@@ -1,0 +1,3 @@
+# Query layer: typed client, throw-on-error
+
+Every module's `queries.ts` (ADR-0003) constructs its Supabase client as `createClient<Database>(...)`, never a hand-typed wrapper — `types/database.ts` (ADR-0008) is the single source of row types. Query functions unwrap Supabase's `{ data, error }` result and throw on `error`, returning just `data` to their callers, so route handlers, Server Actions, and components never branch on Supabase's error shape — that's undifferentiated plumbing the thin-glue rule ([issue #13](https://github.com/Temel00/emelbros-app/issues/13)) keeps out of call sites. Next.js error boundaries handle the thrown error.
