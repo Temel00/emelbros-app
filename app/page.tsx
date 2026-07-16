@@ -18,16 +18,16 @@ export default function Home() {
         </p>
       ) : (
         <ul className="grid w-full grid-cols-2 gap-4 sm:grid-cols-3">
-          {modules.map((module) => (
-            <li key={module.slug}>
+          {modules.map((mod) => (
+            <li key={mod.slug}>
               <Link
-                href={`/${module.slug}`}
+                href={`/${mod.slug}`}
                 className={cn(
                   buttonVariants({ variant: "outline" }),
                   "h-auto w-full py-4",
                 )}
               >
-                {module.name}
+                {mod.name}
               </Link>
             </li>
           ))}
