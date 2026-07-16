@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { supabaseAnonKey, supabaseUrl } from "@/platform/supabase/env";
 
+import type { Database } from "@/types/database";
+
 // Routes reachable while signed out (ADR-0011): the sign-in page itself and
 // the OAuth redirect target that establishes the session.
 const PUBLIC_PATHS = ["/sign-in", "/auth/callback"];
@@ -22,7 +24,7 @@ export function isPublicPath(pathname: string): boolean {
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
