@@ -20,7 +20,8 @@ Implementation tickets are **agent-scoped**: one ticket = one PR = one self-cont
 
 ## Branch & PR flow
 
-- Branch from `main`, named `<type>/<issue#>-<slug>` (e.g. `feat/23-darts-scoring`).
+- Work **in the main checkout on a branch — do not create a git worktree**. One ticket runs at a time, so worktree isolation buys nothing here and costs a fresh `npm install` and env-file copy on every ticket. Branch from `main`, named `<type>/<issue#>-<slug>` (e.g. `feat/23-darts-scoring`).
+- Because sessions share the one checkout, **don't run two ticket sessions against it at once** — finish and merge (or shelve) one before claiming the next. If overlapping work is ever needed, that's the point to reach for a worktree, not the default.
 - Open a **draft PR at first push** so work in progress is visible.
 - Work until CI is green and the ticket's acceptance criteria are met, then **flip the PR to Ready for review**. Draft means the agent is still working; ready means it's the owner's turn. The owner reviews and merges — nothing lands unreviewed.
 - Every PR body carries:
