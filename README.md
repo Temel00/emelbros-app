@@ -54,6 +54,30 @@ Copy `.env.example` to `.env.local` and fill in the values `supabase start`
 prints (`API URL` → `NEXT_PUBLIC_SUPABASE_URL`, `anon key` →
 `NEXT_PUBLIC_SUPABASE_ANON_KEY`).
 
+## Auth (Google sign-in)
+
+Sign-in is Google-only via Supabase Auth, gated by the `allowed_emails`
+allowlist ([ADR-0010](docs/adr/0010-allowed-emails-table-managed-via-dashboard.md),
+[ADR-0011](docs/adr/0011-auth-supabase-google-signin.md)). `supabase db reset`
+seeds `allowed_emails` with local-dev placeholder rows — sign in with
+`temelaudio@gmail.com` locally, or edit the seed migration for another email.
+
+Local dev needs its own Google OAuth client (prod origins are wired in the
+deploy task, [#3](https://github.com/Temel00/emelbros-app/issues/3)):
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
+   create an **OAuth 2.0 Client ID** of type **Web application** (create/select
+   a project first if needed).
+2. Under **Authorized redirect URIs**, add the local Supabase callback:
+   `http://127.0.0.1:54321/auth/v1/callback`.
+3. Copy `supabase/.env.example` to `supabase/.env.local` and fill in the
+   generated **Client ID** and **Client secret** — the Supabase CLI loads
+   this file automatically and resolves `supabase/config.toml`'s `env(...)`
+   substitution from it.
+4. On the **OAuth consent screen**, set **User type** to External, leave
+   publishing status as **Testing**, and add your Google account as a test
+   user.
+
 ## Testing
 
 Unit tests are pure-logic, co-located beside the code (`*.test.ts`), run by
