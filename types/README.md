@@ -6,4 +6,9 @@ that changed the schema (ADR-0008). Nothing is generated at build time — the
 checked-in file is the source of truth so Vercel builds need no live Supabase
 connection.
 
-Empty until the first migration lands.
+Regenerate after any migration change:
+
+```
+supabase db reset
+supabase gen types typescript --local > types/database.ts
+```

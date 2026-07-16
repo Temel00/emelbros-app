@@ -31,18 +31,36 @@ The platform is a **modular monolith** ([ADR-0013](docs/adr/0013-single-nextjs-a
 - `app/` — App Router routes (thin glue).
 - `modules/<slug>/` — self-contained modules; each exports a `manifest.ts` and
   registers in [`modules/index.ts`](modules/index.ts) ([ADR-0001](docs/adr/0001-code-first-module-manifests.md), [ADR-0003](docs/adr/0003-module-layout-and-one-way-imports.md)).
-- `platform/` — shared kit modules import from (types, and later Supabase
-  client factories, member helpers, UI primitives). Imports are one-way.
+- `platform/` — shared kit modules import from: Supabase client factories
+  (`platform/supabase/`), typed query helpers, and later member helpers and UI
+  primitives. Imports are one-way.
 - `components/ui/` — shadcn/ui components, copied in as owned source ([ADR-0014](docs/adr/0014-ui-stack-tailwind-shadcn.md)).
 - `types/` — checked-in generated database types ([ADR-0008](docs/adr/0008-hand-written-migrations-checked-in-types.md)).
+- `supabase/migrations/` — hand-written SQL migrations, applied locally via
+  `supabase db reset` ([ADR-0008](docs/adr/0008-hand-written-migrations-checked-in-types.md)).
+
+## Data layer
+
+Local dev needs the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
+and Docker running:
+
+```bash
+supabase start                 # boots the local stack
+supabase db reset              # applies every migration in supabase/migrations/
+supabase gen types typescript --local > types/database.ts
+```
+
+Copy `.env.example` to `.env.local` and fill in the values `supabase start`
+prints (`API URL` → `NEXT_PUBLIC_SUPABASE_URL`, `anon key` →
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`).
 
 ## Testing
 
 Unit tests are pure-logic, co-located beside the code (`*.test.ts`), run by
 Vitest ([#13](https://github.com/Temel00/emelbros-app/issues/13)). RLS
 integration tests (`*.rls.test.ts`) run against a local Supabase stack in a
-separate suite and are excluded from `npm run test`; they arrive with the data
-layer in a later milestone.
+separate suite and are excluded from `npm run test`; wiring that suite into CI
+is tracked by [#13](https://github.com/Temel00/emelbros-app/issues/13).
 
 ## CI and branch protection
 
