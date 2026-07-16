@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+build
+coverage
+package-lock.json
+
+# Hand-written prose maintained by humans — not Prettier's to reformat.
+docs
+CONTEXT.md
+AGENTS.md
