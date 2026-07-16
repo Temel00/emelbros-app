@@ -10,6 +10,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-sans);
+  --font-brand: var(--font-brand);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -46,75 +47,125 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Brand brights — the four co-equal colours (#18). Theme-aware: redefined
+     per-theme below so consumers never branch on light/dark themselves. */
+  --color-c-pink: var(--c-pink);
+  --color-c-yellow: var(--c-yellow);
+  --color-c-green: var(--c-green);
+  --color-c-blue: var(--c-blue);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* Brand brights (#18) — canonical hex, owner-supplied. Used as a set only
+     for the brand signature; individually per the colour-usage system below. */
+  --c-pink: #ef486f;
+  --c-yellow: #ffd166;
+  --c-green: #05d69e;
+  --c-blue: #1089b1;
+
+  /* Neutrals carry ~90% of every surface. Ink is a dark cut of the blue
+     bright, not pure black; ground is a near-white, not pure white. */
+  --background: #f5f6f7;
+  --foreground: #0e2a31;
+  --card: #ffffff;
+  --card-foreground: #0e2a31;
+  --popover: #ffffff;
+  --popover-foreground: #0e2a31;
+
+  /* Pink is the single platform action colour: buttons, links, active nav,
+     focus ring. Yellow/green/blue never fill this role. */
+  --primary: var(--c-pink);
+  --primary-foreground: #ffffff;
+
+  --secondary: #e7e9eb;
+  --secondary-foreground: #0e2a31;
+  --muted: #ecedef;
+  --muted-foreground: #5b6b70;
+  /* shadcn's generic hover-surface token — unrelated to the per-member
+     `accent` concept in lib/accent.ts, which never touches this var. */
+  --accent: #ecedef;
+  --accent-foreground: #0e2a31;
+
+  /* Semantic status reuses the palette (green = done, yellow = attention,
+     pink = destructive) — accepted minor overlap with the role system at
+     5-person scale (#18). */
+  --destructive: var(--c-pink);
+  --status-done: var(--c-green);
+  --status-attention: var(--c-yellow);
+
+  --border: #dee1e3;
+  --input: #dee1e3;
+  --ring: var(--c-pink);
+
+  /* Categorical series never use pink — it stays the single action colour,
+     never a data colour (#18). */
+  --chart-1: var(--c-blue);
+  --chart-2: var(--c-green);
+  --chart-3: var(--c-yellow);
+  --chart-4: #5b6b70;
+  --chart-5: #8b9a9e;
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0e2a31;
+  --sidebar-primary: var(--c-pink);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ecedef;
+  --sidebar-accent-foreground: #0e2a31;
+  --sidebar-border: #dee1e3;
+  --sidebar-ring: var(--c-pink);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Every bright is nudged lighter/cooler to hold on the dark surface —
+     this is not an inversion of the light values. */
+  --c-pink: #ff6c8f;
+  --c-yellow: #ffdb85;
+  --c-green: #2fe9b8;
+  --c-blue: #3bb6d6;
+
+  /* Deep ground is a dark cut of the blue bright. */
+  --background: #0a1f24;
+  --foreground: #f2f5f6;
+  --card: #10262c;
+  --card-foreground: #f2f5f6;
+  --popover: #10262c;
+  --popover-foreground: #f2f5f6;
+
+  --primary: var(--c-pink);
+  --primary-foreground: #0e2a31;
+
+  --secondary: #16323a;
+  --secondary-foreground: #f2f5f6;
+  --muted: #16323a;
+  --muted-foreground: #9fb8bd;
+  --accent: #16323a;
+  --accent-foreground: #f2f5f6;
+
+  --destructive: var(--c-pink);
+  --status-done: var(--c-green);
+  --status-attention: var(--c-yellow);
+
+  --border: #1d3a42;
+  --input: #1d3a42;
+  --ring: var(--c-pink);
+
+  --chart-1: var(--c-blue);
+  --chart-2: var(--c-green);
+  --chart-3: var(--c-yellow);
+  --chart-4: #9fb8bd;
+  --chart-5: #6f8b91;
+
+  --sidebar: #10262c;
+  --sidebar-foreground: #f2f5f6;
+  --sidebar-primary: var(--c-pink);
+  --sidebar-primary-foreground: #0e2a31;
+  --sidebar-accent: #16323a;
+  --sidebar-accent-foreground: #f2f5f6;
+  --sidebar-border: #1d3a42;
+  --sidebar-ring: var(--c-pink);
 }
 
 @layer base {
@@ -123,6 +174,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Nunito tabular figures for scores/numerals platform-wide (#18). */
+    font-variant-numeric: tabular-nums;
   }
   html {
     @apply font-sans;
