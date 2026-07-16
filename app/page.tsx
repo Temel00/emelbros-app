@@ -1,15 +1,25 @@
 import Link from "next/link";
 
 import { modules } from "@/modules";
+import { getCurrentMember } from "@/platform/auth";
 import { buttonVariants } from "@/components/ui/button";
+import { SignOutButton } from "@/components/sign-out-button";
 import { cn } from "@/lib/utils";
 
-export default function Home() {
+export default async function Home() {
+  const member = await getCurrentMember();
+
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Emelbros</h1>
         <p className="text-muted-foreground">A private family web platform.</p>
+        {member && (
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <p className="text-muted-foreground text-sm">{member.email}</p>
+            <SignOutButton />
+          </div>
+        )}
       </div>
 
       {modules.length === 0 ? (
