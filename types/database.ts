@@ -302,6 +302,8 @@ export type Database = {
           segment: number;
           multiple: number;
         };
+        Insert: {
+          id?: string;
           turn_id: string;
           dart_number: number;
           segment: number;

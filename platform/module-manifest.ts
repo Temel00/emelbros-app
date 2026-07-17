@@ -43,9 +43,6 @@ export type ModuleProfileSection = {
 
 /**
  * The typed contract every module exports from its `manifest.ts`
-
-/**
- * The typed contract every module exports from its `manifest.ts`
  * (ADR-0001, ADR-0003, ADR-0005). Modules import this from `platform/`; the
  * platform never imports a specific module in return — imports are one-way.
  */
@@ -64,4 +61,4 @@ export type ModuleManifest = {
   widgets: ModuleWidget[];
   /** Member-profile contributions this module offers (ADR-0005). */
   profileSections: ModuleProfileSection[];
-};locking it in.)
+};
