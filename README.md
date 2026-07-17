@@ -52,7 +52,7 @@ supabase gen types typescript --local > types/database.ts
 
 Copy `.env.example` to `.env.local` and fill in the values `supabase start`
 prints (`API URL` → `NEXT_PUBLIC_SUPABASE_URL`, `anon key` →
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`).
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`).
 
 ## Auth (Google sign-in)
 
