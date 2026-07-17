@@ -81,6 +81,251 @@ export type Database = {
         };
         Relationships: [];
       };
+      lists_list: {
+        Row: {
+          id: string;
+          owner_member_id: string;
+          title: string;
+          kind: string;
+          scope: Database["public"]["Enums"]["scope"];
+          archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_member_id: string;
+          title: string;
+          kind: string;
+          scope?: Database["public"]["Enums"]["scope"];
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_member_id?: string;
+          title?: string;
+          kind?: string;
+          scope?: Database["public"]["Enums"]["scope"];
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      lists_item: {
+        Row: {
+          id: string;
+          list_id: string;
+          text: string;
+          checked: boolean;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          list_id: string;
+          text: string;
+          checked?: boolean;
+          position: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          list_id?: string;
+          text?: string;
+          checked?: boolean;
+          position?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "lists_item_list_id_fkey";
+            columns: ["list_id"];
+            isOneToOne: false;
+            referencedRelation: "lists_list";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      lists_participant: {
+        Row: {
+          list_id: string;
+          member_id: string;
+        };
+        Insert: {
+          list_id: string;
+          member_id: string;
+        };
+        Update: {
+          list_id?: string;
+          member_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "lists_participant_list_id_fkey";
+            columns: ["list_id"];
+            isOneToOne: false;
+            referencedRelation: "lists_list";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      darts_game: {
+        Row: {
+          id: string;
+          owner_member_id: string;
+          variant: number;
+          starting_participant_id: string | null;
+          winner_participant_id: string | null;
+          status: string;
+          scope: Database["public"]["Enums"]["scope"];
+          completed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_member_id: string;
+          variant: number;
+          starting_participant_id?: string | null;
+          winner_participant_id?: string | null;
+          status?: string;
+          scope?: Database["public"]["Enums"]["scope"];
+          completed_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_member_id?: string;
+          variant?: number;
+          starting_participant_id?: string | null;
+          winner_participant_id?: string | null;
+          status?: string;
+          scope?: Database["public"]["Enums"]["scope"];
+          completed_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "darts_game_starting_participant_id_fkey";
+            columns: ["starting_participant_id"];
+            isOneToOne: false;
+            referencedRelation: "darts_participant";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "darts_game_winner_participant_id_fkey";
+            columns: ["winner_participant_id"];
+            isOneToOne: false;
+            referencedRelation: "darts_participant";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      darts_participant: {
+        Row: {
+          id: string;
+          game_id: string;
+          member_id: string | null;
+          guest_name: string | null;
+          slot: number;
+        };
+        Insert: {
+          id?: string;
+          game_id: string;
+          member_id?: string | null;
+          guest_name?: string | null;
+          slot: number;
+        };
+        Update: {
+          id?: string;
+          game_id?: string;
+          member_id?: string | null;
+          guest_name?: string | null;
+          slot?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "darts_participant_game_id_fkey";
+            columns: ["game_id"];
+            isOneToOne: false;
+            referencedRelation: "darts_game";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      darts_turn: {
+        Row: {
+          id: string;
+          game_id: string;
+          participant_id: string;
+          turn_number: number;
+          busted: boolean;
+        };
+        Insert: {
+          id?: string;
+          game_id: string;
+          participant_id: string;
+          turn_number: number;
+          busted?: boolean;
+        };
+        Update: {
+          id?: string;
+          game_id?: string;
+          participant_id?: string;
+          turn_number?: number;
+          busted?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "darts_turn_game_id_fkey";
+            columns: ["game_id"];
+            isOneToOne: false;
+            referencedRelation: "darts_game";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "darts_turn_participant_id_fkey";
+            columns: ["participant_id"];
+            isOneToOne: false;
+            referencedRelation: "darts_participant";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      darts_dart: {
+        Row: {
+          id: string;
+          turn_id: string;
+          dart_number: number;
+          segment: number;
+          multiple: number;
+        };
+        Insert: {
+          id?: string;
+          turn_id: string;
+          dart_number: number;
+          segment: number;
+          multiple: number;
+        };
+        Update: {
+          id?: string;
+          turn_id?: string;
+          dart_number?: number;
+          segment?: number;
+          multiple?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "darts_dart_turn_id_fkey";
+            columns: ["turn_id"];
+            isOneToOne: false;
+            referencedRelation: "darts_turn";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       habits_trackable: {
         Row: {
           id: string;
@@ -151,7 +396,15 @@ export type Database = {
           note?: string | null;
           created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "habits_log_trackable_id_fkey";
+            columns: ["trackable_id"];
+            isOneToOne: false;
+            referencedRelation: "habits_trackable";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       habits_participant: {
         Row: {
@@ -166,7 +419,15 @@ export type Database = {
           trackable_id?: string;
           member_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "habits_participant_trackable_id_fkey";
+            columns: ["trackable_id"];
+            isOneToOne: false;
+            referencedRelation: "habits_trackable";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: Record<string, never>;
