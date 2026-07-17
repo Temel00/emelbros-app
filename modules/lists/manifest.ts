@@ -12,15 +12,9 @@ export const listsManifest = {
   description: "Shared shopping lists, to-dos, and notes.",
   icon: "ListChecks",
   scopes: [
-    {
-      table: "lists_list",
-      policy: "member-chosen (private / participants / family)",
-    },
-    { table: "lists_item", policy: "inherits the parent list's visibility" },
-    {
-      table: "lists_participant",
-      policy: "participant join, managed by the list owner",
-    },
+    { table: "lists_list", policy: "member-chosen" },
+    { table: "lists_item", policy: "inherited", from: "lists_list" },
+    { table: "lists_participant", policy: "inherited", from: "lists_list" },
   ],
   widgets: [
     {
