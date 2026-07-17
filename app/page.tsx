@@ -1,48 +1,37 @@
-import Link from "next/link";
-
+import { AppHeader } from "@/components/app-header";
+import {
+  Dashboard,
+  type DashboardTile,
+} from "@/components/dashboard/dashboard";
 import { modules } from "@/modules";
 import { getCurrentMember } from "@/platform/auth";
-import { buttonVariants } from "@/components/ui/button";
-import { SignOutButton } from "@/components/sign-out-button";
-import { cn } from "@/lib/utils";
+import { getPins } from "@/platform/queries";
+import { createClient } from "@/platform/supabase/server";
 
 export default async function Home() {
   const member = await getCurrentMember();
+  // The proxy (ADR-0011) redirects signed-out requests to /sign-in before
+  // this component ever runs.
+  if (!member) return null;
+
+  const supabase = await createClient();
+  const pins = await getPins(supabase, member.id);
+  const tilePins = pins.filter((pin) => pin.widget === null);
+
+  const tiles = tilePins
+    .map((pin) => {
+      const mod = modules.find((candidate) => candidate.slug === pin.module);
+      return mod ? { pinId: pin.id, module: mod } : null;
+    })
+    .filter((tile): tile is DashboardTile => tile !== null);
+
+  const pinnedSlugs = new Set(tilePins.map((pin) => pin.module));
+  const availableModules = modules.filter((mod) => !pinnedSlugs.has(mod.slug));
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Emelbros</h1>
-        <p className="text-muted-foreground">A private family web platform.</p>
-        {member && (
-          <div className="flex items-center justify-center gap-3 pt-2">
-            <p className="text-muted-foreground text-sm">{member.email}</p>
-            <SignOutButton />
-          </div>
-        )}
-      </div>
-
-      {modules.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          No modules yet — the launcher fills in as modules are added.
-        </p>
-      ) : (
-        <ul className="grid w-full grid-cols-2 gap-4 sm:grid-cols-3">
-          {modules.map((mod) => (
-            <li key={mod.slug}>
-              <Link
-                href={`/${mod.slug}`}
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "h-auto w-full py-4",
-                )}
-              >
-                {mod.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+    <>
+      <AppHeader memberId={member.id} supabase={supabase} />
+      <Dashboard tiles={tiles} availableModules={availableModules} />
+    </>
   );
 }
