@@ -11,6 +11,10 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/auth/callback")).toBe(true);
   });
 
+  it("allows the PWA manifest", () => {
+    expect(isPublicPath("/manifest.webmanifest")).toBe(true);
+  });
+
   it("rejects protected routes", () => {
     expect(isPublicPath("/")).toBe(false);
     expect(isPublicPath("/darts")).toBe(false);
