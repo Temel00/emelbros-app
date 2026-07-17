@@ -1,15 +1,11 @@
 -- Habits module data model (#37): habits_trackable, habits_log,
--- habits_participant, and the shared `scope` enum (ADR-0007) — first
--- consumer, so it's created here rather than as a habits-local type.
--- RLS per docs/modules/habits.md §2 and the member-chosen templates
--- (ADR-0007), with the key departure from lists: log writes are
--- owner-only regardless of who can see the trackable.
-
--- === shared scope enum ===========================================
--- Platform-wide (ADR-0007), not habits-prefixed: every member-chosen
--- Scope Policy table across modules reuses this one type.
-
-create type public.scope as enum ('private', 'participants', 'family');
+-- habits_participant. RLS per docs/modules/habits.md §2 and the
+-- member-chosen templates (ADR-0007), with the key departure from lists:
+-- log writes are owner-only regardless of who can see the trackable.
+--
+-- `public.scope` is not created here — it's a platform-wide type
+-- (ADR-0007) first created by 20260716080000_darts_tables.sql, and every
+-- member-chosen or fixed-scope module table since reuses that one type.
 
 -- === updated_at helper ============================================
 -- First table in the schema that needs an updated_at column; a small
@@ -26,7 +22,11 @@ begin
 end;
 $$;
 
--- === habits_trackable ==============================================
+-- === tables ==========================================================
+-- All three tables are created before any RLS policy: habits_trackable's
+-- policies reference habits_participant (below), so habits_participant
+-- must already exist by the time those policies are created.
+
 -- One generic trackable per habit/metric (docs/modules/habits.md §1, §5).
 -- Member-chosen Scope, defaulting to Private (health data is private by
 -- default). Cadence lives in plain columns, null for unscheduled kinds.
@@ -48,6 +48,31 @@ create table public.habits_trackable (
 create trigger habits_trackable_set_updated_at
   before update on public.habits_trackable
   for each row execute function public.set_updated_at();
+
+-- One dated entry per trackable per day (docs/modules/habits.md §4, §5).
+
+create table public.habits_log (
+  id uuid primary key default gen_random_uuid(),
+  trackable_id uuid not null references public.habits_trackable (id) on delete cascade,
+  log_date date not null,
+  done boolean not null default false,
+  value numeric,
+  note text,
+  created_at timestamptz not null default now(),
+  unique (trackable_id, log_date)
+);
+
+-- The Participants-scope join table (ADR-0007 pattern). Rows exist only
+-- for participants-scope trackables; a participant is a viewer, not a
+-- co-logger (docs/modules/habits.md §2).
+
+create table public.habits_participant (
+  trackable_id uuid not null references public.habits_trackable (id) on delete cascade,
+  member_id uuid not null references auth.users (id) on delete cascade,
+  primary key (trackable_id, member_id)
+);
+
+-- === RLS: habits_trackable ==========================================
 
 alter table public.habits_trackable enable row level security;
 
@@ -84,19 +109,7 @@ create policy "habits_trackable_delete_own" on public.habits_trackable
   for delete
   using (owner_member_id = auth.uid());
 
--- === habits_log =====================================================
--- One dated entry per trackable per day (docs/modules/habits.md §4, §5).
-
-create table public.habits_log (
-  id uuid primary key default gen_random_uuid(),
-  trackable_id uuid not null references public.habits_trackable (id) on delete cascade,
-  log_date date not null,
-  done boolean not null default false,
-  value numeric,
-  note text,
-  created_at timestamptz not null default now(),
-  unique (trackable_id, log_date)
-);
+-- === RLS: habits_log =================================================
 
 alter table public.habits_log enable row level security;
 
@@ -161,16 +174,7 @@ create policy "habits_log_delete_owner" on public.habits_log
     )
   );
 
--- === habits_participant =============================================
--- The Participants-scope join table (ADR-0007 pattern). Rows exist only
--- for participants-scope trackables; a participant is a viewer, not a
--- co-logger (docs/modules/habits.md §2).
-
-create table public.habits_participant (
-  trackable_id uuid not null references public.habits_trackable (id) on delete cascade,
-  member_id uuid not null references auth.users (id) on delete cascade,
-  primary key (trackable_id, member_id)
-);
+-- === RLS: habits_participant =========================================
 
 alter table public.habits_participant enable row level security;
 
