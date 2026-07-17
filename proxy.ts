@@ -5,9 +5,11 @@ import { supabaseAnonKey, supabaseUrl } from "@/platform/supabase/env";
 
 import type { Database } from "@/types/database";
 
-// Routes reachable while signed out (ADR-0011): the sign-in page itself and
-// the OAuth redirect target that establishes the session.
-const PUBLIC_PATHS = ["/sign-in", "/auth/callback"];
+// Routes reachable while signed out (ADR-0011): the sign-in page itself, the
+// OAuth redirect target that establishes the session, and the PWA manifest
+// (ADR-0015) — browsers probe it for installability from the sign-in page
+// too, before any session cookie exists.
+const PUBLIC_PATHS = ["/sign-in", "/auth/callback", "/manifest.webmanifest"];
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(

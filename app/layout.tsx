@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bagel_Fat_One, Geist_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 
@@ -24,6 +24,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Emelbros",
   description: "A private family web platform.",
+};
+
+// Matches the pink bright's per-theme value in globals.css (#18) so the
+// installed PWA's browser chrome/status bar tints with the active theme.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ef486f" },
+    { media: "(prefers-color-scheme: dark)", color: "#ff6c8f" },
+  ],
 };
 
 // Resolves the theme before first paint — a stored manual override if one
