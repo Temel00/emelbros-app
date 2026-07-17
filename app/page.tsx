@@ -8,6 +8,14 @@ import { getCurrentMember } from "@/platform/auth";
 import { getPins } from "@/platform/queries";
 import { createClient } from "@/platform/supabase/server";
 
+// `ModuleManifest` carries a `component: ComponentType` field (widgets),
+// which can't cross the server/client boundary into the client-side
+// `Dashboard` — strip each module down to its serializable fields first.
+function toDashboardModule(mod: (typeof modules)[number]) {
+  const { slug, name, description, icon } = mod;
+  return { slug, name, description, icon };
+}
+
 export default async function Home() {
   const member = await getCurrentMember();
   // The proxy (ADR-0011) redirects signed-out requests to /sign-in before
@@ -17,11 +25,6 @@ export default async function Home() {
   const supabase = await createClient();
   const pins = await getPins(supabase, member.id);
   const tilePins = pins.filter((pin) => pin.widget === null);
-
-  function toDashboardModule(mod: (typeof modules)[number]) {
-    const { slug, name, description, icon } = mod;
-    return { slug, name, description, icon };
-  }
 
   const tiles = tilePins
     .map((pin) => {

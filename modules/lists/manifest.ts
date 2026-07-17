@@ -6,7 +6,7 @@ import { MyListsWidget } from "@/modules/lists/components/my-lists-widget";
  * The lists Module Manifest (ADR-0001, docs/modules/lists.md §5). Registered
  * in `modules/index.ts` (ADR-0013).
  */
-export const listsManifest: ModuleManifest = {
+export const listsManifest = {
   slug: "lists",
   name: "Lists",
   description: "Shared shopping lists, to-dos, and notes.",
@@ -31,4 +31,4 @@ export const listsManifest: ModuleManifest = {
     },
   ],
   profileSections: [],
-};
+} satisfies ModuleManifest;
