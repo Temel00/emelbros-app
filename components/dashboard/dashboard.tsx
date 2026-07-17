@@ -11,13 +11,9 @@ import {
 import { resolveIcon } from "@/lib/icon";
 import { moveItem } from "@/lib/reorder";
 import { pinItem, reorderPins, unpinItem } from "@/platform/pins";
+import type { ModuleManifest } from "@/platform/module-manifest";
 
-export type DashboardModule = {
-  slug: string;
-  name: string;
-  description: string;
-  icon: string;
-};
+export type DashboardModule = ModuleManifest;
 
 export type DashboardTile = {
   pinId: string;
