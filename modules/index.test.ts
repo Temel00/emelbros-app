@@ -7,4 +7,8 @@ describe("module registry", () => {
   it("is an array", () => {
     expect(Array.isArray(modules)).toBe(true);
   });
+
+  it("registers the lists module", () => {
+    expect(modules.map((mod) => mod.slug)).toContain("lists");
+  });
 });
