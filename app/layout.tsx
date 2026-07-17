@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bagel_Fat_One, Geist_Mono, Nunito } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 import { THEME_STORAGE_KEY } from "@/lib/theme";
@@ -51,10 +52,19 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${nunito.variable} ${bagelFatOne.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* `beforeInteractive` has Next.js inject this straight into the
+            document and run it ahead of hydration — a plain <script> tag in
+            JSX is only ever executed by the browser's HTML parser on the
+            initial load, never by React itself, so it can't be relied on
+            the same way (React 19 now warns on it directly). */}
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
+        {children}
+      </body>
     </html>
   );
 }
