@@ -103,6 +103,54 @@ describe("darts RLS", () => {
     }
   });
 
+  it("lets the inserting member create a game as its owner", async () => {
+    const { data, error } = await owner.client
+      .from("darts_game")
+      .insert({ owner_member_id: owner.id, variant: 501 })
+      .select("id")
+      .single();
+
+    expect(error).toBeNull();
+    if (data) leftoverGameIds.push(data.id);
+  });
+
+  it("blocks a member from inserting a game owned by someone else", async () => {
+    const { data, error } = await bystander.client
+      .from("darts_game")
+      .insert({ owner_member_id: owner.id, variant: 501 })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("lets the owner update their own in-progress game", async () => {
+    const gameId = await createCompletedGame(owner, opponent);
+    leftoverGameIds.push(gameId);
+
+    const { error, count } = await owner.client
+      .from("darts_game")
+      .update({ variant: 301 }, { count: "exact" })
+      .eq("id", gameId);
+
+    expect(error).toBeNull();
+    expect(count).toBe(1);
+  });
+
+  it("blocks a non-owner participant from updating the game", async () => {
+    const gameId = await createCompletedGame(owner, opponent);
+    leftoverGameIds.push(gameId);
+
+    const { error, count } = await opponent.client
+      .from("darts_game")
+      .update({ variant: 301 }, { count: "exact" })
+      .eq("id", gameId);
+
+    expect(error).toBeNull();
+    expect(count).toBe(0);
+  });
+
   it("lets any signed-in member read the game (fixed Family scope)", async () => {
     const gameId = await createCompletedGame(owner, opponent);
     leftoverGameIds.push(gameId);

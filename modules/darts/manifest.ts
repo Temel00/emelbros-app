@@ -6,7 +6,7 @@ import type { ModuleManifest } from "@/platform/module-manifest";
  * the platform's canonical fixed-scope module: every game is Family scope,
  * so all games and stats are open to every signed-in member.
  */
-export const dartsManifest: ModuleManifest = {
+export const dartsManifest = {
   slug: "darts",
   name: "Darts",
   description: "Score 501/301 games and track the family's career records.",
@@ -29,4 +29,4 @@ export const dartsManifest: ModuleManifest = {
   // No profile section in v1 — darts stats live in the module's own pages,
   // not on member profiles (darts.md §10, §11).
   profileSections: [],
-};
+} satisfies ModuleManifest;
