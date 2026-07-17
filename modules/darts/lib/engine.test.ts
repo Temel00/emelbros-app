@@ -6,7 +6,7 @@ import {
   isDouble,
   undoLastDart,
   type ThrownDart,
-} from "@/modules/darts/engine";
+} from "@/modules/darts/lib/engine";
 
 const single = (segment: number): ThrownDart => ({ segment, multiple: 1 });
 const double = (segment: number): ThrownDart => ({ segment, multiple: 2 });

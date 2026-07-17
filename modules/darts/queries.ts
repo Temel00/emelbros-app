@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { ThrownDart } from "@/modules/darts/lib/engine";
 import type { Database } from "@/types/database";
 
 type DartsGame = Database["public"]["Tables"]["darts_game"]["Row"];
@@ -110,7 +111,7 @@ export async function recordTurn(
 export async function recordDarts(
   supabase: SupabaseClient<Database>,
   turnId: string,
-  darts: { segment: number; multiple: number }[],
+  darts: ThrownDart[],
 ): Promise<DartsDart[]> {
   const { data, error } = await supabase
     .from("darts_dart")

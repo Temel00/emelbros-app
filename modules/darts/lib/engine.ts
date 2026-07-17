@@ -7,8 +7,6 @@
  * itself thin-glue-testable (issue #13) without a database.
  */
 
-export type Variant = 301 | 501;
-
 export type PlayerIndex = 0 | 1;
 
 /** One thrown dart: a board segment and its multiple (darts.md §4). */
@@ -31,6 +29,8 @@ export type GameConfig = {
 };
 
 export type TurnResult = {
+  /** 1-based order of play within the game — what `queries.ts`'s `recordTurn` stores as `turn_number`. */
+  turnNumber: number;
   player: PlayerIndex;
   darts: ThrownDart[];
   scoreBefore: number;
@@ -68,7 +68,14 @@ export function isDouble(dart: ThrownDart): boolean {
 /**
  * Removes the single most recent dart. Undo is unlimited and steps back
  * across turn/player boundaries for free, since `computeGameState` always
- * recomputes from the full darts list rather than from incremental state.
+ * recomputes from the full darts list rather than from incremental state —
+ * including, mechanically, back past a checkout dart. That's fine during
+ * live play, where the darts list only exists in memory; but undo must never
+ * be offered once a game has actually been persisted as completed
+ * (`queries.ts`'s `completeGame`) — darts.md §3/§12 make a completed game
+ * immutable, correctable only by deletion. Enforcing that boundary is the
+ * live-scoring UI's job (stop calling this once the game is completed), not
+ * this pure function's — it has no notion of what's been persisted.
  */
 export function undoLastDart(darts: ThrownDart[]): ThrownDart[] {
   return darts.slice(0, -1);
@@ -137,6 +144,7 @@ export function computeGameState(
     const scoreAfter = busted ? scoreBefore : running;
     scores[currentPlayer] = scoreAfter;
     turns.push({
+      turnNumber: turns.length + 1,
       player: currentPlayer,
       darts: turnDarts,
       scoreBefore,
