@@ -326,6 +326,109 @@ export type Database = {
           },
         ];
       };
+      habits_trackable: {
+        Row: {
+          id: string;
+          owner_member_id: string;
+          title: string;
+          kind: string;
+          scope: Database["public"]["Enums"]["scope"];
+          cadence_type: string | null;
+          cadence_target: number | null;
+          cadence_weekdays: number[] | null;
+          archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_member_id: string;
+          title: string;
+          kind: string;
+          scope?: Database["public"]["Enums"]["scope"];
+          cadence_type?: string | null;
+          cadence_target?: number | null;
+          cadence_weekdays?: number[] | null;
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_member_id?: string;
+          title?: string;
+          kind?: string;
+          scope?: Database["public"]["Enums"]["scope"];
+          cadence_type?: string | null;
+          cadence_target?: number | null;
+          cadence_weekdays?: number[] | null;
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      habits_log: {
+        Row: {
+          id: string;
+          trackable_id: string;
+          log_date: string;
+          done: boolean;
+          value: number | null;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          trackable_id: string;
+          log_date: string;
+          done?: boolean;
+          value?: number | null;
+          note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          trackable_id?: string;
+          log_date?: string;
+          done?: boolean;
+          value?: number | null;
+          note?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "habits_log_trackable_id_fkey";
+            columns: ["trackable_id"];
+            isOneToOne: false;
+            referencedRelation: "habits_trackable";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      habits_participant: {
+        Row: {
+          trackable_id: string;
+          member_id: string;
+        };
+        Insert: {
+          trackable_id: string;
+          member_id: string;
+        };
+        Update: {
+          trackable_id?: string;
+          member_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "habits_participant_trackable_id_fkey";
+            columns: ["trackable_id"];
+            isOneToOne: false;
+            referencedRelation: "habits_trackable";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
