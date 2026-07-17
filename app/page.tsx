@@ -21,7 +21,9 @@ export default async function Home() {
   const tiles = tilePins
     .map((pin) => {
       const mod = modules.find((candidate) => candidate.slug === pin.module);
-      return mod ? { pinId: pin.id, module: mod } : null;
+      if (!mod) return null;
+      const { slug, name, description, icon } = mod;
+      return { pinId: pin.id, module: { slug, name, description, icon } };
     })
     .filter((tile): tile is DashboardTile => tile !== null);
 

@@ -1,3 +1,4 @@
+import { dartsManifest } from "@/modules/darts/manifest";
 import type { ModuleManifest } from "@/platform/module-manifest";
 
 /**
@@ -5,7 +6,5 @@ import type { ModuleManifest } from "@/platform/module-manifest";
  * registers its manifest here; the app reads only this array, never a specific
  * module folder (one-way imports, ADR-0003). Adding a module is adding its
  * folder under `modules/<slug>/` and one entry to this list.
- *
- * Empty until the first module (darts, #5) lands.
  */
-export const modules: ModuleManifest[] = [];
+export const modules: ModuleManifest[] = [dartsManifest];
