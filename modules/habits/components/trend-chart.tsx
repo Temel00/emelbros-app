@@ -19,8 +19,7 @@ export function TrendChart({
   if (points.length === 1) {
     return (
       <p className="text-xs text-muted-foreground">
-        {points[0].value} on {points[0].date} — one more entry to chart a
-        trend.
+        {points[0].value} on {points[0].date} — one more entry to chart a trend.
       </p>
     );
   }

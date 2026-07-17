@@ -238,6 +238,22 @@ export async function getParticipants(
   return data.map((row) => row.member_id);
 }
 
+/** Participant rows across several trackables in one query, for the module home's edit forms. */
+export async function getParticipantsForTrackables(
+  supabase: SupabaseClient<Database>,
+  trackableIds: string[],
+): Promise<{ trackable_id: string; member_id: string }[]> {
+  if (trackableIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("habits_participant")
+    .select("trackable_id, member_id")
+    .in("trackable_id", trackableIds);
+
+  if (error) throw error;
+  return data;
+}
+
 export async function addParticipant(
   supabase: SupabaseClient<Database>,
   trackableId: string,

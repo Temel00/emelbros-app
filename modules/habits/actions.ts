@@ -7,10 +7,12 @@ import { createClient } from "@/platform/supabase/server";
 import type { Database } from "@/types/database";
 
 import {
+  addParticipant,
   archiveTrackable,
   createTrackable,
   deleteLog,
   deleteTrackable,
+  removeParticipant,
   restoreTrackable,
   updateTrackable,
   upsertLog,
@@ -114,6 +116,30 @@ export async function deleteLogAction(trackableId: string, logDate: string) {
   const supabase = await createClient();
 
   await deleteLog(supabase, trackableId, logDate);
+
+  revalidatePath("/habits");
+}
+
+export async function addParticipantAction(
+  trackableId: string,
+  memberId: string,
+) {
+  await requireMember();
+  const supabase = await createClient();
+
+  await addParticipant(supabase, trackableId, memberId);
+
+  revalidatePath("/habits");
+}
+
+export async function removeParticipantAction(
+  trackableId: string,
+  memberId: string,
+) {
+  await requireMember();
+  const supabase = await createClient();
+
+  await removeParticipant(supabase, trackableId, memberId);
 
   revalidatePath("/habits");
 }

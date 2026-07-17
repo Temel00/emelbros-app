@@ -19,11 +19,7 @@ describe("isDueToday", () => {
   it("daily is always due unless already logged done today", () => {
     expect(isDueToday({ type: "daily" }, [], TODAY)).toBe(true);
     expect(
-      isDueToday(
-        { type: "daily" },
-        logs({ "2026-07-15": true }),
-        TODAY,
-      ),
+      isDueToday({ type: "daily" }, logs({ "2026-07-15": true }), TODAY),
     ).toBe(false);
   });
 

@@ -3,17 +3,20 @@ import { getCurrentMember } from "@/platform/auth";
 import { createClient } from "@/platform/supabase/server";
 
 import { CreateTrackableForm } from "@/modules/habits/components/create-trackable-form";
-import { HabitRow } from "@/modules/habits/components/habit-row";
-import { MetricRow } from "@/modules/habits/components/metric-row";
+import { HabitList } from "@/modules/habits/components/habit-list";
+import { MetricList } from "@/modules/habits/components/metric-list";
+import { toISODate } from "@/modules/habits/lib/cadence";
 import {
-  computeStreak,
-  isDueToday,
-  toCadence,
-  toISODate,
-  type DayLog,
-} from "@/modules/habits/lib/cadence";
-import { getTrackableKind } from "@/modules/habits/lib/kinds";
-import { getLogsForTrackables, getTrackables } from "@/modules/habits/queries";
+  buildHabitViewModels,
+  buildMetricViewModels,
+  groupLogsByTrackable,
+  groupParticipantsByTrackable,
+} from "@/modules/habits/lib/view-model";
+import {
+  getLogsForTrackables,
+  getParticipantsForTrackables,
+  getTrackables,
+} from "@/modules/habits/queries";
 
 export default async function HabitsPage() {
   const member = await getCurrentMember();
@@ -24,55 +27,38 @@ export default async function HabitsPage() {
   const supabase = await createClient();
   const today = toISODate(new Date());
 
-  const trackables = await getTrackables(supabase, member.id);
-  const logs = await getLogsForTrackables(
-    supabase,
-    trackables.map((t) => t.id),
+  const trackables = await getTrackables(supabase, member.id, {
+    includeArchived: true,
+  });
+  const trackableIds = trackables.map((t) => t.id);
+  const [logs, participantRows] = await Promise.all([
+    getLogsForTrackables(supabase, trackableIds),
+    getParticipantsForTrackables(supabase, trackableIds),
+  ]);
+
+  const logsByTrackable = groupLogsByTrackable(
+    logs.map((log) => ({
+      trackable_id: log.trackable_id,
+      log_date: log.log_date,
+      done: log.done,
+      value: log.value,
+    })),
   );
+  const participantsByTrackable = groupParticipantsByTrackable(participantRows);
 
-  const logsByTrackable = new Map<string, DayLog[]>();
-  for (const log of logs) {
-    const list = logsByTrackable.get(log.trackable_id) ?? [];
-    list.push({ date: log.log_date, done: log.done });
-    logsByTrackable.set(log.trackable_id, list);
-  }
+  const active = trackables.filter((t) => t.archived_at === null);
+  const archived = trackables.filter((t) => t.archived_at !== null);
 
-  const habits = trackables
-    .map((trackable) => {
-      const kind = getTrackableKind(trackable.kind);
-      if (!kind.scheduled) return null;
-
-      const cadence = toCadence(trackable);
-      const trackableLogs = logsByTrackable.get(trackable.id) ?? [];
-      const todayDone =
-        trackableLogs.find((log) => log.date === today)?.done ?? false;
-
-      return {
-        trackable,
-        kind,
-        streak: cadence ? computeStreak(cadence, trackableLogs, new Date()) : 0,
-        due: cadence ? isDueToday(cadence, trackableLogs, new Date()) : false,
-        todayDone,
-      };
-    })
-    .filter((h): h is NonNullable<typeof h> => h !== null);
-
+  const habits = buildHabitViewModels(active, logsByTrackable, new Date());
+  const metrics = buildMetricViewModels(active, logs);
   const dueToday = habits.filter((h) => h.due && !h.todayDone);
 
-  const metrics = trackables
-    .map((trackable) => {
-      const kind = getTrackableKind(trackable.kind);
-      if (kind.scheduled) return null;
-
-      const trackableLogs = (
-        logs.filter((log) => log.trackable_id === trackable.id) ?? []
-      )
-        .filter((log) => log.value !== null)
-        .map((log) => ({ date: log.log_date, value: log.value as number }));
-
-      return { trackable, kind, points: trackableLogs };
-    })
-    .filter((m): m is NonNullable<typeof m> => m !== null);
+  const archivedHabits = buildHabitViewModels(
+    archived,
+    logsByTrackable,
+    new Date(),
+  );
+  const archivedMetrics = buildMetricViewModels(archived, logs);
 
   return (
     <>
@@ -92,79 +78,61 @@ export default async function HabitsPage() {
           <h2 className="text-sm font-semibold text-muted-foreground">
             Due today
           </h2>
-          {dueToday.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nothing due right now — nice work.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {dueToday.map((h) => (
-                <HabitRow
-                  key={h.trackable.id}
-                  id={h.trackable.id}
-                  title={h.trackable.title}
-                  kind={h.kind}
-                  today={today}
-                  todayDone={h.todayDone}
-                  streak={h.streak}
-                  due={h.due}
-                  archived={h.trackable.archived_at !== null}
-                />
-              ))}
-            </ul>
-          )}
+          <HabitList
+            habits={dueToday}
+            today={today}
+            participantsByTrackable={participantsByTrackable}
+            emptyMessage="Nothing due right now — nice work."
+          />
         </section>
 
         <section className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-muted-foreground">
             Your habits
           </h2>
-          {habits.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No scheduled habits yet — add one above.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {habits.map((h) => (
-                <HabitRow
-                  key={h.trackable.id}
-                  id={h.trackable.id}
-                  title={h.trackable.title}
-                  kind={h.kind}
-                  today={today}
-                  todayDone={h.todayDone}
-                  streak={h.streak}
-                  due={h.due}
-                  archived={h.trackable.archived_at !== null}
-                />
-              ))}
-            </ul>
-          )}
+          <HabitList
+            habits={habits}
+            today={today}
+            participantsByTrackable={participantsByTrackable}
+            emptyMessage="No scheduled habits yet — add one above."
+          />
         </section>
 
         <section className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-muted-foreground">
             Your metrics
           </h2>
-          {metrics.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No metrics yet — add weight, sleep, or exercise above.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {metrics.map((m) => (
-                <MetricRow
-                  key={m.trackable.id}
-                  id={m.trackable.id}
-                  title={m.trackable.title}
-                  kind={m.kind}
-                  today={today}
-                  points={m.points}
-                />
-              ))}
-            </ul>
-          )}
+          <MetricList
+            metrics={metrics}
+            today={today}
+            participantsByTrackable={participantsByTrackable}
+            emptyMessage="No metrics yet — add weight, sleep, or exercise above."
+          />
         </section>
+
+        {(archivedHabits.length > 0 || archivedMetrics.length > 0) && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-sm font-semibold text-muted-foreground">
+              Archived
+            </h2>
+            {archivedHabits.length > 0 && (
+              <HabitList
+                habits={archivedHabits}
+                today={today}
+                participantsByTrackable={participantsByTrackable}
+                emptyMessage=""
+              />
+            )}
+            {archivedMetrics.length > 0 && (
+              <MetricList
+                metrics={archivedMetrics}
+                today={today}
+                participantsByTrackable={participantsByTrackable}
+                emptyMessage=""
+              />
+            )}
+          </section>
+        )}
       </main>
     </>
   );

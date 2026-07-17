@@ -1,25 +1,17 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
-import { resolveIcon } from "@/lib/icon";
-import {
-  deleteTrackableAction,
-  logDayAction,
-} from "@/modules/habits/actions";
+import { logDayAction } from "@/modules/habits/actions";
+import { EditTrackableForm } from "@/modules/habits/components/edit-trackable-form";
+import { kindIcon } from "@/modules/habits/components/kind-icon";
+import { TrackableActions } from "@/modules/habits/components/trackable-actions";
 import type { TrackableKind } from "@/modules/habits/lib/kinds";
 import { TrendChart } from "@/modules/habits/components/trend-chart";
+import type { Database } from "@/types/database";
 
-// A plain (non-component) helper, so `resolveIcon`'s dynamic lookup doesn't
-// read as "component created during render" the way calling it directly
-// inside `MetricRow` would (react-hooks/static-components) — same pattern as
-// `toItem`/`toCandidate` in components/dashboard/dashboard.tsx.
-function kindIcon(kind: TrackableKind, className: string) {
-  const Icon = resolveIcon(kind.icon);
-  return <Icon className={className} aria-hidden />;
-}
+type Scope = Database["public"]["Enums"]["scope"];
 
 /**
  * One unscheduled metric row (docs/modules/habits.md §1, §4): a value input
@@ -30,26 +22,40 @@ export function MetricRow({
   id,
   title,
   kind,
+  scope,
+  participants,
   today,
   points,
+  archived,
 }: {
   id: string;
   title: string;
   kind: TrackableKind;
+  scope: Scope;
+  participants: string[];
   today: string;
   points: { date: string; value: number }[];
+  archived: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [editing, setEditing] = useState(false);
   const [date, setDate] = useState(today);
   const [value, setValue] = useState("");
+  const [note, setNote] = useState("");
 
   function submit() {
     const parsed = Number(value);
     if (value.trim() === "" || Number.isNaN(parsed)) return;
 
     startTransition(async () => {
-      await logDayAction({ trackableId: id, logDate: date, value: parsed });
+      await logDayAction({
+        trackableId: id,
+        logDate: date,
+        value: parsed,
+        note: note.trim() === "" ? null : note.trim(),
+      });
       setValue("");
+      setNote("");
     });
   }
 
@@ -60,23 +66,28 @@ export function MetricRow({
           {kindIcon(kind, "size-4 text-muted-foreground")}
           <p className="text-sm font-medium">{title}</p>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Delete"
-          disabled={isPending}
-          onClick={() => {
-            if (confirm(`Delete "${title}" and all its history?`)) {
-              startTransition(async () => {
-                await deleteTrackableAction(id);
-              });
-            }
-          }}
-        >
-          <Trash2 className="size-4" aria-hidden />
-        </Button>
+        <TrackableActions
+          id={id}
+          title={title}
+          archived={archived}
+          editing={editing}
+          onToggleEdit={() => setEditing((prev) => !prev)}
+        />
       </div>
+
+      {editing && (
+        <EditTrackableForm
+          id={id}
+          title={title}
+          scope={scope}
+          kind={kind}
+          cadenceType={null}
+          cadenceTarget={null}
+          cadenceWeekdays={null}
+          participants={participants}
+          onClose={() => setEditing(false)}
+        />
+      )}
 
       <TrendChart points={points} />
 
@@ -104,6 +115,14 @@ export function MetricRow({
           placeholder={kind.unit ? `Value (${kind.unit})` : "Value"}
           className="h-8 w-28 rounded-lg border border-border bg-background px-2 text-sm"
           aria-label={`Value for ${title} entry`}
+        />
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Note (optional)"
+          className="h-8 min-w-32 flex-1 rounded-lg border border-border bg-background px-2 text-sm"
+          aria-label={`Note for ${title} entry`}
         />
         <Button type="submit" size="sm" disabled={isPending}>
           Log
