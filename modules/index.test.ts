@@ -7,6 +7,10 @@ describe("module registry", () => {
     expect(Array.isArray(modules)).toBe(true);
   });
 
+  it("registers the lists module", () => {
+    expect(modules.map((mod) => mod.slug)).toContain("lists");
+  });
+
   it("registers the darts module", () => {
     const darts = modules.find((mod) => mod.slug === "darts");
     expect(darts).toBeDefined();

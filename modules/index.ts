@@ -1,4 +1,5 @@
 import { dartsManifest } from "@/modules/darts/manifest";
+import { listsManifest } from "@/modules/lists/manifest";
 import type { ModuleManifest } from "@/platform/module-manifest";
 
 /**
@@ -7,4 +8,4 @@ import type { ModuleManifest } from "@/platform/module-manifest";
  * module folder (one-way imports, ADR-0003). Adding a module is adding its
  * folder under `modules/<slug>/` and one entry to this list.
  */
-export const modules: ModuleManifest[] = [dartsManifest];
+export const modules: ModuleManifest[] = [listsManifest, dartsManifest];
