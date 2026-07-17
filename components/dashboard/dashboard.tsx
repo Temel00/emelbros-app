@@ -10,14 +10,15 @@ import {
 } from "@/components/dashboard/pin-zone";
 import { resolveIcon } from "@/lib/icon";
 import { moveItem } from "@/lib/reorder";
+import type { ModuleManifest } from "@/platform/module-manifest";
 import { pinItem, reorderPins, unpinItem } from "@/platform/pins";
 
-export type DashboardModule = {
-  slug: string;
-  name: string;
-  description: string;
-  icon: string;
-};
+// The launcher only needs a module's identity, not its scopes/widgets —
+// Pick keeps this in sync with ModuleManifest (ADR-0001) as it grows.
+export type DashboardModule = Pick<
+  ModuleManifest,
+  "slug" | "name" | "description" | "icon"
+>;
 
 export type DashboardTile = {
   pinId: string;
