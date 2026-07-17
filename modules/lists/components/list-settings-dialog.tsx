@@ -19,15 +19,18 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { ACCENT_BG } from "@/lib/accent";
 import { cn } from "@/lib/utils";
+import { listKinds } from "@/modules/lists/kinds";
 import {
   addParticipantAction,
   archiveListAction,
+  changeListKindAction,
   changeListScopeAction,
   deleteListAction,
   removeParticipantAction,
   renameListAction,
   unarchiveListAction,
 } from "@/modules/lists/actions";
+import { SCOPE_OPTIONS } from "@/modules/lists/components/scope-options";
 
 import type {
   ListRow,
@@ -53,6 +56,7 @@ export function ListSettingsDialog({
 }) {
   const router = useRouter();
   const titleId = useId();
+  const kindId = useId();
   const scopeId = useId();
 
   const [open, setOpen] = useState(false);
@@ -70,6 +74,12 @@ export function ListSettingsDialog({
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
       }
+    });
+  }
+
+  function handleKindChange(kind: string) {
+    startTransition(async () => {
+      await changeListKindAction(list.id, kind);
     });
   }
 
@@ -136,6 +146,21 @@ export function ListSettingsDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
+            <Label htmlFor={kindId}>Kind</Label>
+            <Select
+              id={kindId}
+              value={list.kind}
+              onChange={(event) => handleKindChange(event.target.value)}
+            >
+              {listKinds().map((k) => (
+                <option key={k.key} value={k.key}>
+                  {k.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor={scopeId}>Scope</Label>
             <Select
               id={scopeId}
@@ -144,9 +169,11 @@ export function ListSettingsDialog({
                 handleScopeChange(event.target.value as Scope)
               }
             >
-              <option value="private">Private</option>
-              <option value="participants">Participants</option>
-              <option value="family">Family</option>
+              {SCOPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </Select>
           </div>
 

@@ -19,6 +19,7 @@ import {
   uncheckAllItems,
   updateItemPosition,
   updateItemText,
+  updateListKind,
   updateListScope,
   updateListTitle,
 } from "@/modules/lists/queries";
@@ -139,6 +140,18 @@ describe("updateListTitle", () => {
       expect.objectContaining({ title: "Renamed" }),
     );
     expect(chain.eq).toHaveBeenCalledWith("id", "l1");
+  });
+});
+
+describe("updateListKind", () => {
+  it("updates the kind", async () => {
+    const { client, update } = fakeSupabaseClient({ error: null });
+
+    await updateListKind(client, "l1", "notes");
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "notes" }),
+    );
   });
 });
 

@@ -95,6 +95,24 @@ export async function updateListTitle(
   if (error) throw error;
 }
 
+/**
+ * Changing a list's kind never migrates data (lists.md §8) — the base
+ * list/item model is shared across every kind, so this is a plain column
+ * update.
+ */
+export async function updateListKind(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  kind: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("lists_list")
+    .update({ kind, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
 export async function updateListScope(
   supabase: SupabaseClient<Database>,
   id: string,

@@ -19,6 +19,7 @@ import {
   uncheckAllItems,
   updateItemPosition,
   updateItemText,
+  updateListKind,
   updateListScope,
   updateListTitle,
   type Scope,
@@ -70,6 +71,14 @@ export async function renameListAction(listId: string, title: string) {
   const supabase = await createClient();
 
   await updateListTitle(supabase, listId, title.trim());
+  revalidateList(listId);
+}
+
+export async function changeListKindAction(listId: string, kind: string) {
+  await requireMember();
+  const supabase = await createClient();
+
+  await updateListKind(supabase, listId, kind);
   revalidateList(listId);
 }
 
@@ -131,7 +140,7 @@ export async function addItemAction(listId: string, text: string) {
   const supabase = await createClient();
 
   const items = await getListItems(supabase, listId);
-  const position = items.length;
+  const position = items.filter((item) => !item.checked).length;
 
   await insertItem(supabase, { listId, text: text.trim(), position });
   revalidateList(listId);
@@ -151,6 +160,12 @@ export async function updateItemTextAction(
   revalidateList(listId);
 }
 
+/**
+ * Unchecking moves an item back into the active group (lists.md §3), so it
+ * also gets a fresh `position` at the end of the active items — otherwise it
+ * would keep whatever stale position it had from before it was last checked,
+ * which can collide with an active item's current position.
+ */
 export async function toggleItemCheckedAction(
   listId: string,
   itemId: string,
@@ -159,7 +174,17 @@ export async function toggleItemCheckedAction(
   await requireMember();
   const supabase = await createClient();
 
-  await setItemChecked(supabase, itemId, checked);
+  if (checked) {
+    await setItemChecked(supabase, itemId, true);
+  } else {
+    const items = await getListItems(supabase, listId);
+    const activeCount = items.filter(
+      (item) => !item.checked && item.id !== itemId,
+    ).length;
+
+    await setItemChecked(supabase, itemId, false);
+    await updateItemPosition(supabase, itemId, activeCount);
+  }
   revalidateList(listId);
 }
 

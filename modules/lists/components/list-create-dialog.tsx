@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { listKinds } from "@/modules/lists/kinds";
 import { createListAction } from "@/modules/lists/actions";
+import { SCOPE_OPTIONS } from "@/modules/lists/components/scope-options";
 
 import type { Scope } from "@/modules/lists/queries";
 
@@ -107,9 +108,11 @@ export function ListCreateDialog() {
               value={scope}
               onChange={(event) => setScope(event.target.value as Scope)}
             >
-              <option value="private">Private</option>
-              <option value="participants">Participants</option>
-              <option value="family">Family</option>
+              {SCOPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </Select>
           </div>
 

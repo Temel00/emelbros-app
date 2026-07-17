@@ -5,6 +5,7 @@ const revalidatePath = vi.fn();
 
 const insertList = vi.fn();
 const updateListTitle = vi.fn();
+const updateListKind = vi.fn();
 const updateListScope = vi.fn();
 const setListArchived = vi.fn();
 const deleteList = vi.fn();
@@ -27,6 +28,7 @@ vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("@/modules/lists/queries", () => ({
   insertList,
   updateListTitle,
+  updateListKind,
   updateListScope,
   setListArchived,
   deleteList,
@@ -46,6 +48,7 @@ const {
   addItemAction,
   addParticipantAction,
   archiveListAction,
+  changeListKindAction,
   changeListScopeAction,
   clearCheckedAction,
   createListAction,
@@ -127,6 +130,16 @@ describe("renameListAction", () => {
   });
 });
 
+describe("changeListKindAction", () => {
+  it("updates the kind", async () => {
+    getCurrentMember.mockResolvedValueOnce(MEMBER);
+
+    await changeListKindAction("l1", "notes");
+
+    expect(updateListKind).toHaveBeenCalledWith({}, "l1", "notes");
+  });
+});
+
 describe("changeListScopeAction", () => {
   it("updates the scope", async () => {
     getCurrentMember.mockResolvedValueOnce(MEMBER);
@@ -185,15 +198,33 @@ describe("addParticipantAction / removeParticipantAction", () => {
 });
 
 describe("addItemAction", () => {
-  it("appends the new item after existing items", async () => {
+  it("appends the new item after existing active items", async () => {
     getCurrentMember.mockResolvedValueOnce(MEMBER);
-    getListItems.mockResolvedValueOnce([{ id: "i1" }, { id: "i2" }]);
+    getListItems.mockResolvedValueOnce([
+      { id: "i1", checked: false },
+      { id: "i2", checked: false },
+    ]);
 
     await addItemAction("l1", "Milk");
 
     expect(insertItem).toHaveBeenCalledWith(
       {},
       { listId: "l1", text: "Milk", position: 2 },
+    );
+  });
+
+  it("counts only active items toward the new item's position", async () => {
+    getCurrentMember.mockResolvedValueOnce(MEMBER);
+    getListItems.mockResolvedValueOnce([
+      { id: "i1", checked: false },
+      { id: "i2", checked: true },
+    ]);
+
+    await addItemAction("l1", "Milk");
+
+    expect(insertItem).toHaveBeenCalledWith(
+      {},
+      { listId: "l1", text: "Milk", position: 1 },
     );
   });
 
@@ -216,12 +247,27 @@ describe("updateItemTextAction", () => {
 });
 
 describe("toggleItemCheckedAction", () => {
-  it("sets the checked flag", async () => {
+  it("checks an item without touching its position", async () => {
     getCurrentMember.mockResolvedValueOnce(MEMBER);
 
     await toggleItemCheckedAction("l1", "i1", true);
 
     expect(setItemChecked).toHaveBeenCalledWith({}, "i1", true);
+    expect(updateItemPosition).not.toHaveBeenCalled();
+  });
+
+  it("unchecking places the item at the end of the active items", async () => {
+    getCurrentMember.mockResolvedValueOnce(MEMBER);
+    getListItems.mockResolvedValueOnce([
+      { id: "i1", checked: true },
+      { id: "i2", checked: false },
+      { id: "i3", checked: false },
+    ]);
+
+    await toggleItemCheckedAction("l1", "i1", false);
+
+    expect(setItemChecked).toHaveBeenCalledWith({}, "i1", false);
+    expect(updateItemPosition).toHaveBeenCalledWith({}, "i1", 2);
   });
 });
 
