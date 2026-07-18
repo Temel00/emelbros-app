@@ -318,7 +318,11 @@ export function summarizeMyDarts(
     : null;
 
   return {
-    recent: { wins, losses: recentGames.length - wins, played: recentGames.length },
+    recent: {
+      wins,
+      losses: recentGames.length - wins,
+      played: recentGames.length,
+    },
     mostRecent,
   };
 }

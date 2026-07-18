@@ -34,9 +34,7 @@ export function WidgetFrame({ children }: { children: ReactNode }) {
         }
       >
         <Suspense
-          fallback={
-            <div className="h-16 animate-pulse rounded-md bg-muted" />
-          }
+          fallback={<div className="h-16 animate-pulse rounded-md bg-muted" />}
         >
           {children}
         </Suspense>

@@ -305,11 +305,29 @@ describe("assembleCompletedGames", () => {
       },
     ];
     const participants = [
-      { id: "p1", game_id: "game1", member_id: "alice", guest_name: null, slot: 1 },
-      { id: "p2", game_id: "game1", member_id: "bob", guest_name: null, slot: 2 },
+      {
+        id: "p1",
+        game_id: "game1",
+        member_id: "alice",
+        guest_name: null,
+        slot: 1,
+      },
+      {
+        id: "p2",
+        game_id: "game1",
+        member_id: "bob",
+        guest_name: null,
+        slot: 2,
+      },
     ];
     const turns = [
-      { id: "t1", game_id: "game1", participant_id: "p1", turn_number: 1, busted: false },
+      {
+        id: "t1",
+        game_id: "game1",
+        participant_id: "p1",
+        turn_number: 1,
+        busted: false,
+      },
     ];
     const darts = [
       { turn_id: "t1", dart_number: 2, segment: 20, multiple: 2 },
