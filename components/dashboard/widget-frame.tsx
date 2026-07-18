@@ -8,9 +8,14 @@ import { WidgetErrorBoundary } from "@/components/dashboard/widget-error-boundar
  * up the dashboard, and an error boundary so a crashed one doesn't break the
  * page. The widget itself takes zero props and fetches its own data.
  *
+ * The name comes from the module manifest, so a pinned widget's heading and
+ * its entry in the At-a-glance Add list can't drift apart — widgets render
+ * only their body, never their own title.
+ *
  * The card surface (border, background, padding) comes from the `PinZone`
  * card this is rendered into — the frame owns only what is widget-specific,
- * so pinned widgets and pinned app tiles share one chrome.
+ * so pinned widgets and pinned app tiles share one chrome. Only the error
+ * boundary needs to be a client component, so the frame itself stays server.
  */
 export function WidgetFrame({
   name,

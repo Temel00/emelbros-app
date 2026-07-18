@@ -43,7 +43,8 @@ export default async function Home() {
   // Widgets are Server Components: render each one here, inside the platform
   // frame that owns its Suspense/error boundary (ADR-0005), and hand the
   // result to the client Dashboard as an opaque node — a rendered node can
-  // cross that boundary where the component itself cannot.
+  // cross that boundary where the component itself cannot. `platform/widgets`
+  // does the pin/manifest resolution, so this route stays thin glue.
   const widgetPins = resolveWidgetPins(modules, pins).map(
     ({ component: Widget, ...pin }) => ({
       ...pin,

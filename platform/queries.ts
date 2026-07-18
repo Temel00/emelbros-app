@@ -7,6 +7,12 @@ type Pin = Database["public"]["Tables"]["pins"]["Row"];
 /**
  * Sample of the `queries.ts` convention (ADR-0009): unwrap `{ data, error }`
  * and throw on `error`, so call sites never branch on Supabase's error shape.
+ *
+ * Returns `null` rather than throwing when the member has no profile row —
+ * `.maybeSingle()`, not `.single()`. A valid JWT whose member row no longer
+ * exists (e.g. after a local `supabase db reset`) is a recoverable stale
+ * session, not a query failure: callers treat `null` as "re-authenticate"
+ * (see `AppHeader`), so it must not surface as a thrown "no rows" error.
  */
 export async function getProfile(
   supabase: SupabaseClient<Database>,
@@ -16,7 +22,7 @@ export async function getProfile(
     .from("profiles")
     .select("*")
     .eq("id", memberId)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
   return data;

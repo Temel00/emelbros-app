@@ -160,6 +160,37 @@ describe("lists RLS", () => {
     expect(checked?.checked).toBe(true);
   });
 
+  it("bumps the parent list's updated_at on a non-owner's item write", async () => {
+    // "Most-recently-active first" (lists.md §6): item activity — even by a
+    // non-owner collaborator — must resurface the list, despite lists_list
+    // UPDATE being owner-only. The security-definer touch trigger is what
+    // makes that write land.
+    const list = await createList("family", "Active shopping list");
+
+    const { data: before } = await service
+      .from("lists_list")
+      .select("updated_at")
+      .eq("id", list.id)
+      .single();
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const { error: insertError } = await outsider.client
+      .from("lists_item")
+      .insert({ list_id: list.id, text: "Bread", position: 0 });
+    expect(insertError).toBeNull();
+
+    const { data: after } = await service
+      .from("lists_list")
+      .select("updated_at")
+      .eq("id", list.id)
+      .single();
+
+    expect(new Date(after!.updated_at).getTime()).toBeGreaterThan(
+      new Date(before!.updated_at).getTime(),
+    );
+  });
+
   it("hides items belonging to a private list from a non-owner", async () => {
     const list = await createList("private", "Private with items");
     await owner.client

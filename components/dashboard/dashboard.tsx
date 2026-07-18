@@ -29,12 +29,16 @@ export type DashboardTile = {
  * A widget offered by some module's manifest. A widget's pin identity is the
  * pair `(module, widget)` (ADR-0002), since widget ids are only unique within
  * a module — hence both fields travel together everywhere below.
+ *
+ * Structurally this is `platform/widgets`' `WidgetRef`, restated here so the
+ * client dashboard doesn't import server-side platform code.
  */
 export type DashboardWidget = {
   moduleSlug: string;
   widgetId: string;
   name: string;
   description: string;
+  moduleIcon: string;
 };
 
 /**
@@ -83,7 +87,13 @@ function toWidgetItem(pin: DashboardWidgetPin): PinZoneItem {
 }
 
 function toWidgetCandidate(widget: DashboardWidget): PinZoneCandidate {
-  return { key: widgetKey(widget), label: widget.name, icon: null };
+  // A widget has no icon of its own, so the Add list borrows its module's.
+  const Icon = resolveIcon(widget.moduleIcon);
+  return {
+    key: widgetKey(widget),
+    label: widget.name,
+    icon: <Icon className="size-6" aria-hidden />,
+  };
 }
 
 /**
@@ -119,6 +129,8 @@ export function Dashboard({
     setTileOrder(tiles);
   }
 
+  // Same adopt-on-revalidate pattern for the widget zone. The nodes are fresh
+  // server-rendered elements each request, so this also refreshes widget data.
   const [prevWidgets, setPrevWidgets] = useState(widgetPins);
   if (widgetPins !== prevWidgets) {
     setPrevWidgets(widgetPins);
