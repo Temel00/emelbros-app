@@ -25,6 +25,7 @@ function fakeSupabaseClient(result: { data?: unknown; error: unknown }) {
   chain.is = vi.fn(() => chain);
   chain.order = vi.fn(() => chain);
   chain.single = vi.fn(() => chain);
+  chain.maybeSingle = vi.fn(() => chain);
 
   const select = vi.fn(() => chain);
   const insert = vi.fn(() => chain);
@@ -48,6 +49,14 @@ describe("getProfile", () => {
     const { client } = fakeSupabaseClient({ data: profile, error: null });
 
     await expect(getProfile(client, "member-1")).resolves.toEqual(profile);
+  });
+
+  it("returns null when the member has no profile row", async () => {
+    // `.maybeSingle()` yields `{ data: null, error: null }` for zero rows — a
+    // stale session (valid JWT, member row wiped), not a query failure.
+    const { client } = fakeSupabaseClient({ data: null, error: null });
+
+    await expect(getProfile(client, "member-1")).resolves.toBeNull();
   });
 
   it("throws on a forced error", async () => {
