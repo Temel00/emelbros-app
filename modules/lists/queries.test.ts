@@ -22,6 +22,7 @@ import {
   updateListKind,
   updateListScope,
   updateListTitle,
+  getMyLists,
 } from "@/modules/lists/queries";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -40,6 +41,7 @@ function fakeSupabaseClient(result: { data?: unknown; error: unknown }) {
   chain.not = vi.fn(() => chain);
   chain.is = vi.fn(() => chain);
   chain.order = vi.fn(() => chain);
+  chain.limit = vi.fn(() => chain);
   chain.single = vi.fn(() => chain);
   chain.maybeSingle = vi.fn(() => chain);
   chain.select = vi.fn(() => chain);
@@ -79,6 +81,54 @@ describe("getVisibleLists", () => {
     });
 
     await expect(getVisibleLists(client)).rejects.toThrow("forced failure");
+  });
+});
+
+describe("getMyLists", () => {
+  it("returns non-archived lists newest-first, capped, with unchecked counts", async () => {
+    const rows = [
+      {
+        id: "l1",
+        title: "Groceries",
+        lists_item: [{ checked: false }, { checked: true }, { checked: false }],
+      },
+      {
+        id: "l2",
+        title: "Chores",
+        lists_item: [],
+      },
+    ];
+    const { client, chain } = fakeSupabaseClient({ data: rows, error: null });
+
+    const result = await getMyLists(client, 5);
+
+    expect(chain.is).toHaveBeenCalledWith("archived_at", null);
+    expect(chain.order).toHaveBeenCalledWith("updated_at", {
+      ascending: false,
+    });
+    expect(chain.limit).toHaveBeenCalledWith(5);
+    // The embedded `lists_item` rows are stripped off the returned list.
+    expect(result).toEqual([
+      { list: { id: "l1", title: "Groceries" }, uncheckedCount: 2 },
+      { list: { id: "l2", title: "Chores" }, uncheckedCount: 0 },
+    ]);
+  });
+
+  it("defaults to a cap of five lists", async () => {
+    const { client, chain } = fakeSupabaseClient({ data: [], error: null });
+
+    await getMyLists(client);
+
+    expect(chain.limit).toHaveBeenCalledWith(5);
+  });
+
+  it("throws on a forced error", async () => {
+    const { client } = fakeSupabaseClient({
+      data: null,
+      error: new Error("forced failure"),
+    });
+
+    await expect(getMyLists(client)).rejects.toThrow("forced failure");
   });
 });
 

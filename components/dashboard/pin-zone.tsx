@@ -14,6 +14,9 @@ export type PinZoneItem = {
   description?: string;
   icon: ReactNode;
   href?: string;
+  // A widget item carries its own rendered card (a `WidgetFrame`); when set,
+  // it replaces the icon/label tile chrome and the frame is the card itself.
+  content?: ReactNode;
 };
 
 export type PinZoneCandidate = {
@@ -124,6 +127,48 @@ function PinCard({
   onMoveDown: () => void;
   onUnpin: () => void;
 }) {
+  const controls = editing && (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label="Move up"
+        disabled={!canMoveUp}
+        onClick={onMoveUp}
+      >
+        <ChevronUp />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label="Move down"
+        disabled={!canMoveDown}
+        onClick={onMoveDown}
+      >
+        <ChevronDown />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label={`Unpin ${item.label}`}
+        onClick={onUnpin}
+      >
+        <X />
+      </Button>
+    </div>
+  );
+
+  // A widget item brings its own card (the `WidgetFrame`); render it as-is and
+  // hang the edit controls beneath it, rather than wrapping it in tile chrome.
+  if (item.content) {
+    return (
+      <div className="flex flex-col gap-2">
+        {item.content}
+        {editing && <div className="flex justify-end">{controls}</div>}
+      </div>
+    );
+  }
+
   const content = (
     <div className="flex flex-1 flex-col items-center gap-2 text-center">
       {item.icon}
@@ -151,36 +196,7 @@ function PinCard({
         content
       )}
 
-      {editing && (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Move up"
-            disabled={!canMoveUp}
-            onClick={onMoveUp}
-          >
-            <ChevronUp />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Move down"
-            disabled={!canMoveDown}
-            onClick={onMoveDown}
-          >
-            <ChevronDown />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label={`Unpin ${item.label}`}
-            onClick={onUnpin}
-          >
-            <X />
-          </Button>
-        </div>
-      )}
+      {controls}
     </div>
   );
 }

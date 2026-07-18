@@ -35,6 +35,40 @@ export async function getVisibleLists(
   return data;
 }
 
+/** A visible list paired with how many of its items are still unchecked. */
+export type MyListSummary = { list: ListRow; uncheckedCount: number };
+
+/**
+ * The "My Lists" widget's data (lists.md §6): the member's visible,
+ * non-archived lists, most-recently-active first, capped at ~5, each with its
+ * count of still-unchecked items. RLS already filters to visible lists; the
+ * embedded `lists_item` rows ride that same list visibility, so a single round
+ * trip yields both the lists and the counts.
+ */
+export async function getMyLists(
+  supabase: SupabaseClient<Database>,
+  limit = 5,
+): Promise<MyListSummary[]> {
+  const { data, error } = await supabase
+    .from("lists_list")
+    .select("*, lists_item(checked)")
+    .is("archived_at", null)
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return data.map((row) => {
+    const { lists_item, ...list } = row as ListRow & {
+      lists_item: { checked: boolean }[];
+    };
+    return {
+      list: list as ListRow,
+      uncheckedCount: lists_item.filter((item) => !item.checked).length,
+    };
+  });
+}
+
 /** Archived lists (lists.md §3) — kept recoverable, so a view must exist. */
 export async function getArchivedLists(
   supabase: SupabaseClient<Database>,

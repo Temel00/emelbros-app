@@ -1,10 +1,67 @@
+import Link from "next/link";
+
+import { resolveIcon } from "@/lib/icon";
+import { createClient } from "@/platform/supabase/server";
+import { getListKind } from "@/modules/lists/kinds";
+import { listCountLabel } from "@/modules/lists/lib/count-label";
+import { getMyLists, type MyListSummary } from "@/modules/lists/queries";
+
+// A plain helper, not a component — mirrors `lists-home.tsx`'s `kindIcon`:
+// resolving a manifest icon name to an element inside a component's render
+// body trips `react-hooks/static-components`.
+function kindIcon(iconName: string) {
+  const Icon = resolveIcon(iconName);
+  return <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden />;
+}
+
 /**
- * "My Lists" widget (lists.md §6, ADR-0005). This ticket (#34) only declares
- * the widget on the manifest; real data-fetching needs the lists query layer
- * (#35) and lands with the widget ticket (#36).
+ * The "My Lists" widget (lists.md §6, ADR-0005): a zero-prop React Server
+ * Component about the current member. It fetches its own data — the member's
+ * visible, non-archived lists, newest-first and capped at five — via the
+ * module's `queries.ts`; RLS is what scopes the rows, so no member id is
+ * passed. The platform widget frame owns the card chrome around it.
  */
-export function MyListsWidget() {
+export async function MyListsWidget() {
+  const supabase = await createClient();
+  const lists = await getMyLists(supabase);
+
   return (
-    <p className="text-sm text-muted-foreground">My Lists — coming soon.</p>
+    <div className="flex flex-col gap-3">
+      <p className="text-sm font-bold text-muted-foreground">My Lists</p>
+
+      {lists.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No lists yet — open Lists to create one.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {lists.map((summary) => (
+            <MyListsRow key={summary.list.id} summary={summary} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function MyListsRow({ summary }: { summary: MyListSummary }) {
+  const { list, uncheckedCount } = summary;
+  const kind = getListKind(list.kind);
+
+  return (
+    <li>
+      <Link
+        href={`/lists/${list.id}`}
+        className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted"
+      >
+        {kindIcon(kind.icon)}
+        <span className="flex-1 truncate text-sm font-medium">
+          {list.title}
+        </span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {listCountLabel(kind, uncheckedCount)}
+        </span>
+      </Link>
+    </li>
   );
 }
