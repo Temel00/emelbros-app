@@ -12,13 +12,10 @@ export type PinZoneItem = {
   key: string;
   label: string;
   description?: string;
-  icon?: ReactNode;
+  icon: ReactNode;
   href?: string;
-  /**
-   * Pre-rendered card body (a widget's frame + content, ADR-0005). When set,
-   * it replaces the icon/label layout and the edit controls overlay it, so a
-   * widget owns its own chrome while still being reorderable/unpinnable.
-   */
+  // A widget item carries its own rendered card (a `WidgetFrame`); when set,
+  // it replaces the icon/label tile chrome and the frame is the card itself.
   content?: ReactNode;
 };
 
@@ -130,7 +127,7 @@ function PinCard({
   onMoveDown: () => void;
   onUnpin: () => void;
 }) {
-  const controls = (
+  const controls = editing && (
     <div className="flex items-center gap-1">
       <Button
         variant="ghost"
@@ -161,17 +158,13 @@ function PinCard({
     </div>
   );
 
-  // A widget brings its own card frame (ADR-0005), so it isn't wrapped in the
-  // launcher-tile chrome; the edit controls overlay its top-right corner.
+  // A widget item brings its own card (the `WidgetFrame`); render it as-is and
+  // hang the edit controls beneath it, rather than wrapping it in tile chrome.
   if (item.content) {
     return (
-      <div className="relative">
+      <div className="flex flex-col gap-2">
         {item.content}
-        {editing && (
-          <div className="absolute top-2 right-2 rounded-md border border-border bg-card">
-            {controls}
-          </div>
-        )}
+        {editing && <div className="flex justify-end">{controls}</div>}
       </div>
     );
   }
@@ -203,7 +196,7 @@ function PinCard({
         content
       )}
 
-      {editing && controls}
+      {controls}
     </div>
   );
 }

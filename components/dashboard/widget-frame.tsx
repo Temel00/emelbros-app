@@ -3,13 +3,14 @@
 import { Component, Suspense, type ReactNode } from "react";
 
 /**
- * The platform frame every dashboard widget renders inside (ADR-0005): it
- * owns the card chrome, a Suspense boundary, and an error boundary, so one
- * slow or crashing widget never takes down the dashboard. Widgets themselves
- * are zero-prop Server Components and know nothing about this frame.
+ * The platform frame every dashboard widget renders inside (ADR-0005): it owns
+ * the card chrome, a Suspense boundary, and an error boundary, so one slow or
+ * crashed widget degrades to a small message rather than breaking the whole
+ * At-a-glance zone. Widgets themselves stay zero-prop RSCs that know nothing
+ * of this wrapper.
  */
 class WidgetErrorBoundary extends Component<
-  { fallback: ReactNode; children: ReactNode },
+  { children: ReactNode },
   { hasError: boolean }
 > {
   state = { hasError: false };
@@ -19,22 +20,23 @@ class WidgetErrorBoundary extends Component<
   }
 
   render() {
-    return this.state.hasError ? this.props.fallback : this.props.children;
+    if (this.state.hasError) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          This widget couldn&apos;t load.
+        </p>
+      );
+    }
+    return this.props.children;
   }
 }
 
 export function WidgetFrame({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <WidgetErrorBoundary
-        fallback={
-          <p className="text-sm text-muted-foreground">
-            This widget couldn’t load.
-          </p>
-        }
-      >
+      <WidgetErrorBoundary>
         <Suspense
-          fallback={<div className="h-16 animate-pulse rounded-md bg-muted" />}
+          fallback={<p className="text-sm text-muted-foreground">Loading…</p>}
         >
           {children}
         </Suspense>

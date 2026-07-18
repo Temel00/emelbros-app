@@ -2,11 +2,11 @@ import { AppHeader } from "@/components/app-header";
 import {
   Dashboard,
   type DashboardTile,
-  type DashboardWidget,
-  type DashboardWidgetCandidate,
+  type DashboardWidgetTile,
 } from "@/components/dashboard/dashboard";
 import { WidgetFrame } from "@/components/dashboard/widget-frame";
 import { modules } from "@/modules";
+import { resolveIcon } from "@/lib/icon";
 import { getCurrentMember } from "@/platform/auth";
 import { getPins } from "@/platform/queries";
 import { createClient } from "@/platform/supabase/server";
@@ -17,6 +17,15 @@ import { createClient } from "@/platform/supabase/server";
 function toDashboardModule(mod: (typeof modules)[number]) {
   const { slug, name, description, icon } = mod;
   return { slug, name, description, icon };
+}
+
+// Every (module, widget) pair the platform knows about — the pool the
+// At-a-glance zone pins from. Rendering each widget stays on the server: only
+// the resulting node crosses into the client `Dashboard`.
+function allWidgets() {
+  return modules.flatMap((mod) =>
+    mod.widgets.map((widget) => ({ mod, widget })),
+  );
 }
 
 export default async function Home() {
@@ -42,11 +51,10 @@ export default async function Home() {
     .filter((mod) => !pinnedSlugs.has(mod.slug))
     .map(toDashboardModule);
 
-  // Widgets are zero-prop RSCs (ADR-0005): render each inside the platform
-  // frame here on the server and pass the elements to the client dashboard,
-  // which reorders/unpins them but never touches their data.
-  const widgets = widgetPins
-    .map((pin): DashboardWidget | null => {
+  // Resolve each widget pin to its manifest widget and render its RSC inside
+  // the platform frame; the client `Dashboard` only reorders these nodes.
+  const widgetTiles = widgetPins
+    .map((pin): DashboardWidgetTile | null => {
       const mod = modules.find((candidate) => candidate.slug === pin.module);
       const widget = mod?.widgets.find((w) => w.id === pin.widget);
       if (!mod || !widget) return null;
@@ -56,28 +64,29 @@ export default async function Home() {
         module: mod.slug,
         widget: widget.id,
         label: widget.name,
-        content: (
+        node: (
           <WidgetFrame>
             <Widget />
           </WidgetFrame>
         ),
       };
     })
-    .filter((widget): widget is DashboardWidget => widget !== null);
+    .filter((tile): tile is DashboardWidgetTile => tile !== null);
 
   const pinnedWidgetKeys = new Set(
     widgetPins.map((pin) => `${pin.module}:${pin.widget}`),
   );
-  const availableWidgets: DashboardWidgetCandidate[] = modules.flatMap((mod) =>
-    mod.widgets
-      .filter((widget) => !pinnedWidgetKeys.has(`${mod.slug}:${widget.id}`))
-      .map((widget) => ({
+  const availableWidgets = allWidgets()
+    .filter(({ mod, widget }) => !pinnedWidgetKeys.has(`${mod.slug}:${widget.id}`))
+    .map(({ mod, widget }) => {
+      const Icon = resolveIcon(mod.icon);
+      return {
         module: mod.slug,
         widget: widget.id,
         label: widget.name,
-        icon: mod.icon,
-      })),
-  );
+        icon: <Icon className="size-6" aria-hidden />,
+      };
+    });
 
   return (
     <>
@@ -85,7 +94,7 @@ export default async function Home() {
       <Dashboard
         tiles={tiles}
         availableModules={availableModules}
-        widgets={widgets}
+        widgetTiles={widgetTiles}
         availableWidgets={availableWidgets}
       />
     </>

@@ -1,7 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,25 +25,23 @@ export type DashboardTile = {
   module: DashboardModule;
 };
 
-/**
- * A pinned widget, its RSC output already rendered server-side (widgets can't
- * cross the client boundary as components — ADR-0005 — so the page renders
- * them and passes the elements down). `module`/`widget` are the pin identity.
- */
-export type DashboardWidget = {
+// A pinned widget: the module/widget it belongs to (for pin persistence) plus
+// its already-rendered node — a `WidgetFrame`-wrapped RSC handed down from the
+// server page, which the client dashboard only reorders, never introspects.
+export type DashboardWidgetTile = {
   pinId: string;
   module: string;
   widget: string;
   label: string;
-  content: ReactNode;
+  node: ReactNode;
 };
 
-/** An unpinned widget the At-a-glance zone offers in the Add list. */
+// An unpinned widget offered in the At-a-glance zone's Add list.
 export type DashboardWidgetCandidate = {
   module: string;
   widget: string;
   label: string;
-  icon: string;
+  icon: ReactNode;
 };
 
 function widgetKey(w: { module: string; widget: string }): string {
@@ -72,52 +69,31 @@ function toCandidate(mod: DashboardModule): PinZoneCandidate {
   };
 }
 
-function toWidgetItem(widget: DashboardWidget): PinZoneItem {
-  return {
-    pinId: widget.pinId,
-    key: widgetKey(widget),
-    label: widget.label,
-    content: widget.content,
-  };
-}
-
-function toWidgetCandidate(
-  candidate: DashboardWidgetCandidate,
-): PinZoneCandidate {
-  const Icon = resolveIcon(candidate.icon);
-  return {
-    key: widgetKey(candidate),
-    label: candidate.label,
-    icon: <Icon className="size-6" aria-hidden />,
-  };
-}
-
 /**
- * The signed-in dashboard (#27): an Apps grid + an At-a-glance widget stack,
- * each independently ordered (ADR-0002, prototype #8). Both zones share the
- * pin/reorder/unpin plumbing via `PinZone`; only their layout and item content
- * differ. Widgets arrive already rendered from the server (ADR-0005) — the
- * dashboard reorders and pins them but never fetches their data.
+ * The signed-in dashboard (#27): Apps grid + At-a-glance widget stack, each
+ * independently ordered (ADR-0002, prototype #8). Both zones share the
+ * reorder/pin plumbing via `PinZone`; they differ only in what a card holds —
+ * a launcher tile in Apps, a `WidgetFrame`-wrapped RSC in At-a-glance.
  */
 export function Dashboard({
   tiles,
   availableModules,
-  widgets,
+  widgetTiles,
   availableWidgets,
 }: {
   tiles: DashboardTile[];
   availableModules: DashboardModule[];
-  widgets: DashboardWidget[];
+  widgetTiles: DashboardWidgetTile[];
   availableWidgets: DashboardWidgetCandidate[];
 }) {
   const [editing, setEditing] = useState(false);
   const [tileOrder, setTileOrder] = useState(tiles);
-  const [widgetOrder, setWidgetOrder] = useState(widgets);
+  const [widgetOrder, setWidgetOrder] = useState(widgetTiles);
   const [, startTransition] = useTransition();
 
-  // `tiles`/`widgets` only get new references when the server re-fetches pins
-  // after a mutation revalidates the page — adopt them then, computed during
-  // render rather than a post-commit effect (React's "adjusting state on prop
+  // `tiles` only gets a new reference when the server re-fetches pins after
+  // a mutation revalidates the page — adopt it then, computed during render
+  // rather than a post-commit effect (React's "adjusting state on prop
   // change" pattern) so there's no extra render with stale order.
   const [prevTiles, setPrevTiles] = useState(tiles);
   if (tiles !== prevTiles) {
@@ -125,10 +101,12 @@ export function Dashboard({
     setTileOrder(tiles);
   }
 
-  const [prevWidgets, setPrevWidgets] = useState(widgets);
-  if (widgets !== prevWidgets) {
-    setPrevWidgets(widgets);
-    setWidgetOrder(widgets);
+  // Same adopt-on-revalidate pattern for the widget zone. The nodes are fresh
+  // server-rendered elements each request, so this also refreshes widget data.
+  const [prevWidgetTiles, setPrevWidgetTiles] = useState(widgetTiles);
+  if (widgetTiles !== prevWidgetTiles) {
+    setPrevWidgetTiles(widgetTiles);
+    setWidgetOrder(widgetTiles);
   }
 
   function handleMove(index: number, direction: "up" | "down") {
@@ -156,16 +134,16 @@ export function Dashboard({
     const next = moveItem(widgetOrder, index, direction);
     setWidgetOrder(next);
     startTransition(async () => {
-      await reorderPins(next.map((widget) => widget.pinId));
+      await reorderPins(next.map((tile) => tile.pinId));
     });
   }
 
   function handleWidgetUnpin(item: PinZoneItem) {
-    const widget = widgetOrder.find((w) => w.pinId === item.pinId);
-    if (!widget) return;
+    const tile = widgetOrder.find((w) => w.pinId === item.pinId);
+    if (!tile) return;
     setWidgetOrder((prev) => prev.filter((w) => w.pinId !== item.pinId));
     startTransition(async () => {
-      await unpinItem(widget.module, widget.widget);
+      await unpinItem(tile.module, tile.widget);
     });
   }
 
@@ -207,8 +185,18 @@ export function Dashboard({
         title="At a glance"
         layout="stack"
         editing={editing}
-        items={widgetOrder.map(toWidgetItem)}
-        candidates={availableWidgets.map(toWidgetCandidate)}
+        items={widgetOrder.map((tile) => ({
+          pinId: tile.pinId,
+          key: widgetKey(tile),
+          label: tile.label,
+          icon: null,
+          content: tile.node,
+        }))}
+        candidates={availableWidgets.map((widget) => ({
+          key: widgetKey(widget),
+          label: widget.label,
+          icon: widget.icon,
+        }))}
         emptyMessage="No widgets yet — pin one from a module to see it here."
         onMove={handleWidgetMove}
         onUnpin={handleWidgetUnpin}
