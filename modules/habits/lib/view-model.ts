@@ -99,6 +99,45 @@ export function buildHabitViewModels(
     .filter((h): h is HabitViewModel => h !== null);
 }
 
+export type HabitsWidgetSummary = {
+  /** Habits scheduled for today that are already logged done. */
+  doneToday: number;
+  /** Habits scheduled for today at all — the "of N" in "2 of 4 done today". */
+  scheduledToday: number;
+  topStreaks: { title: string; streak: number }[];
+};
+
+/**
+ * The dashboard widget's read-only summary (docs/modules/habits.md §7):
+ * today's progress as a count plus the top current streaks, highest first.
+ *
+ * "Scheduled today" is `due || todayDone` rather than every habit the member
+ * owns — a `weekdays` habit that doesn't fall on today, or a `weekly` one
+ * whose target is already met, isn't part of today's count.
+ */
+export function buildHabitsWidgetSummary(
+  habits: HabitViewModel[],
+  { topStreakCount = 3 }: { topStreakCount?: number } = {},
+): HabitsWidgetSummary {
+  const todayHabits = habits.filter((h) => h.due || h.todayDone);
+
+  const topStreaks = habits
+    .filter((h) => h.streak > 0)
+    .sort(
+      (a, b) =>
+        b.streak - a.streak ||
+        a.trackable.title.localeCompare(b.trackable.title),
+    )
+    .slice(0, topStreakCount)
+    .map((h) => ({ title: h.trackable.title, streak: h.streak }));
+
+  return {
+    doneToday: todayHabits.filter((h) => h.todayDone).length,
+    scheduledToday: todayHabits.length,
+    topStreaks,
+  };
+}
+
 export function buildMetricViewModels(
   trackables: TrackableRow[],
   logs: LogRow[],

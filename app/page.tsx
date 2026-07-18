@@ -3,10 +3,12 @@ import {
   Dashboard,
   type DashboardTile,
 } from "@/components/dashboard/dashboard";
+import { WidgetFrame } from "@/components/dashboard/widget-frame";
 import { modules } from "@/modules";
 import { getCurrentMember } from "@/platform/auth";
 import { getPins } from "@/platform/queries";
 import { createClient } from "@/platform/supabase/server";
+import { listAvailableWidgets, resolveWidgetPins } from "@/platform/widgets";
 
 // `ModuleManifest` carries a `component: ComponentType` field (widgets),
 // which can't cross the server/client boundary into the client-side
@@ -38,10 +40,30 @@ export default async function Home() {
     .filter((mod) => !pinnedSlugs.has(mod.slug))
     .map(toDashboardModule);
 
+  // Widgets are Server Components: render each one here, inside the platform
+  // frame that owns its Suspense/error boundary (ADR-0005), and hand the
+  // result to the client Dashboard as an opaque node — a rendered node can
+  // cross that boundary where the component itself cannot.
+  const widgetPins = resolveWidgetPins(modules, pins).map(
+    ({ component: Widget, ...pin }) => ({
+      ...pin,
+      content: (
+        <WidgetFrame name={pin.name}>
+          <Widget />
+        </WidgetFrame>
+      ),
+    }),
+  );
+
   return (
     <>
       <AppHeader memberId={member.id} supabase={supabase} />
-      <Dashboard tiles={tiles} availableModules={availableModules} />
+      <Dashboard
+        tiles={tiles}
+        availableModules={availableModules}
+        widgetPins={widgetPins}
+        availableWidgets={listAvailableWidgets(modules, pins)}
+      />
     </>
   );
 }

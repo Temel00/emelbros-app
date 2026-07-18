@@ -12,8 +12,14 @@ export type PinZoneItem = {
   key: string;
   label: string;
   description?: string;
-  icon: ReactNode;
+  icon?: ReactNode;
   href?: string;
+  /**
+   * Full card body, used by the At-a-glance zone: a widget renders its own
+   * content rather than the icon + label tile the Apps grid shows. When set,
+   * `icon`/`description`/`href` are ignored.
+   */
+  content?: ReactNode;
 };
 
 export type PinZoneCandidate = {
@@ -124,7 +130,7 @@ function PinCard({
   onMoveDown: () => void;
   onUnpin: () => void;
 }) {
-  const content = (
+  const content = item.content ?? (
     <div className="flex flex-1 flex-col items-center gap-2 text-center">
       {item.icon}
       <span className="text-sm font-medium">{item.label}</span>
@@ -138,7 +144,7 @@ function PinCard({
 
   return (
     <div className="relative flex flex-col items-center gap-2 rounded-lg border border-border bg-card p-4">
-      {editing ? (
+      {editing || item.content ? (
         content
       ) : item.href ? (
         <Link
