@@ -5,6 +5,10 @@ import {
   createGame,
   createParticipants,
   deleteGame,
+  getAllProfiles,
+  getCompletedGameDetail,
+  getCompletedGames,
+  getGame,
   recordDarts,
   recordTurn,
   setStartingParticipant,
@@ -248,5 +252,169 @@ describe("deleteGame", () => {
     await expect(deleteGame(client, "game-1")).rejects.toThrow(
       "forced failure",
     );
+  });
+});
+
+/**
+ * A table-aware fake: each table name maps to the `{ data, error }` it
+ * resolves to, chainable through any number of `.eq()`/`.in()`/`.order()`/
+ * `.maybeSingle()` calls. Needed for the multi-query functions below, which
+ * hit several tables in one call.
+ */
+function fakeMultiTableClient(
+  resultsByTable: Record<string, { data?: unknown; error: unknown }>,
+) {
+  const from = vi.fn((table: string) => {
+    const result = resultsByTable[table] ?? { data: [], error: null };
+    const chain: Record<string, unknown> = {
+      then: (resolve: (value: unknown) => unknown) =>
+        Promise.resolve(result).then(resolve),
+    };
+    chain.select = vi.fn(() => chain);
+    chain.eq = vi.fn(() => chain);
+    chain.in = vi.fn(() => chain);
+    chain.order = vi.fn(() => chain);
+    chain.maybeSingle = vi.fn(() => Promise.resolve(result));
+    return chain;
+  });
+
+  return { client: { from } as unknown as SupabaseClient<Database>, from };
+}
+
+describe("getGame", () => {
+  it("returns the game row by id", async () => {
+    const game = { id: "game-1", status: "completed" };
+    const { client } = fakeMultiTableClient({
+      darts_game: { data: game, error: null },
+    });
+
+    await expect(getGame(client, "game-1")).resolves.toEqual(game);
+  });
+
+  it("returns null when the game doesn't exist or isn't visible", async () => {
+    const { client } = fakeMultiTableClient({
+      darts_game: { data: null, error: null },
+    });
+
+    await expect(getGame(client, "missing")).resolves.toBeNull();
+  });
+});
+
+describe("getAllProfiles", () => {
+  it("returns every profile row", async () => {
+    const profiles = [{ id: "m1", accent: "pink" }];
+    const { client, from } = fakeMultiTableClient({
+      profiles: { data: profiles, error: null },
+    });
+
+    await expect(getAllProfiles(client)).resolves.toEqual(profiles);
+    expect(from).toHaveBeenCalledWith("profiles");
+  });
+
+  it("throws on a forced error", async () => {
+    const { client } = fakeMultiTableClient({
+      profiles: { data: null, error: new Error("forced failure") },
+    });
+
+    await expect(getAllProfiles(client)).rejects.toThrow("forced failure");
+  });
+});
+
+describe("getCompletedGames", () => {
+  it("assembles completed games from the four flat queries", async () => {
+    const game = {
+      id: "game1",
+      variant: 501,
+      owner_member_id: "alice",
+      winner_participant_id: "p1",
+      completed_at: "2026-01-01T00:00:00.000Z",
+      status: "completed",
+    };
+    const participant = {
+      id: "p1",
+      game_id: "game1",
+      member_id: "alice",
+      guest_name: null,
+      slot: 1,
+    };
+    const turn = {
+      id: "t1",
+      game_id: "game1",
+      participant_id: "p1",
+      turn_number: 1,
+      busted: false,
+    };
+    const dart = { turn_id: "t1", dart_number: 1, segment: 20, multiple: 2 };
+
+    const { client } = fakeMultiTableClient({
+      darts_game: { data: [game], error: null },
+      darts_participant: { data: [participant], error: null },
+      darts_turn: { data: [turn], error: null },
+      darts_dart: { data: [dart], error: null },
+    });
+
+    const games = await getCompletedGames(client);
+
+    expect(games).toHaveLength(1);
+    expect(games[0].id).toBe("game1");
+    expect(games[0].participants).toEqual([
+      { id: "p1", memberId: "alice", guestName: null, slot: 1 },
+    ]);
+    expect(games[0].turns).toEqual([
+      {
+        participantId: "p1",
+        turnNumber: 1,
+        busted: false,
+        darts: [{ segment: 20, multiple: 2 }],
+      },
+    ]);
+  });
+
+  it("returns an empty list when there are no completed games", async () => {
+    const { client } = fakeMultiTableClient({
+      darts_game: { data: [], error: null },
+    });
+
+    await expect(getCompletedGames(client)).resolves.toEqual([]);
+  });
+});
+
+describe("getCompletedGameDetail", () => {
+  it("returns null for a game that isn't completed", async () => {
+    const { client } = fakeMultiTableClient({
+      darts_game: { data: { id: "game1", status: "in_progress" }, error: null },
+    });
+
+    await expect(getCompletedGameDetail(client, "game1")).resolves.toBeNull();
+  });
+
+  it("returns null for a game that doesn't exist", async () => {
+    const { client } = fakeMultiTableClient({
+      darts_game: { data: null, error: null },
+    });
+
+    await expect(
+      getCompletedGameDetail(client, "missing"),
+    ).resolves.toBeNull();
+  });
+
+  it("assembles the single completed game's detail", async () => {
+    const game = {
+      id: "game1",
+      variant: 501,
+      owner_member_id: "alice",
+      winner_participant_id: "p1",
+      completed_at: "2026-01-01T00:00:00.000Z",
+      status: "completed",
+    };
+    const { client } = fakeMultiTableClient({
+      darts_game: { data: game, error: null },
+      darts_participant: { data: [], error: null },
+      darts_turn: { data: [], error: null },
+      darts_dart: { data: [], error: null },
+    });
+
+    const detail = await getCompletedGameDetail(client, "game1");
+    expect(detail?.id).toBe("game1");
   });
 });
