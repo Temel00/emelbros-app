@@ -3,9 +3,23 @@ import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { getCurrentMember } from "@/platform/auth";
 import { createClient } from "@/platform/supabase/server";
-import { getCompletedGameDetail, getGame } from "@/modules/darts/queries";
 import { GameDetail } from "@/modules/darts/components/game-detail";
+import { LiveGame } from "@/modules/darts/components/live-game";
+import {
+  getCompletedGameDetail,
+  getGame,
+  getParticipants,
+  getProfiles,
+  getTurnsWithDarts,
+} from "@/modules/darts/queries";
 
+/**
+ * A single game's page (darts.md §10). One route, two faces: while the game
+ * is in progress it's the live-scoring board (#31); once completed it's the
+ * read-only detail view (#32). RLS returns no row for a game the caller
+ * can't see — the same `notFound` as a game that doesn't exist, so a missing
+ * id never leaks which case it was (mirrors app/(platform)/lists/[id]).
+ */
 export default async function DartsGamePage({
   params,
 }: {
@@ -20,18 +34,27 @@ export default async function DartsGamePage({
 
   const supabase = await createClient();
   const game = await getGame(supabase, id);
-  // RLS returns no row for a game the caller can't see — same response as a
-  // game that doesn't exist (mirrors app/(platform)/lists/[id]/page.tsx).
   if (!game) notFound();
 
   if (game.status !== "completed") {
+    const [participants, turns, profiles] = await Promise.all([
+      getParticipants(supabase, game.id),
+      getTurnsWithDarts(supabase, game.id),
+      getProfiles(supabase),
+    ]);
+    if (participants.length !== 2) notFound();
+
     return (
       <>
         <AppHeader memberId={member.id} supabase={supabase} />
-        <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 p-4 sm:p-6">
-          <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            This game is still in progress. Live scoring lands with #31.
-          </p>
+        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 p-4 sm:p-6">
+          <LiveGame
+            game={game}
+            participants={[participants[0], participants[1]]}
+            initialTurns={turns}
+            profiles={profiles}
+            currentMemberId={member.id}
+          />
         </main>
       </>
     );

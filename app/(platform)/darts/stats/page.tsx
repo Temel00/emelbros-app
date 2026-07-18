@@ -1,7 +1,7 @@
 import { AppHeader } from "@/components/app-header";
 import { getCurrentMember } from "@/platform/auth";
 import { createClient } from "@/platform/supabase/server";
-import { getAllProfiles, getCompletedGames } from "@/modules/darts/queries";
+import { getCompletedGames, getProfiles } from "@/modules/darts/queries";
 import {
   computeCareerRecord,
   computeHeadToHead,
@@ -26,7 +26,7 @@ export default async function DartsStatsPage() {
   const supabase = await createClient();
   const [games, profiles] = await Promise.all([
     getCompletedGames(supabase),
-    getAllProfiles(supabase),
+    getProfiles(supabase),
   ]);
 
   const labelById = new Map(profiles.map((p) => [p.id, memberLabel(p.id)]));
