@@ -5,6 +5,11 @@ import {
   createGame,
   createParticipants,
   deleteGame,
+  deleteTurn,
+  getGame,
+  getParticipants,
+  getProfiles,
+  getTurnsWithDarts,
   recordDarts,
   recordTurn,
   setStartingParticipant,
@@ -26,11 +31,14 @@ function fakeSupabaseClient(result: { data?: unknown; error: unknown }) {
   chain.eq = vi.fn(() => chain);
   chain.select = vi.fn(() => chain);
   chain.single = vi.fn(() => chain);
+  chain.maybeSingle = vi.fn(() => chain);
+  chain.order = vi.fn(() => chain);
 
   const insert = vi.fn(() => chain);
   const update = vi.fn(() => chain);
   const del = vi.fn(() => chain);
-  const from = vi.fn(() => ({ insert, update, delete: del }));
+  const select = vi.fn(() => chain);
+  const from = vi.fn(() => ({ insert, update, delete: del, select }));
 
   return {
     client: { from } as unknown as SupabaseClient<Database>,
@@ -38,6 +46,7 @@ function fakeSupabaseClient(result: { data?: unknown; error: unknown }) {
     insert,
     update,
     delete: del,
+    select,
   };
 }
 
@@ -103,6 +112,140 @@ describe("createParticipants", () => {
         { memberId: "m2" },
       ]),
     ).rejects.toThrow("forced failure");
+  });
+});
+
+describe("getGame", () => {
+  it("reads a game by id", async () => {
+    const game = { id: "game-1", variant: 501 };
+    const { client, from, select } = fakeSupabaseClient({
+      data: game,
+      error: null,
+    });
+
+    await expect(getGame(client, "game-1")).resolves.toEqual(game);
+    expect(from).toHaveBeenCalledWith("darts_game");
+    expect(select).toHaveBeenCalledWith("*");
+  });
+
+  it("throws on a forced error", async () => {
+    const { client } = fakeSupabaseClient({
+      data: null,
+      error: new Error("forced failure"),
+    });
+
+    await expect(getGame(client, "game-1")).rejects.toThrow("forced failure");
+  });
+});
+
+describe("getProfiles", () => {
+  it("reads every profile", async () => {
+    const profiles = [{ id: "m1" }, { id: "m2" }];
+    const { client, from } = fakeSupabaseClient({
+      data: profiles,
+      error: null,
+    });
+
+    await expect(getProfiles(client)).resolves.toEqual(profiles);
+    expect(from).toHaveBeenCalledWith("profiles");
+  });
+
+  it("throws on a forced error", async () => {
+    const { client } = fakeSupabaseClient({
+      data: null,
+      error: new Error("forced failure"),
+    });
+
+    await expect(getProfiles(client)).rejects.toThrow("forced failure");
+  });
+});
+
+describe("getParticipants", () => {
+  it("reads a game's participants in slot order", async () => {
+    const participants = [
+      { id: "p1", slot: 1 },
+      { id: "p2", slot: 2 },
+    ];
+    const { client, from } = fakeSupabaseClient({
+      data: participants,
+      error: null,
+    });
+
+    await expect(getParticipants(client, "game-1")).resolves.toEqual(
+      participants,
+    );
+    expect(from).toHaveBeenCalledWith("darts_participant");
+  });
+
+  it("throws on a forced error", async () => {
+    const { client } = fakeSupabaseClient({
+      data: null,
+      error: new Error("forced failure"),
+    });
+
+    await expect(getParticipants(client, "game-1")).rejects.toThrow(
+      "forced failure",
+    );
+  });
+});
+
+describe("getTurnsWithDarts", () => {
+  it("reads turns with their darts sorted by dart_number", async () => {
+    const turns = [
+      {
+        id: "turn-1",
+        turn_number: 1,
+        darts: [
+          { dart_number: 2, segment: 1, multiple: 1 },
+          { dart_number: 1, segment: 20, multiple: 3 },
+        ],
+      },
+    ];
+    const { client, from } = fakeSupabaseClient({ data: turns, error: null });
+
+    await expect(getTurnsWithDarts(client, "game-1")).resolves.toEqual([
+      {
+        id: "turn-1",
+        turn_number: 1,
+        darts: [
+          { dart_number: 1, segment: 20, multiple: 3 },
+          { dart_number: 2, segment: 1, multiple: 1 },
+        ],
+      },
+    ]);
+    expect(from).toHaveBeenCalledWith("darts_turn");
+  });
+
+  it("throws on a forced error", async () => {
+    const { client } = fakeSupabaseClient({
+      data: null,
+      error: new Error("forced failure"),
+    });
+
+    await expect(getTurnsWithDarts(client, "game-1")).rejects.toThrow(
+      "forced failure",
+    );
+  });
+});
+
+describe("deleteTurn", () => {
+  it("deletes the turn row by id", async () => {
+    const { client, delete: del, from } = fakeSupabaseClient({ error: null });
+
+    await deleteTurn(client, "turn-1");
+
+    expect(from).toHaveBeenCalledWith("darts_turn");
+    expect(del).toHaveBeenCalled();
+  });
+
+  it("throws on a forced error", async () => {
+    const { client } = fakeSupabaseClient({
+      error: new Error("forced failure"),
+    });
+
+    await expect(deleteTurn(client, "turn-1")).rejects.toThrow(
+      "forced failure",
+    );
   });
 });
 

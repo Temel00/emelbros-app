@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  checkoutDartTarget,
   computeGameState,
   dartValue,
   isDouble,
@@ -186,6 +187,26 @@ describe("computeGameState", () => {
     expect(state.turns).toHaveLength(1);
     expect(state.turns[0].darts).toHaveLength(3);
     expect(state.scores[0]).toBe(501);
+  });
+});
+
+describe("checkoutDartTarget", () => {
+  it("the bull finishes 50", () => {
+    expect(checkoutDartTarget(50)).toEqual({ segment: 50, multiple: 1 });
+  });
+
+  it("an even score from 2 to 40 finishes on the matching double", () => {
+    expect(checkoutDartTarget(40)).toEqual({ segment: 20, multiple: 2 });
+    expect(checkoutDartTarget(2)).toEqual({ segment: 1, multiple: 2 });
+    expect(checkoutDartTarget(32)).toEqual({ segment: 16, multiple: 2 });
+  });
+
+  it("an odd score, or a score outside 2-40 (besides 50), has no one-dart finish", () => {
+    expect(checkoutDartTarget(41)).toBeNull();
+    expect(checkoutDartTarget(1)).toBeNull();
+    expect(checkoutDartTarget(0)).toBeNull();
+    expect(checkoutDartTarget(42)).toBeNull();
+    expect(checkoutDartTarget(170)).toBeNull();
   });
 });
 
