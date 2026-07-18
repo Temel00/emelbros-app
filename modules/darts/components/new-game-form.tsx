@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { ACCENT_BG } from "@/lib/accent";
 import { cn } from "@/lib/utils";
 import { createGameAction } from "@/modules/darts/actions";
+import { shortMemberLabel } from "@/modules/darts/lib/member-label";
 
 import type { ProfileRow } from "@/modules/darts/queries";
 
@@ -189,7 +190,7 @@ function PlayerPicker({
         >
           {profiles.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.id.slice(0, 8)}…
+              {shortMemberLabel(p.id)}
             </option>
           ))}
           <option value={GUEST_VALUE}>Guest…</option>

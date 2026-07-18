@@ -67,6 +67,28 @@ export function Dartboard({
     );
   }
 
+  /** Tap/click/keyboard-activation props shared by every scoring shape (wedge, bull, outer bull). */
+  function targetProps(segment: number, multiple: 1 | 2 | 3, ariaLabel: string) {
+    const glow = isTarget(segment, multiple);
+    return {
+      glow,
+      stroke: glow ? "var(--color-c-pink)" : "var(--color-border)",
+      strokeWidth: glow ? 4 : 0.5,
+      role: "button" as const,
+      tabIndex: disabled ? -1 : 0,
+      "aria-label": ariaLabel,
+      "aria-disabled": disabled,
+      onClick: () => !disabled && onThrow({ segment, multiple }),
+      onKeyDown: (event: React.KeyboardEvent) => {
+        if (disabled) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onThrow({ segment, multiple });
+        }
+      },
+    };
+  }
+
   function wedge(
     segment: number,
     multiple: 1 | 2 | 3,
@@ -76,33 +98,21 @@ export function Dartboard({
     angleEnd: number,
     fill: string,
   ) {
-    const glow = isTarget(segment, multiple);
+    const { glow, ...props } = targetProps(
+      segment,
+      multiple,
+      `${multiple === 3 ? "Treble" : multiple === 2 ? "Double" : "Single"} ${segment}`,
+    );
     return (
       <path
         key={`${segment}-${multiple}`}
         d={annularSector(r1, r2, angleStart, angleEnd)}
         fill={fill}
-        stroke={glow ? "var(--color-c-pink)" : "var(--color-border)"}
-        strokeWidth={glow ? 4 : 0.5}
         className={cn("cursor-pointer transition-[filter] hover:brightness-110", glow && "animate-pulse")}
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        aria-label={`${multiple === 3 ? "Treble" : multiple === 2 ? "Double" : "Single"} ${segment}`}
-        aria-disabled={disabled}
-        onClick={() => !disabled && onThrow({ segment, multiple })}
-        onKeyDown={(event) => {
-          if (disabled) return;
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onThrow({ segment, multiple });
-          }
-        }}
+        {...props}
       />
     );
   }
-
-  const bullGlow = isTarget(50, 1);
-  const outerBullGlow = isTarget(25, 1);
 
   return (
     <svg
@@ -139,48 +149,32 @@ export function Dartboard({
         );
       })}
 
-      <circle
-        cx={CX}
-        cy={CY}
-        r={R_25}
-        fill="var(--color-c-yellow)"
-        stroke={outerBullGlow ? "var(--color-c-pink)" : "var(--color-border)"}
-        strokeWidth={outerBullGlow ? 4 : 0.5}
-        className={cn("cursor-pointer transition-[filter] hover:brightness-110", outerBullGlow && "animate-pulse")}
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        aria-label="25 (outer bull)"
-        aria-disabled={disabled}
-        onClick={() => !disabled && onThrow({ segment: 25, multiple: 1 })}
-        onKeyDown={(event) => {
-          if (disabled) return;
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onThrow({ segment: 25, multiple: 1 });
-          }
-        }}
-      />
-      <circle
-        cx={CX}
-        cy={CY}
-        r={R_BULL}
-        fill="var(--color-foreground)"
-        stroke={bullGlow ? "var(--color-c-pink)" : "var(--color-border)"}
-        strokeWidth={bullGlow ? 4 : 0.5}
-        className={cn("cursor-pointer transition-[filter] hover:brightness-125", bullGlow && "animate-pulse")}
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        aria-label="Bull (50)"
-        aria-disabled={disabled}
-        onClick={() => !disabled && onThrow({ segment: 50, multiple: 1 })}
-        onKeyDown={(event) => {
-          if (disabled) return;
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onThrow({ segment: 50, multiple: 1 });
-          }
-        }}
-      />
+      {(() => {
+        const { glow, ...props } = targetProps(25, 1, "25 (outer bull)");
+        return (
+          <circle
+            cx={CX}
+            cy={CY}
+            r={R_25}
+            fill="var(--color-c-yellow)"
+            className={cn("cursor-pointer transition-[filter] hover:brightness-110", glow && "animate-pulse")}
+            {...props}
+          />
+        );
+      })()}
+      {(() => {
+        const { glow, ...props } = targetProps(50, 1, "Bull (50)");
+        return (
+          <circle
+            cx={CX}
+            cy={CY}
+            r={R_BULL}
+            fill="var(--color-foreground)"
+            className={cn("cursor-pointer transition-[filter] hover:brightness-125", glow && "animate-pulse")}
+            {...props}
+          />
+        );
+      })()}
       <text
         x={CX}
         y={CY}

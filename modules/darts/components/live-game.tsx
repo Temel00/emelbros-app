@@ -20,6 +20,7 @@ import {
   type PlayerIndex,
   type ThrownDart,
 } from "@/modules/darts/lib/engine";
+import { shortMemberLabel } from "@/modules/darts/lib/member-label";
 
 import type {
   DartsGameRow,
@@ -44,7 +45,7 @@ function playerLabel(
   }
   const profile = participant.member_id ? profiles.get(participant.member_id) : undefined;
   return {
-    text: participant.member_id ? `${participant.member_id.slice(0, 8)}…` : "Unknown",
+    text: participant.member_id ? shortMemberLabel(participant.member_id) : "Unknown",
     accentClass: profile ? ACCENT_BG[profile.accent] : null,
   };
 }
@@ -95,9 +96,8 @@ export function LiveGame({
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; kind: "bust" | "win" } | null>(
-    null,
-  );
+  // Bust = toast, checkout = overlay (darts.md §3) — the toast only ever carries a bust message.
+  const [toast, setToast] = useState<string | null>(null);
   const [showOverlay, setShowOverlay] = useState(game.status === "completed");
   const [, startTransition] = useTransition();
   const toastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -112,8 +112,8 @@ export function LiveGame({
     };
   }, []);
 
-  function showToast(message: string, kind: "bust" | "win") {
-    setToast({ message, kind });
+  function showBustToast(message: string) {
+    setToast(message);
     if (toastTimeout.current) clearTimeout(toastTimeout.current);
     toastTimeout.current = setTimeout(() => setToast(null), 2200);
   }
@@ -151,9 +151,8 @@ export function LiveGame({
         });
         setPersistedTurnIds((prev) => [...prev, turnId]);
         if (turn.busted) {
-          showToast(`BUST — ${label(turn.player).text} stays on ${turn.scoreBefore}`, "bust");
+          showBustToast(`BUST — ${label(turn.player).text} stays on ${turn.scoreBefore}`);
         } else if (checkoutWinnerParticipantId) {
-          showToast(`Checkout! ${label(turn.player).text} wins`, "win");
           setShowOverlay(true);
         }
       } catch (err) {
@@ -239,14 +238,9 @@ export function LiveGame({
       {toast && (
         <div
           role="status"
-          className={cn(
-            "fixed top-16 left-1/2 z-30 -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg",
-            toast.kind === "bust"
-              ? "bg-c-yellow text-[#3a2c00]"
-              : "bg-c-green text-[#00312a]",
-          )}
+          className="fixed top-16 left-1/2 z-30 -translate-x-1/2 rounded-full bg-c-yellow px-4 py-2 text-sm font-semibold text-[#3a2c00] shadow-lg"
         >
-          {toast.message}
+          {toast}
         </div>
       )}
 
