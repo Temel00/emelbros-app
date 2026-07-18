@@ -3,11 +3,23 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ThrownDart } from "@/modules/darts/lib/engine";
 import type { Database } from "@/types/database";
 
-type DartsGame = Database["public"]["Tables"]["darts_game"]["Row"];
-type DartsParticipant =
+export type DartsGameRow = Database["public"]["Tables"]["darts_game"]["Row"];
+export type DartsParticipantRow =
   Database["public"]["Tables"]["darts_participant"]["Row"];
-type DartsTurn = Database["public"]["Tables"]["darts_turn"]["Row"];
-type DartsDart = Database["public"]["Tables"]["darts_dart"]["Row"];
+export type DartsTurnRow = Database["public"]["Tables"]["darts_turn"]["Row"];
+export type DartsDartRow = Database["public"]["Tables"]["darts_dart"]["Row"];
+export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+
+// Local aliases so the rest of this file (predating the reads/UI added for
+// #31) can keep using the short names.
+type DartsGame = DartsGameRow;
+type DartsParticipant = DartsParticipantRow;
+type DartsTurn = DartsTurnRow;
+type DartsDart = DartsDartRow;
+
+/** A turn with its darts in throw order — the shape the live-scoring UI
+ * replays into `computeGameState`'s flat dart list on page load. */
+export type TurnWithDarts = DartsTurn & { darts: DartsDart[] };
 
 /** A player is either a member (gets a career record) or a free-text guest (darts.md §1). */
 export type NewParticipant =
@@ -37,6 +49,35 @@ export async function createGame(
   return data;
 }
 
+/**
+ * Reads a single game by id (the live-scoring page's initial load). `null`
+ * for a game that doesn't exist or that RLS hides — the same response
+ * either way, so a missing id never leaks which case it was.
+ */
+export async function getGame(
+  supabase: SupabaseClient<Database>,
+  gameId: string,
+): Promise<DartsGame | null> {
+  const { data, error } = await supabase
+    .from("darts_game")
+    .select("*")
+    .eq("id", gameId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+/** Every member profile — the pool the New game form picks players from. */
+export async function getProfiles(
+  supabase: SupabaseClient<Database>,
+): Promise<ProfileRow[]> {
+  const { data, error } = await supabase.from("profiles").select("*");
+
+  if (error) throw error;
+  return data;
+}
+
 /** Inserts the game's two participant rows (slot 1 and slot 2). */
 export async function createParticipants(
   supabase: SupabaseClient<Database>,
@@ -60,6 +101,21 @@ export async function createParticipants(
       },
     ])
     .select();
+
+  if (error) throw error;
+  return data;
+}
+
+/** A game's two participant rows, in slot order (the live-scoring page's initial load). */
+export async function getParticipants(
+  supabase: SupabaseClient<Database>,
+  gameId: string,
+): Promise<DartsParticipant[]> {
+  const { data, error } = await supabase
+    .from("darts_participant")
+    .select("*")
+    .eq("game_id", gameId)
+    .order("slot", { ascending: true });
 
   if (error) throw error;
   return data;
@@ -105,6 +161,46 @@ export async function recordTurn(
 
   if (error) throw error;
   return data;
+}
+
+/**
+ * A game's resolved turns and their darts, in play order (the live-scoring
+ * page's initial load — replayed into `computeGameState`'s flat dart list).
+ * Only ever the turns that have actually been persisted: a turn is written
+ * once it resolves (bust, checkout, or three darts), so an in-progress
+ * turn's darts live only in the client's local state until then.
+ */
+export async function getTurnsWithDarts(
+  supabase: SupabaseClient<Database>,
+  gameId: string,
+): Promise<TurnWithDarts[]> {
+  const { data, error } = await supabase
+    .from("darts_turn")
+    .select("*, darts:darts_dart(*)")
+    .eq("game_id", gameId)
+    .order("turn_number", { ascending: true });
+
+  if (error) throw error;
+  return data.map((turn) => ({
+    ...turn,
+    darts: [...turn.darts].sort((a, b) => a.dart_number - b.dart_number),
+  }));
+}
+
+/**
+ * Deletes a single persisted turn (cascades to its darts). Undo stepping
+ * back across a turn boundary (darts.md §3) reopens that turn locally by
+ * removing its persisted record — the engine recomputes the reopened state
+ * from the shortened dart list, and the turn is re-persisted (possibly with
+ * different darts) once it resolves again.
+ */
+export async function deleteTurn(
+  supabase: SupabaseClient<Database>,
+  turnId: string,
+): Promise<void> {
+  const { error } = await supabase.from("darts_turn").delete().eq("id", turnId);
+
+  if (error) throw error;
 }
 
 /** Writes a turn's darts in throw order (darts.md §4). */

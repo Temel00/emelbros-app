@@ -66,6 +66,21 @@ export function isDouble(dart: ThrownDart): boolean {
 }
 
 /**
+ * The single dart that finishes a given remaining score, if one exists
+ * (darts.md §3's "checkout double glows"): any even score from 2 to 40 goes
+ * out on the matching double, and 50 goes out on the bull (which counts as a
+ * double, `isDouble`). Anything else needs more than one dart to finish, so
+ * there's no single target to highlight.
+ */
+export function checkoutDartTarget(remainingScore: number): ThrownDart | null {
+  if (remainingScore === 50) return { segment: 50, multiple: 1 };
+  if (remainingScore >= 2 && remainingScore <= 40 && remainingScore % 2 === 0) {
+    return { segment: remainingScore / 2, multiple: 2 };
+  }
+  return null;
+}
+
+/**
  * Removes the single most recent dart. Undo is unlimited and steps back
  * across turn/player boundaries for free, since `computeGameState` always
  * recomputes from the full darts list rather than from incremental state —
