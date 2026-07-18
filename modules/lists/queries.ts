@@ -63,7 +63,7 @@ export async function getMyLists(
       lists_item: { checked: boolean }[];
     };
     return {
-      list: list as ListRow,
+      list,
       uncheckedCount: lists_item.filter((item) => !item.checked).length,
     };
   });

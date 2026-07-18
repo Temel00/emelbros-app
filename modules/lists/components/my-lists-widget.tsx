@@ -1,18 +1,10 @@
 import Link from "next/link";
 
-import { resolveIcon } from "@/lib/icon";
 import { createClient } from "@/platform/supabase/server";
 import { getListKind } from "@/modules/lists/kinds";
+import { kindIcon } from "@/modules/lists/components/kind-icon";
 import { listCountLabel } from "@/modules/lists/lib/count-label";
 import { getMyLists, type MyListSummary } from "@/modules/lists/queries";
-
-// A plain helper, not a component — mirrors `lists-home.tsx`'s `kindIcon`:
-// resolving a manifest icon name to an element inside a component's render
-// body trips `react-hooks/static-components`.
-function kindIcon(iconName: string) {
-  const Icon = resolveIcon(iconName);
-  return <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden />;
-}
 
 /**
  * The "My Lists" widget (lists.md §6, ADR-0005): a zero-prop React Server
