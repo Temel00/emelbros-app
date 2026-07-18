@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,31 @@ export type DashboardTile = {
   module: DashboardModule;
 };
 
+/**
+ * A pinned widget, its RSC output already rendered server-side (widgets can't
+ * cross the client boundary as components — ADR-0005 — so the page renders
+ * them and passes the elements down). `module`/`widget` are the pin identity.
+ */
+export type DashboardWidget = {
+  pinId: string;
+  module: string;
+  widget: string;
+  label: string;
+  content: ReactNode;
+};
+
+/** An unpinned widget the At-a-glance zone offers in the Add list. */
+export type DashboardWidgetCandidate = {
+  module: string;
+  widget: string;
+  label: string;
+  icon: string;
+};
+
+function widgetKey(w: { module: string; widget: string }): string {
+  return `${w.module}:${w.widget}`;
+}
+
 function toItem(tile: DashboardTile): PinZoneItem {
   const Icon = resolveIcon(tile.module.icon);
   return {
@@ -46,32 +72,63 @@ function toCandidate(mod: DashboardModule): PinZoneCandidate {
   };
 }
 
+function toWidgetItem(widget: DashboardWidget): PinZoneItem {
+  return {
+    pinId: widget.pinId,
+    key: widgetKey(widget),
+    label: widget.label,
+    content: widget.content,
+  };
+}
+
+function toWidgetCandidate(
+  candidate: DashboardWidgetCandidate,
+): PinZoneCandidate {
+  const Icon = resolveIcon(candidate.icon);
+  return {
+    key: widgetKey(candidate),
+    label: candidate.label,
+    icon: <Icon className="size-6" aria-hidden />,
+  };
+}
+
 /**
- * The signed-in dashboard (#27): Apps grid + At-a-glance widget stack, each
- * independently ordered (ADR-0002, prototype #8). Widget pins don't exist
- * yet — no module declares a widget until the widget contract (#4) lands —
- * so that zone always renders its empty state; the reorder/pin plumbing
- * underneath is shared with the Apps zone via `PinZone`.
+ * The signed-in dashboard (#27): an Apps grid + an At-a-glance widget stack,
+ * each independently ordered (ADR-0002, prototype #8). Both zones share the
+ * pin/reorder/unpin plumbing via `PinZone`; only their layout and item content
+ * differ. Widgets arrive already rendered from the server (ADR-0005) — the
+ * dashboard reorders and pins them but never fetches their data.
  */
 export function Dashboard({
   tiles,
   availableModules,
+  widgets,
+  availableWidgets,
 }: {
   tiles: DashboardTile[];
   availableModules: DashboardModule[];
+  widgets: DashboardWidget[];
+  availableWidgets: DashboardWidgetCandidate[];
 }) {
   const [editing, setEditing] = useState(false);
   const [tileOrder, setTileOrder] = useState(tiles);
+  const [widgetOrder, setWidgetOrder] = useState(widgets);
   const [, startTransition] = useTransition();
 
-  // `tiles` only gets a new reference when the server re-fetches pins after
-  // a mutation revalidates the page — adopt it then, computed during render
-  // rather than a post-commit effect (React's "adjusting state on prop
+  // `tiles`/`widgets` only get new references when the server re-fetches pins
+  // after a mutation revalidates the page — adopt them then, computed during
+  // render rather than a post-commit effect (React's "adjusting state on prop
   // change" pattern) so there's no extra render with stale order.
   const [prevTiles, setPrevTiles] = useState(tiles);
   if (tiles !== prevTiles) {
     setPrevTiles(tiles);
     setTileOrder(tiles);
+  }
+
+  const [prevWidgets, setPrevWidgets] = useState(widgets);
+  if (widgets !== prevWidgets) {
+    setPrevWidgets(widgets);
+    setWidgetOrder(widgets);
   }
 
   function handleMove(index: number, direction: "up" | "down") {
@@ -92,6 +149,31 @@ export function Dashboard({
   function handlePin(candidate: PinZoneCandidate) {
     startTransition(async () => {
       await pinItem(candidate.key, null);
+    });
+  }
+
+  function handleWidgetMove(index: number, direction: "up" | "down") {
+    const next = moveItem(widgetOrder, index, direction);
+    setWidgetOrder(next);
+    startTransition(async () => {
+      await reorderPins(next.map((widget) => widget.pinId));
+    });
+  }
+
+  function handleWidgetUnpin(item: PinZoneItem) {
+    const widget = widgetOrder.find((w) => w.pinId === item.pinId);
+    if (!widget) return;
+    setWidgetOrder((prev) => prev.filter((w) => w.pinId !== item.pinId));
+    startTransition(async () => {
+      await unpinItem(widget.module, widget.widget);
+    });
+  }
+
+  function handleWidgetPin(candidate: PinZoneCandidate) {
+    const widget = availableWidgets.find((w) => widgetKey(w) === candidate.key);
+    if (!widget) return;
+    startTransition(async () => {
+      await pinItem(widget.module, widget.widget);
     });
   }
 
@@ -125,12 +207,12 @@ export function Dashboard({
         title="At a glance"
         layout="stack"
         editing={editing}
-        items={[]}
-        candidates={[]}
-        emptyMessage="No widgets yet — modules will offer widgets here once available."
-        onMove={() => {}}
-        onUnpin={() => {}}
-        onPin={() => {}}
+        items={widgetOrder.map(toWidgetItem)}
+        candidates={availableWidgets.map(toWidgetCandidate)}
+        emptyMessage="No widgets yet — pin one from a module to see it here."
+        onMove={handleWidgetMove}
+        onUnpin={handleWidgetUnpin}
+        onPin={handleWidgetPin}
       />
     </main>
   );

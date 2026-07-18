@@ -261,6 +261,68 @@ export function summarizeGame(game: CompletedGame): ParticipantGameSummary[] {
   });
 }
 
+export type MyDartsSummary = {
+  /** Win/loss over the member's most recent `limit` completed games as a player. */
+  recent: { wins: number; losses: number; played: number };
+  /**
+   * The member's most recent completed game as a player, or `null` if they
+   * have never played one. `opponent` is the other participant (member or
+   * guest); `null` only if the game is malformed with no second side.
+   */
+  mostRecent: {
+    gameId: string;
+    opponent: GameParticipant | null;
+    won: boolean;
+  } | null;
+};
+
+/**
+ * The "My Darts" widget's read model (darts.md §9): the member's recent W/L
+ * over their last `limit` completed games and their most recent game's
+ * opponent and result. Only games the member actually *played* count — a game
+ * they merely tracked for two other people isn't part of their own record.
+ * Games are sorted most-recent-first here so the result is independent of the
+ * query's ordering.
+ */
+export function summarizeMyDarts(
+  games: CompletedGame[],
+  memberId: string,
+  limit = 10,
+): MyDartsSummary {
+  // Pair each game the member played in with their own participant row, so
+  // "which side am I" is resolved once and `self` is known non-null downstream.
+  const played = games
+    .map((game) => ({
+      game,
+      self: game.participants.find((p) => p.memberId === memberId),
+    }))
+    .filter(
+      (entry): entry is { game: CompletedGame; self: GameParticipant } =>
+        entry.self !== undefined,
+    )
+    .sort((a, b) => b.game.completedAt.localeCompare(a.game.completedAt));
+
+  const recentGames = played.slice(0, limit);
+  const wins = recentGames.filter(
+    ({ game, self }) => game.winnerParticipantId === self.id,
+  ).length;
+
+  const latest = played[0];
+  const mostRecent = latest
+    ? {
+        gameId: latest.game.id,
+        opponent:
+          latest.game.participants.find((p) => p.id !== latest.self.id) ?? null,
+        won: latest.game.winnerParticipantId === latest.self.id,
+      }
+    : null;
+
+  return {
+    recent: { wins, losses: recentGames.length - wins, played: recentGames.length },
+    mostRecent,
+  };
+}
+
 /**
  * A member's head-to-head record against each other member they've played
  * (darts.md §5): member-vs-member only, so a guest opponent never produces a

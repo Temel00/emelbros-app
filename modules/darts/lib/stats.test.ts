@@ -5,6 +5,7 @@ import {
   computeCareerRecord,
   computeHeadToHead,
   summarizeGame,
+  summarizeMyDarts,
   type CompletedGame,
 } from "@/modules/darts/lib/stats";
 
@@ -247,6 +248,48 @@ describe("summarizeGame", () => {
     expect(bob?.points).toBe(3);
     expect(bob?.darts).toBe(3);
     expect(bob?.average).toBe(3);
+  });
+});
+
+describe("summarizeMyDarts", () => {
+  it("summarizes the member's recent W/L and most recent game as a player", () => {
+    const summary = summarizeMyDarts(seededGames(), "alice");
+
+    // alice played game1 (win) and game2 (win); most recent is game2 vs Pat.
+    expect(summary.recent).toEqual({ wins: 2, losses: 0, played: 2 });
+    expect(summary.mostRecent).toEqual({
+      gameId: "game2",
+      opponent: { id: "g2p2", memberId: null, guestName: "Pat", slot: 2 },
+      won: true,
+    });
+  });
+
+  it("records a loss and the winning opponent for a member who lost their last game", () => {
+    const summary = summarizeMyDarts(seededGames(), "bob");
+
+    // bob lost game1 and game3; most recent is game3 vs carol.
+    expect(summary.recent).toEqual({ wins: 0, losses: 2, played: 2 });
+    expect(summary.mostRecent).toEqual({
+      gameId: "game3",
+      opponent: { id: "g3p2", memberId: "carol", guestName: null, slot: 2 },
+      won: false,
+    });
+  });
+
+  it("honours the limit when counting the recent record", () => {
+    const summary = summarizeMyDarts(seededGames(), "alice", 1);
+
+    // Only the most recent game (game2, a win) counts toward the record.
+    expect(summary.recent).toEqual({ wins: 1, losses: 0, played: 1 });
+    expect(summary.mostRecent?.gameId).toBe("game2");
+  });
+
+  it("ignores games the member only tracked but didn't play in", () => {
+    // carol owns game3 but bob/carol are the players; a non-participant owner
+    // gets no record from it.
+    const trackerOnly = summarizeMyDarts(seededGames(), "dana");
+    expect(trackerOnly.recent).toEqual({ wins: 0, losses: 0, played: 0 });
+    expect(trackerOnly.mostRecent).toBeNull();
   });
 });
 
