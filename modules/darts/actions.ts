@@ -18,11 +18,12 @@ import {
 } from "@/modules/darts/queries";
 
 /**
- * Server actions behind the darts live-scoring UI (darts.md §3, #31). Every
- * write still rides RLS (darts.md §7): only the tracker (game owner) can
- * score or abandon a game, and only the owner or a member participant can
- * delete one — these actions don't re-check that themselves, a disallowed
- * request just comes back as a Postgres RLS error.
+ * Server actions behind the darts UI — game setup and live scoring (darts.md
+ * §3, #31) plus deleting a completed game (darts.md §6, #32). Every write
+ * rides RLS (darts.md §7): only the tracker (game owner) can score or abandon
+ * a game, and only the owner or a member participant can delete one — these
+ * actions don't re-check that themselves, a disallowed request just comes
+ * back as a Postgres RLS error.
  */
 async function requireMember() {
   const member = await getCurrentMember();
@@ -111,4 +112,20 @@ export async function abandonGameAction(gameId: string) {
 
   await deleteGame(supabase, gameId);
   revalidatePath("/darts");
+}
+
+/**
+ * Deletes a completed game (darts.md §6). Same hard delete as abandoning,
+ * but reached from the history/detail views, so it also refreshes the recent
+ * list, the leaderboard, and the game's own page.
+ */
+export async function deleteGameAction(gameId: string) {
+  await requireMember();
+  const supabase = await createClient();
+
+  await deleteGame(supabase, gameId);
+
+  revalidatePath("/darts");
+  revalidatePath("/darts/stats");
+  revalidatePath(`/darts/${gameId}`);
 }

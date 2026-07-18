@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ThrownDart } from "@/modules/darts/lib/engine";
+import {
+  assembleCompletedGames,
+  type CompletedGame,
+} from "@/modules/darts/lib/stats";
 import type { Database } from "@/types/database";
 
 export type DartsGameRow = Database["public"]["Tables"]["darts_game"]["Row"];
@@ -68,7 +72,11 @@ export async function getGame(
   return data;
 }
 
-/** Every member profile — the pool the New game form picks players from. */
+/**
+ * Every member profile — the pool the New game form picks players from
+ * (darts.md §3) and the roster the leaderboard renders (darts.md §7: the
+ * trophy case is open to all five members).
+ */
 export async function getProfiles(
   supabase: SupabaseClient<Database>,
 ): Promise<ProfileRow[]> {
@@ -258,4 +266,117 @@ export async function deleteGame(
   const { error } = await supabase.from("darts_game").delete().eq("id", gameId);
 
   if (error) throw error;
+}
+
+/** Every completed game, most recently finished first (darts.md §5 reads across all completed games). */
+async function getCompletedGameRows(
+  supabase: SupabaseClient<Database>,
+): Promise<DartsGame[]> {
+  const { data, error } = await supabase
+    .from("darts_game")
+    .select("*")
+    .eq("status", "completed")
+    .order("completed_at", { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+async function getParticipantsForGames(
+  supabase: SupabaseClient<Database>,
+  gameIds: string[],
+): Promise<DartsParticipant[]> {
+  if (gameIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("darts_participant")
+    .select("*")
+    .in("game_id", gameIds);
+
+  if (error) throw error;
+  return data;
+}
+
+async function getTurnsForGames(
+  supabase: SupabaseClient<Database>,
+  gameIds: string[],
+): Promise<DartsTurn[]> {
+  if (gameIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("darts_turn")
+    .select("*")
+    .in("game_id", gameIds)
+    .order("turn_number", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+async function getDartsForTurns(
+  supabase: SupabaseClient<Database>,
+  turnIds: string[],
+): Promise<DartsDart[]> {
+  if (turnIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("darts_dart")
+    .select("*")
+    .in("turn_id", turnIds)
+    .order("dart_number", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Every completed game, fully assembled with its participants/turns/darts
+ * (darts.md §5): the input to career-record, head-to-head, and game-detail
+ * derivation (`modules/darts/lib/stats.ts`). Four flat queries plus a pure
+ * join, rather than one nested `select`, to keep each query trivially typed
+ * and testable (mirrors the habits module's `getLogsForTrackables` /
+ * `getParticipantsForTrackables` split).
+ */
+export async function getCompletedGames(
+  supabase: SupabaseClient<Database>,
+): Promise<CompletedGame[]> {
+  const games = await getCompletedGameRows(supabase);
+  const gameIds = games.map((g) => g.id);
+
+  const [participants, turns] = await Promise.all([
+    getParticipantsForGames(supabase, gameIds),
+    getTurnsForGames(supabase, gameIds),
+  ]);
+  const darts = await getDartsForTurns(
+    supabase,
+    turns.map((t) => t.id),
+  );
+
+  return assembleCompletedGames(games, participants, turns, darts);
+}
+
+/** One completed game, fully assembled for the game-detail page — `null` if it doesn't exist or isn't completed. */
+export async function getCompletedGameDetail(
+  supabase: SupabaseClient<Database>,
+  gameId: string,
+): Promise<CompletedGame | null> {
+  const game = await getGame(supabase, gameId);
+  if (!game || game.status !== "completed") return null;
+
+  const [participants, turns] = await Promise.all([
+    getParticipantsForGames(supabase, [gameId]),
+    getTurnsForGames(supabase, [gameId]),
+  ]);
+  const darts = await getDartsForTurns(
+    supabase,
+    turns.map((t) => t.id),
+  );
+
+  const [detail] = assembleCompletedGames(
+    [game],
+    participants,
+    turns,
+    darts,
+  );
+  return detail ?? null;
 }
