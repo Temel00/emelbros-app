@@ -44,11 +44,17 @@ export function Leaderboard({ rows }: { rows: LeaderboardRow[] }) {
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.memberId} className="border-b border-border last:border-0">
+              <tr
+                key={row.memberId}
+                className="border-b border-border last:border-0"
+              >
                 <td className="flex items-center gap-2 p-3 font-medium">
                   <span
                     aria-hidden
-                    className={cn("size-2.5 rounded-full", ACCENT_BG[row.accent])}
+                    className={cn(
+                      "size-2.5 rounded-full",
+                      ACCENT_BG[row.accent],
+                    )}
                   />
                   {row.label}
                 </td>
@@ -64,9 +70,13 @@ export function Leaderboard({ rows }: { rows: LeaderboardRow[] }) {
                 <td className="p-3 tabular-nums">
                   {round(row.record.bestGameAverage)}
                 </td>
-                <td className="p-3 tabular-nums">{row.record.highestCheckout}</td>
+                <td className="p-3 tabular-nums">
+                  {row.record.highestCheckout}
+                </td>
                 <td className="p-3 tabular-nums">{row.record.highestTurn}</td>
-                <td className="p-3 tabular-nums">{row.record.bestLeg ?? "—"}</td>
+                <td className="p-3 tabular-nums">
+                  {row.record.bestLeg ?? "—"}
+                </td>
                 <td className="p-3 tabular-nums">{row.record.count180}</td>
               </tr>
             ))}

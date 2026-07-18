@@ -372,11 +372,6 @@ export async function getCompletedGameDetail(
     turns.map((t) => t.id),
   );
 
-  const [detail] = assembleCompletedGames(
-    [game],
-    participants,
-    turns,
-    darts,
-  );
+  const [detail] = assembleCompletedGames([game], participants, turns, darts);
   return detail ?? null;
 }

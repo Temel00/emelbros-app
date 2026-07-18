@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
-import { resolveIcon } from "@/lib/icon";
 import { getListKind } from "@/modules/lists/kinds";
 import { unarchiveListAction } from "@/modules/lists/actions";
 import { ListCreateDialog } from "@/modules/lists/components/list-create-dialog";
+import { kindIcon } from "@/modules/lists/components/kind-icon";
 
 import type { ListRow } from "@/modules/lists/queries";
 
@@ -16,15 +16,6 @@ const SCOPE_LABEL: Record<ListRow["scope"], string> = {
   participants: "Participants",
   family: "Family",
 };
-
-// A plain (lowercase) helper, not a component — mirrors
-// `components/dashboard/dashboard.tsx`'s `toItem`/`toCandidate`, which
-// resolve a manifest icon name to an element outside of a component's own
-// render body (react-hooks/static-components forbids doing it inline).
-function kindIcon(iconName: string) {
-  const Icon = resolveIcon(iconName);
-  return <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden />;
-}
 
 /**
  * The lists module home (lists.md §6): every list the member can see,

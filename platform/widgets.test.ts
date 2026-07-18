@@ -46,12 +46,14 @@ describe("listModuleWidgets", () => {
         widgetId: "habits",
         name: "habits/habits",
         description: "habits widget",
+        moduleIcon: "LayoutGrid",
       },
       {
         moduleSlug: "lists",
         widgetId: "my-lists",
         name: "lists/my-lists",
         description: "my-lists widget",
+        moduleIcon: "LayoutGrid",
       },
     ]);
   });
@@ -99,6 +101,7 @@ describe("listAvailableWidgets", () => {
         widgetId: "my-lists",
         name: "lists/my-lists",
         description: "my-lists widget",
+        moduleIcon: "LayoutGrid",
       },
     ]);
   });

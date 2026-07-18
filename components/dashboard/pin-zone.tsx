@@ -130,6 +130,40 @@ function PinCard({
   onMoveDown: () => void;
   onUnpin: () => void;
 }) {
+  const controls = editing && (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label="Move up"
+        disabled={!canMoveUp}
+        onClick={onMoveUp}
+      >
+        <ChevronUp />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label="Move down"
+        disabled={!canMoveDown}
+        onClick={onMoveDown}
+      >
+        <ChevronDown />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label={`Unpin ${item.label}`}
+        onClick={onUnpin}
+      >
+        <X />
+      </Button>
+    </div>
+  );
+
+  // A widget supplies the whole card body (its `WidgetFrame`); an app tile
+  // gets the icon + label tile instead. Either way the card chrome below is
+  // the same, so the two zones can't drift apart visually.
   const content = item.content ?? (
     <div className="flex flex-1 flex-col items-center gap-2 text-center">
       {item.icon}
@@ -157,36 +191,7 @@ function PinCard({
         content
       )}
 
-      {editing && (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Move up"
-            disabled={!canMoveUp}
-            onClick={onMoveUp}
-          >
-            <ChevronUp />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Move down"
-            disabled={!canMoveDown}
-            onClick={onMoveDown}
-          >
-            <ChevronDown />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label={`Unpin ${item.label}`}
-            onClick={onUnpin}
-          >
-            <X />
-          </Button>
-        </div>
-      )}
+      {controls}
     </div>
   );
 }

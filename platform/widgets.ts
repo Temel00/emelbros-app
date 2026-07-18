@@ -17,6 +17,8 @@ export type WidgetRef = {
   widgetId: string;
   name: string;
   description: string;
+  /** The owning module's Lucide icon name — what the Add list shows. */
+  moduleIcon: string;
 };
 
 export type ResolvedWidgetPin = WidgetRef & {
@@ -43,6 +45,7 @@ export function listModuleWidgets(modules: ModuleManifest[]): WidgetRef[] {
       widgetId: widget.id,
       name: widget.name,
       description: widget.description,
+      moduleIcon: mod.icon,
     })),
   );
 }
@@ -70,6 +73,7 @@ export function resolveWidgetPins(
         widgetId: widget.id,
         name: widget.name,
         description: widget.description,
+        moduleIcon: mod.icon,
         component: widget.component,
       };
     })
