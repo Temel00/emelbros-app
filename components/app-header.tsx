@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { ACCENT_BG } from "@/lib/accent";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,15 @@ export async function AppHeader({
   supabase: SupabaseClient<Database>;
 }) {
   const profile = await getProfile(supabase, memberId);
+
+  // A cryptographically-valid JWT can outlive its member row — the DB was
+  // reset (dev) or the account was deleted while a session was still open.
+  // `getClaims()`/the proxy (ADR-0011) only verify the token, not that the
+  // member still exists, so every platform page renders this header with a
+  // ghost id. Without a profile there's no header to draw; bounce to sign-in
+  // so a fresh Google sign-in re-provisions the member (handle_new_member)
+  // instead of throwing an unhandled render error on every page.
+  if (!profile) redirect("/sign-in");
 
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
