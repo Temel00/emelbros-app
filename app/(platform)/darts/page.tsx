@@ -12,9 +12,13 @@ export default async function DartsPage() {
 
   const supabase = await createClient();
   const games = await getCompletedGames(supabase);
+  // Includes games the member tracked but didn't play in (darts.md §6: the
+  // owner has the delete right too, so they need a way to find the game).
   const recentGames = games
-    .filter((game) =>
-      game.participants.some((p) => p.memberId === member.id),
+    .filter(
+      (game) =>
+        game.ownerMemberId === member.id ||
+        game.participants.some((p) => p.memberId === member.id),
     )
     .slice(0, 10);
 

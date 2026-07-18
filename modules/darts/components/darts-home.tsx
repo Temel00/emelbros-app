@@ -55,10 +55,25 @@ export function DartsHome({
               const self = game.participants.find(
                 (p) => p.memberId === currentMemberId,
               );
-              const opponent = game.participants.find(
-                (p) => p.id !== self?.id,
-              );
-              const won = self ? game.winnerParticipantId === self.id : false;
+              // The owner (tracker) can see and delete a game they scored
+              // for two other people without having played in it themselves
+              // (darts.md §6) — `self` is undefined in that case.
+              const opponent = self
+                ? game.participants.find((p) => p.id !== self.id)
+                : undefined;
+
+              const label = self
+                ? `vs ${opponent ? participantLabel(opponent) : "Unknown"}`
+                : game.participants
+                    .slice()
+                    .sort((a, b) => a.slot - b.slot)
+                    .map((p) => participantLabel(p))
+                    .join(" vs ");
+              const resultLabel = self
+                ? game.winnerParticipantId === self.id
+                  ? "W"
+                  : "L"
+                : "Tracked";
 
               return (
                 <li
@@ -69,16 +84,10 @@ export function DartsHome({
                     href={`/darts/${game.id}`}
                     className="flex-1 truncate text-sm font-medium hover:underline"
                   >
-                    vs {opponent ? participantLabel(opponent) : "Unknown"}
+                    {label}
                   </Link>
-                  <span
-                    className={
-                      won
-                        ? "text-xs font-semibold text-foreground"
-                        : "text-xs font-semibold text-muted-foreground"
-                    }
-                  >
-                    {won ? "W" : "L"}
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {resultLabel}
                   </span>
                   <DeleteGameButton
                     gameId={game.id}

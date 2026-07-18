@@ -165,6 +165,10 @@ export function computeCareerRecord(
     const turns = game.turns
       .filter((t) => t.participantId === participant.id)
       .sort((a, b) => a.turnNumber - b.turnNumber);
+    // Unreachable for a real completed game: 301/501 double-out means the
+    // first turn can reduce at most 180, so a game can never finish before
+    // both participants have thrown at least once. Guarded anyway so a
+    // malformed row can't silently corrupt the aggregate below.
     if (turns.length === 0) continue;
 
     played++;
