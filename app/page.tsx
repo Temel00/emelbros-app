@@ -77,7 +77,9 @@ export default async function Home() {
     widgetPins.map((pin) => `${pin.module}:${pin.widget}`),
   );
   const availableWidgets = allWidgets()
-    .filter(({ mod, widget }) => !pinnedWidgetKeys.has(`${mod.slug}:${widget.id}`))
+    .filter(
+      ({ mod, widget }) => !pinnedWidgetKeys.has(`${mod.slug}:${widget.id}`),
+    )
     .map(({ mod, widget }) => {
       const Icon = resolveIcon(mod.icon);
       return {

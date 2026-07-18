@@ -101,7 +101,9 @@ export function NewGameForm({ profiles }: { profiles: ProfileRow[] }) {
         <Select
           id={variantId}
           value={variant}
-          onChange={(event) => setVariant(Number(event.target.value) as 301 | 501)}
+          onChange={(event) =>
+            setVariant(Number(event.target.value) as 301 | 501)
+          }
         >
           <option value={501}>501</option>
           <option value={301}>301</option>
@@ -178,7 +180,10 @@ function PlayerPicker({
         {profile && (
           <span
             aria-hidden
-            className={cn("size-3 shrink-0 rounded-full", ACCENT_BG[profile.accent])}
+            className={cn(
+              "size-3 shrink-0 rounded-full",
+              ACCENT_BG[profile.accent],
+            )}
           />
         )}
         <Select

@@ -503,9 +503,7 @@ describe("getCompletedGameDetail", () => {
       darts_game: { data: null, error: null },
     });
 
-    await expect(
-      getCompletedGameDetail(client, "missing"),
-    ).resolves.toBeNull();
+    await expect(getCompletedGameDetail(client, "missing")).resolves.toBeNull();
   });
 
   it("assembles the single completed game's detail", async () => {
