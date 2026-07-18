@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { parseISODate } from "@/modules/habits/lib/cadence";
+import { getTrackableKind } from "@/modules/habits/lib/kinds";
 import {
+  buildHabitsWidgetSummary,
   buildHabitViewModels,
   buildMetricViewModels,
   groupLogsByTrackable,
   groupParticipantsByTrackable,
+  type HabitViewModel,
   type LogRow,
   type TrackableRow,
 } from "@/modules/habits/lib/view-model";
@@ -113,5 +116,64 @@ describe("buildMetricViewModels", () => {
     expect(metrics).toHaveLength(1);
     expect(metrics[0].trackable.id).toBe("weight-1");
     expect(metrics[0].points).toEqual([{ date: "2026-07-10", value: 71 }]);
+  });
+});
+
+describe("buildHabitsWidgetSummary", () => {
+  function habitVm(
+    overrides: Partial<HabitViewModel> & { title: string },
+  ): HabitViewModel {
+    const { title, ...rest } = overrides;
+    return {
+      trackable: trackable({ id: title, title }),
+      kind: getTrackableKind("habit"),
+      streak: 0,
+      due: false,
+      todayDone: false,
+      ...rest,
+    };
+  }
+
+  it("counts only habits scheduled today, and ranks streaks highest first", () => {
+    const summary = buildHabitsWidgetSummary([
+      habitVm({ title: "Vitamins", todayDone: true, streak: 12 }),
+      habitVm({ title: "Exercise", todayDone: true, streak: 4 }),
+      habitVm({ title: "Reading", due: true, streak: 0 }),
+      habitVm({ title: "Stretch", due: true, streak: 7 }),
+      // Not on today's schedule (e.g. a weekdays habit that skips today):
+      // neither due nor done, so it stays out of the count.
+      habitVm({ title: "Laundry", streak: 3 }),
+    ]);
+
+    expect(summary.doneToday).toBe(2);
+    expect(summary.scheduledToday).toBe(4);
+    expect(summary.topStreaks).toEqual([
+      { title: "Vitamins", streak: 12 },
+      { title: "Stretch", streak: 7 },
+      { title: "Exercise", streak: 4 },
+    ]);
+  });
+
+  it("omits zero streaks and caps the row", () => {
+    const summary = buildHabitsWidgetSummary(
+      [
+        habitVm({ title: "A", due: true, streak: 5 }),
+        habitVm({ title: "B", due: true, streak: 3 }),
+        habitVm({ title: "C", due: true, streak: 0 }),
+      ],
+      { topStreakCount: 1 },
+    );
+
+    expect(summary.topStreaks).toEqual([{ title: "A", streak: 5 }]);
+  });
+
+  it("reports an empty day when nothing is scheduled today", () => {
+    const summary = buildHabitsWidgetSummary([habitVm({ title: "A" })]);
+
+    expect(summary).toEqual({
+      doneToday: 0,
+      scheduledToday: 0,
+      topStreaks: [],
+    });
   });
 });

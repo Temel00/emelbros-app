@@ -12,10 +12,13 @@ export type PinZoneItem = {
   key: string;
   label: string;
   description?: string;
-  icon: ReactNode;
+  icon?: ReactNode;
   href?: string;
-  // A widget item carries its own rendered card (a `WidgetFrame`); when set,
-  // it replaces the icon/label tile chrome and the frame is the card itself.
+  /**
+   * Full card body, used by the At-a-glance zone: a widget renders its own
+   * content rather than the icon + label tile the Apps grid shows. When set,
+   * `icon`/`description`/`href` are ignored.
+   */
   content?: ReactNode;
 };
 
@@ -158,18 +161,10 @@ function PinCard({
     </div>
   );
 
-  // A widget item brings its own card (the `WidgetFrame`); render it as-is and
-  // hang the edit controls beneath it, rather than wrapping it in tile chrome.
-  if (item.content) {
-    return (
-      <div className="flex flex-col gap-2">
-        {item.content}
-        {editing && <div className="flex justify-end">{controls}</div>}
-      </div>
-    );
-  }
-
-  const content = (
+  // A widget supplies the whole card body (its `WidgetFrame`); an app tile
+  // gets the icon + label tile instead. Either way the card chrome below is
+  // the same, so the two zones can't drift apart visually.
+  const content = item.content ?? (
     <div className="flex flex-1 flex-col items-center gap-2 text-center">
       {item.icon}
       <span className="text-sm font-medium">{item.label}</span>
@@ -183,7 +178,7 @@ function PinCard({
 
   return (
     <div className="relative flex flex-col items-center gap-2 rounded-lg border border-border bg-card p-4">
-      {editing ? (
+      {editing || item.content ? (
         content
       ) : item.href ? (
         <Link

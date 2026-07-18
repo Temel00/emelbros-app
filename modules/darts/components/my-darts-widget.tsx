@@ -12,7 +12,9 @@ import { createClient } from "@/platform/supabase/server";
  * Component about the current member. It fetches its own data via the module's
  * `queries.ts` and the platform current-member helper — the dashboard passes
  * it nothing — and shows the member's recent record, most recent completed
- * game, and a New game shortcut into the module.
+ * game, and a New game shortcut into the module. The platform widget frame
+ * owns the card chrome and the "My Darts" heading, so this renders only the
+ * body.
  */
 export async function MyDartsWidget() {
   const member = await getCurrentMember();
@@ -24,8 +26,7 @@ export async function MyDartsWidget() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
-        <p className="text-sm font-medium">My Darts</p>
+      <div className="flex items-baseline justify-end">
         <Link
           href="/darts/new"
           className={buttonVariants({ size: "sm", variant: "outline" })}

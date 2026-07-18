@@ -1,9 +1,9 @@
 import type { ModuleManifest } from "@/platform/module-manifest";
 
+import { HabitsWidget } from "@/modules/habits/components/habits-widget";
+
 /**
- * The Habits module manifest (ADR-0001). No widget yet: the "Habits"
- * dashboard widget is built and added here by a later ticket (#39), once
- * the queries/streak logic it depends on (#38) exists.
+ * The Habits module manifest (ADR-0001).
  */
 export const habitsManifest = {
   slug: "habits",
@@ -19,6 +19,13 @@ export const habitsManifest = {
       from: "habits_trackable",
     },
   ],
-  widgets: [],
+  widgets: [
+    {
+      id: "habits",
+      name: "Habits",
+      description: "Today's check-off progress and your top current streaks.",
+      component: HabitsWidget,
+    },
+  ],
   profileSections: [],
 } satisfies ModuleManifest;

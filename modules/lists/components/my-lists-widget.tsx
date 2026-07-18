@@ -11,7 +11,8 @@ import { getMyLists, type MyListSummary } from "@/modules/lists/queries";
  * Component about the current member. It fetches its own data — the member's
  * visible, non-archived lists, newest-first and capped at five — via the
  * module's `queries.ts`; RLS is what scopes the rows, so no member id is
- * passed. The platform widget frame owns the card chrome around it.
+ * passed. The platform widget frame owns the card chrome and the "My Lists"
+ * heading around it, so this renders only the body.
  */
 export async function MyListsWidget() {
   const supabase = await createClient();
@@ -19,8 +20,6 @@ export async function MyListsWidget() {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm font-bold text-muted-foreground">My Lists</p>
-
       {lists.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No lists yet — open Lists to create one.
