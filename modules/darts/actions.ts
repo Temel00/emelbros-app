@@ -85,7 +85,11 @@ export async function recordTurnAction(input: {
   });
   await recordDarts(supabase, turn.id, input.darts);
   if (input.checkoutWinnerParticipantId) {
-    await completeGame(supabase, input.gameId, input.checkoutWinnerParticipantId);
+    await completeGame(
+      supabase,
+      input.gameId,
+      input.checkoutWinnerParticipantId,
+    );
   }
 
   revalidatePath(`/darts/${input.gameId}`);

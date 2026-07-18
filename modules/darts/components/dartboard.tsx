@@ -17,7 +17,12 @@ const R_25 = 58;
 const RINGS = [R_25, 102, 146, 190];
 const STEP = (2 * Math.PI) / 20;
 
-function polar(cx: number, cy: number, r: number, angle: number): [number, number] {
+function polar(
+  cx: number,
+  cy: number,
+  r: number,
+  angle: number,
+): [number, number] {
   return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
 }
 
@@ -36,12 +41,13 @@ function annularSector(
   return `M${x1} ${y1} A${r2} ${r2} 0 ${large} 1 ${x2} ${y2} L${x3} ${y3} A${r1} ${r1} 0 ${large} 0 ${x4} ${y4} Z`;
 }
 
-const RING_FILL: Record<"single-a" | "single-b" | "double" | "treble", string> = {
-  "single-a": "var(--color-card)",
-  "single-b": "var(--color-muted)",
-  double: "var(--color-c-green)",
-  treble: "var(--color-c-blue)",
-};
+const RING_FILL: Record<"single-a" | "single-b" | "double" | "treble", string> =
+  {
+    "single-a": "var(--color-card)",
+    "single-b": "var(--color-muted)",
+    double: "var(--color-c-green)",
+    treble: "var(--color-c-blue)",
+  };
 
 /**
  * The dartboard-shaped calculator (darts.md §3, prototype #7): enlarged bull
@@ -68,7 +74,11 @@ export function Dartboard({
   }
 
   /** Tap/click/keyboard-activation props shared by every scoring shape (wedge, bull, outer bull). */
-  function targetProps(segment: number, multiple: 1 | 2 | 3, ariaLabel: string) {
+  function targetProps(
+    segment: number,
+    multiple: 1 | 2 | 3,
+    ariaLabel: string,
+  ) {
     const glow = isTarget(segment, multiple);
     return {
       glow,
@@ -108,7 +118,10 @@ export function Dartboard({
         key={`${segment}-${multiple}`}
         d={annularSector(r1, r2, angleStart, angleEnd)}
         fill={fill}
-        className={cn("cursor-pointer transition-[filter] hover:brightness-110", glow && "animate-pulse")}
+        className={cn(
+          "cursor-pointer transition-[filter] hover:brightness-110",
+          glow && "animate-pulse",
+        )}
         {...props}
       />
     );
@@ -130,9 +143,33 @@ export function Dartboard({
 
         return (
           <g key={segment}>
-            {wedge(segment, 1, RINGS[0], RINGS[1], angleStart, angleEnd, singleFill)}
-            {wedge(segment, 2, RINGS[1], RINGS[2], angleStart, angleEnd, RING_FILL.double)}
-            {wedge(segment, 3, RINGS[2], RINGS[3], angleStart, angleEnd, RING_FILL.treble)}
+            {wedge(
+              segment,
+              1,
+              RINGS[0],
+              RINGS[1],
+              angleStart,
+              angleEnd,
+              singleFill,
+            )}
+            {wedge(
+              segment,
+              2,
+              RINGS[1],
+              RINGS[2],
+              angleStart,
+              angleEnd,
+              RING_FILL.double,
+            )}
+            {wedge(
+              segment,
+              3,
+              RINGS[2],
+              RINGS[3],
+              angleStart,
+              angleEnd,
+              RING_FILL.treble,
+            )}
             <text
               x={labelX}
               y={labelY}
@@ -157,7 +194,10 @@ export function Dartboard({
             cy={CY}
             r={R_25}
             fill="var(--color-c-yellow)"
-            className={cn("cursor-pointer transition-[filter] hover:brightness-110", glow && "animate-pulse")}
+            className={cn(
+              "cursor-pointer transition-[filter] hover:brightness-110",
+              glow && "animate-pulse",
+            )}
             {...props}
           />
         );
@@ -170,7 +210,10 @@ export function Dartboard({
             cy={CY}
             r={R_BULL}
             fill="var(--color-foreground)"
-            className={cn("cursor-pointer transition-[filter] hover:brightness-125", glow && "animate-pulse")}
+            className={cn(
+              "cursor-pointer transition-[filter] hover:brightness-125",
+              glow && "animate-pulse",
+            )}
             {...props}
           />
         );

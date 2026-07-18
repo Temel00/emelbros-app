@@ -33,7 +33,9 @@ function dartLabel(dart: ThrownDart): string {
   if (dart.segment === 0) return "—";
   if (dart.segment === 50) return "Bull";
   if (dart.segment === 25) return "25";
-  return (dart.multiple === 3 ? "T" : dart.multiple === 2 ? "D" : "") + dart.segment;
+  return (
+    (dart.multiple === 3 ? "T" : dart.multiple === 2 ? "D" : "") + dart.segment
+  );
 }
 
 function playerLabel(
@@ -43,9 +45,13 @@ function playerLabel(
   if (participant.guest_name) {
     return { text: participant.guest_name, accentClass: null };
   }
-  const profile = participant.member_id ? profiles.get(participant.member_id) : undefined;
+  const profile = participant.member_id
+    ? profiles.get(participant.member_id)
+    : undefined;
   return {
-    text: participant.member_id ? shortMemberLabel(participant.member_id) : "Unknown",
+    text: participant.member_id
+      ? shortMemberLabel(participant.member_id)
+      : "Unknown",
     accentClass: profile ? ACCENT_BG[profile.accent] : null,
   };
 }
@@ -87,7 +93,10 @@ export function LiveGame({
   const config = { startingScore: game.variant, startingPlayer };
 
   const initialDarts: ThrownDart[] = initialTurns.flatMap((turn) =>
-    turn.darts.map((d) => ({ segment: d.segment, multiple: d.multiple as 1 | 2 | 3 })),
+    turn.darts.map((d) => ({
+      segment: d.segment,
+      multiple: d.multiple as 1 | 2 | 3,
+    })),
   );
 
   const [darts, setDarts] = useState<ThrownDart[]>(initialDarts);
@@ -151,13 +160,17 @@ export function LiveGame({
         });
         setPersistedTurnIds((prev) => [...prev, turnId]);
         if (turn.busted) {
-          showBustToast(`BUST — ${label(turn.player).text} stays on ${turn.scoreBefore}`);
+          showBustToast(
+            `BUST — ${label(turn.player).text} stays on ${turn.scoreBefore}`,
+          );
         } else if (checkoutWinnerParticipantId) {
           setShowOverlay(true);
         }
       } catch (err) {
         setDarts(darts);
-        setError(err instanceof Error ? err.message : "Couldn't save that turn");
+        setError(
+          err instanceof Error ? err.message : "Couldn't save that turn",
+        );
       } finally {
         setPending(false);
       }
@@ -165,7 +178,12 @@ export function LiveGame({
   }
 
   function handleUndo() {
-    if (!isOwner || pending || darts.length === 0 || state.status !== "in_progress") {
+    if (
+      !isOwner ||
+      pending ||
+      darts.length === 0 ||
+      state.status !== "in_progress"
+    ) {
       return;
     }
 
@@ -185,7 +203,9 @@ export function LiveGame({
         setPersistedTurnIds((prev) => prev.slice(0, -1));
         setDarts(nextDarts);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Couldn't undo that dart");
+        setError(
+          err instanceof Error ? err.message : "Couldn't undo that dart",
+        );
       } finally {
         setPending(false);
       }
@@ -194,7 +214,11 @@ export function LiveGame({
 
   function handleAbandon() {
     if (!isOwner) return;
-    if (!window.confirm("Abandon this game? It's discarded entirely — this can't be undone.")) {
+    if (
+      !window.confirm(
+        "Abandon this game? It's discarded entirely — this can't be undone.",
+      )
+    ) {
       return;
     }
     startTransition(async () => {
@@ -202,13 +226,17 @@ export function LiveGame({
         await abandonGameAction(game.id);
         router.push("/darts");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Couldn't abandon the game");
+        setError(
+          err instanceof Error ? err.message : "Couldn't abandon the game",
+        );
       }
     });
   }
 
   const checkoutTarget =
-    state.status === "in_progress" ? checkoutDartTarget(state.scores[state.currentPlayer]) : null;
+    state.status === "in_progress"
+      ? checkoutDartTarget(state.scores[state.currentPlayer])
+      : null;
 
   const historyTurns = [
     ...state.turns,
@@ -230,7 +258,9 @@ export function LiveGame({
 
   const winnerDartsThrown =
     state.winner !== null
-      ? state.turns.filter((t) => t.player === state.winner).reduce((sum, t) => sum + t.darts.length, 0)
+      ? state.turns
+          .filter((t) => t.player === state.winner)
+          .reduce((sum, t) => sum + t.darts.length, 0)
       : 0;
 
   return (
@@ -253,7 +283,8 @@ export function LiveGame({
       <div className="grid grid-cols-2 gap-2">
         {([0, 1] as const).map((index) => {
           const { text, accentClass } = label(index);
-          const active = state.currentPlayer === index && state.status === "in_progress";
+          const active =
+            state.currentPlayer === index && state.status === "in_progress";
           return (
             <div
               key={index}
@@ -263,12 +294,21 @@ export function LiveGame({
               )}
             >
               <div className="flex items-center gap-2 text-sm font-bold">
-                {accentClass && <span aria-hidden className={cn("size-2.5 rounded-full", accentClass)} />}
+                {accentClass && (
+                  <span
+                    aria-hidden
+                    className={cn("size-2.5 rounded-full", accentClass)}
+                  />
+                )}
                 <span className="truncate">{text}</span>
               </div>
-              <div className="mt-1 text-4xl font-black tabular-nums">{state.scores[index]}</div>
+              <div className="mt-1 text-4xl font-black tabular-nums">
+                {state.scores[index]}
+              </div>
               <div className="min-h-4 text-xs font-bold text-primary">
-                {state.status === "in_progress" && state.currentPlayer === index && checkoutTarget
+                {state.status === "in_progress" &&
+                state.currentPlayer === index &&
+                checkoutTarget
                   ? `Checkout ${dartLabel(checkoutTarget)}`
                   : " "}
               </div>
@@ -289,24 +329,35 @@ export function LiveGame({
                   : "border-dashed border-border text-muted-foreground",
               )}
             >
-              {state.currentTurnDarts[i] ? dartLabel(state.currentTurnDarts[i]) : ""}
+              {state.currentTurnDarts[i]
+                ? dartLabel(state.currentTurnDarts[i])
+                : ""}
             </div>
           ))}
         </div>
         <span className="font-bold text-muted-foreground">
-          this turn {state.currentTurnDarts.reduce((sum, d) => sum + dartValue(d), 0)}
+          this turn{" "}
+          {state.currentTurnDarts.reduce((sum, d) => sum + dartValue(d), 0)}
         </span>
       </div>
 
-      <Dartboard disabled={disabled} checkoutTarget={checkoutTarget} onThrow={handleThrow} />
+      <Dartboard
+        disabled={disabled}
+        checkoutTarget={checkoutTarget}
+        onThrow={handleThrow}
+      />
 
       <div className="rounded-lg border border-border bg-card p-2">
         <h3 className="mb-1.5 flex items-center justify-between text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
           <span>Turn history</span>
-          <span>{historyTurns.length > 0 ? `${historyTurns.length} turns` : ""}</span>
+          <span>
+            {historyTurns.length > 0 ? `${historyTurns.length} turns` : ""}
+          </span>
         </h3>
         {historyTurns.length === 0 ? (
-          <p className="p-1 text-xs text-muted-foreground">No darts yet — tap the board to start scoring.</p>
+          <p className="p-1 text-xs text-muted-foreground">
+            No darts yet — tap the board to start scoring.
+          </p>
         ) : (
           <ul className="flex gap-2 overflow-x-auto pb-1">
             {historyTurns.map((turn, i) => {
@@ -316,7 +367,9 @@ export function LiveGame({
                   key={i}
                   className={cn(
                     "min-w-16 shrink-0 rounded-lg bg-muted px-2 py-1.5 opacity-70",
-                    "current" in turn && turn.current && "opacity-100 ring-1 ring-inset ring-primary/40",
+                    "current" in turn &&
+                      turn.current &&
+                      "opacity-100 ring-1 ring-inset ring-primary/40",
                   )}
                 >
                   <div className="flex items-center justify-between gap-1 text-[10px] font-bold text-muted-foreground">
@@ -359,7 +412,11 @@ export function LiveGame({
           >
             ↶ Undo
           </Button>
-          <Button variant="destructive" disabled={pending} onClick={handleAbandon}>
+          <Button
+            variant="destructive"
+            disabled={pending}
+            onClick={handleAbandon}
+          >
             Abandon
           </Button>
         </div>
@@ -371,13 +428,21 @@ export function LiveGame({
             <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
               Game over · double-out
             </p>
-            <p className="my-1.5 text-2xl font-black">{label(state.winner).text} wins!</p>
-            <p className="mb-4 font-bold text-muted-foreground">{winnerDartsThrown} darts thrown</p>
+            <p className="my-1.5 text-2xl font-black">
+              {label(state.winner).text} wins!
+            </p>
+            <p className="mb-4 font-bold text-muted-foreground">
+              {winnerDartsThrown} darts thrown
+            </p>
             <div className="flex gap-2">
               <Button className="flex-1" onClick={() => router.push("/darts")}>
                 New game
               </Button>
-              <Button variant="secondary" className="flex-1" onClick={() => setShowOverlay(false)}>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setShowOverlay(false)}
+              >
                 View board
               </Button>
             </div>

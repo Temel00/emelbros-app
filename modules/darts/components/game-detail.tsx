@@ -104,7 +104,9 @@ export function GameDetail({
                           : "flex justify-between"
                       }
                     >
-                      <span>{turn.darts.map((d) => dartLabel(d)).join(" ")}</span>
+                      <span>
+                        {turn.darts.map((d) => dartLabel(d)).join(" ")}
+                      </span>
                       <span className="tabular-nums">{turn.points}</span>
                     </li>
                   ))}
