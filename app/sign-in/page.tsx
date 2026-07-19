@@ -28,13 +28,20 @@ import {
   type VariantProps,
 } from "./prototype-variants";
 import {
-  POSITION_VARIANTS,
   PositionD0,
   PositionD1,
   PositionD2,
   PositionD3,
   PositionD4,
 } from "./prototype-positions";
+import {
+  CONVERGE_VARIANTS,
+  ConvergeE0,
+  ConvergeE1,
+  ConvergeE2,
+  ConvergeE3,
+  ConvergeE4,
+} from "./prototype-converge";
 
 const RENDERERS: Record<string, (props: VariantProps) => React.ReactNode> = {
   A: VariantA,
@@ -46,6 +53,11 @@ const RENDERERS: Record<string, (props: VariantProps) => React.ReactNode> = {
   D2: PositionD2,
   D3: PositionD3,
   D4: PositionD4,
+  E0: ConvergeE0,
+  E1: ConvergeE1,
+  E2: ConvergeE2,
+  E3: ConvergeE3,
+  E4: ConvergeE4,
 };
 
 const FRAME_WIDTHS = [320, 390, 430, 768];
@@ -54,7 +66,7 @@ function SignInVariants() {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
-  const variant = searchParams.get("variant") ?? "D1";
+  const variant = searchParams.get("variant") ?? "E1";
   const showFrames = searchParams.get("frames") === "1";
   // `frames=0` marks the document as being *inside* one of the iframes, so it
   // renders the bare variant without a switcher bar in every frame.
@@ -76,7 +88,7 @@ function SignInVariants() {
     }
   }
 
-  const Render = RENDERERS[variant] ?? PositionD1;
+  const Render = RENDERERS[variant] ?? ConvergeE1;
   const props: VariantProps = { onSignIn: handleSignIn, isPending, error };
 
   if (showFrames) {
@@ -98,7 +110,7 @@ function SignInVariants() {
             </figure>
           ))}
         </div>
-        <PrototypeSwitcher variants={POSITION_VARIANTS} current={variant} />
+        <PrototypeSwitcher variants={CONVERGE_VARIANTS} current={variant} />
       </>
     );
   }
@@ -108,7 +120,7 @@ function SignInVariants() {
   return (
     <>
       <Render {...props} />
-      <PrototypeSwitcher variants={POSITION_VARIANTS} current={variant} />
+      <PrototypeSwitcher variants={CONVERGE_VARIANTS} current={variant} />
     </>
   );
 }
