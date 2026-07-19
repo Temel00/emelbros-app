@@ -1,4 +1,3 @@
-import { AppHeader } from "@/components/app-header";
 import { getCurrentMember } from "@/platform/auth";
 import { createClient } from "@/platform/supabase/server";
 import { NewGameForm } from "@/modules/darts/components/new-game-form";
@@ -20,7 +19,6 @@ export default async function NewDartsGamePage() {
 
   return (
     <>
-      <AppHeader memberId={member.id} supabase={supabase} />
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-4 sm:p-6">
         <div>
           <h1 className="text-xl font-semibold">New game</h1>

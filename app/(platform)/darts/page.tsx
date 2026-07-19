@@ -1,4 +1,3 @@
-import { AppHeader } from "@/components/app-header";
 import { getCurrentMember } from "@/platform/auth";
 import { createClient } from "@/platform/supabase/server";
 import { getCompletedGames } from "@/modules/darts/queries";
@@ -24,7 +23,6 @@ export default async function DartsPage() {
 
   return (
     <>
-      <AppHeader memberId={member.id} supabase={supabase} />
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 sm:p-6">
         <DartsHome recentGames={recentGames} currentMemberId={member.id} />
       </main>
