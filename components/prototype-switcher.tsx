@@ -74,11 +74,24 @@ export function PrototypeSwitcher({
     router.replace(`?${params.toString()}`);
   }
 
+  const framesOn = searchParams.get("frames") === "1";
+
+  function toggleFrames() {
+    const params = new URLSearchParams(searchParams.toString());
+    if (framesOn) params.delete("frames");
+    else params.set("frames", "1");
+    router.replace(`?${params.toString()}`);
+  }
+
   function toggleTheme() {
     const nextDark = !document.documentElement.classList.contains("dark");
     document.documentElement.classList.toggle("dark", nextDark);
     localStorage.setItem("emelbros-theme", nextDark ? "dark" : "light");
-    router.refresh();
+    // The breakpoint frames are separate documents — they resolve the theme
+    // from localStorage in layout.tsx's pre-paint script at *load*, so a class
+    // flip on the parent never reaches them. Reload so they re-read it.
+    if (framesOn) window.location.reload();
+    else router.refresh();
   }
 
   return (
@@ -109,6 +122,15 @@ export function PrototypeSwitcher({
         className="ml-1 rounded-full border-l border-white/20 px-2 py-1 hover:bg-white/15"
       >
         {isDark ? "☀" : "☾"}
+      </button>
+      <button
+        type="button"
+        onClick={toggleFrames}
+        aria-label="Toggle breakpoint frames"
+        title="Show this variant at 320 / 390 / 430 / 768px"
+        className="rounded-full border-l border-white/20 px-2 py-1 hover:bg-white/15"
+      >
+        {framesOn ? "▣" : "▤"}
       </button>
     </div>
   );
