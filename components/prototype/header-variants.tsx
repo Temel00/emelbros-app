@@ -1,14 +1,22 @@
 /**
- * PROTOTYPE (#68) — throwaway. **Round two.**
+ * PROTOTYPE (#68) — throwaway. **Round three.**
  *
- * Round one asked "what shape is the header lockup" across four structurally
- * different directions (A–D, see PR #80's first commit). The owner picked the
- * combination: **C's single-line multicoloured live-text wordmark** paired with
- * **D's initial avatar**. Round two holds that structure fixed and varies the
- * one thing still open — **which letters get which colour**.
+ * Round one settled the *shape*: single-line multicoloured live-text wordmark
+ * with an initial avatar. Round two ran six colourings of it; the owner picked
+ * **Cycle** (four brights, twice through, no symmetry) as the favourite, and
+ * asked for the **inverse of Tail** — colour on "emel", neutral on "bros".
  *
- * So every variant below is the same header. Only the colouring changes,
- * ranging from "all four brights, loud" to "no brights at all".
+ * Round three explores only those two ideas. Two families:
+ *
+ * - **Head** (A–D) — "emel" carries the brights, "bros" goes neutral.
+ * - **Cycle** (E–F) — the round-two favourite, plus one hybrid.
+ *
+ * A note on "white": the owner asked for a white "bros". White is only white
+ * on the *dark* ground — on the light ground `--background` is `#f5f6f7`, so a
+ * literally-white "bros" is invisible. A and B are therefore the same idea
+ * twice: A reads "white" as the theme-aware ink token (dark on light, near-
+ * white on dark), B takes it literally so the light-mode failure is visible
+ * rather than argued about.
  *
  * Still sized with **container queries**, not viewport breakpoints, so the
  * same component renders as the live sticky header *and* inside the
@@ -37,6 +45,14 @@ const GREEN = "var(--c-green)";
 const BLUE = "var(--c-blue)";
 /** Body ink — the neutral that carries ~90% of every surface (#18). */
 const INK = "var(--foreground)";
+/** Softer than ink — deliberate hierarchy rather than equal weight. */
+const MUTED = "var(--muted-foreground)";
+/** Literally white, on both grounds. Only legible on the dark one. */
+const WHITE = "#ffffff";
+
+/** A bright, faded toward the ground — used for the half-strength tail. */
+const fade = (color: string, pct: number) =>
+  `color-mix(in oklab, ${color} ${pct}%, var(--background))`;
 
 /**
  * One colour per letter of "emelbros". Eight entries, always — the schemes
@@ -58,75 +74,77 @@ const SCHEMES: Record<
   { name: string; note: string; colors: Scheme }
 > = {
   /**
-   * The artwork's own colouring, flattened. The two-line lockup runs
-   * pink-yellow-green-blue across "emel" and blue-green-yellow-pink across
-   * "bros", so laid out in one line it reads as a palindrome.
+   * The requested inverse of Tail, read theme-aware: brights on "emel",
+   * "bros" in the ink token — near-white on the dark ground, dark on the
+   * light one. This is "white bros" as it actually has to be implemented
+   * if the header is to work in both themes.
    */
   A: {
-    name: "Mirror — the artwork's own order",
-    note: "Exactly the colours #66's artwork already assigns, just on one line. Reads as a palindrome: pink at both ends, blue meeting in the middle.",
-    colors: [PINK, YELLOW, GREEN, BLUE, BLUE, GREEN, YELLOW, PINK],
+    name: "Head — bright 'emel', ink 'bros'",
+    note: "The inverse of Tail. Colour leads, the name lands. 'bros' uses the ink token, so it is near-white on dark and dark on light — the only reading of 'white' that survives both themes.",
+    colors: [PINK, YELLOW, GREEN, BLUE, INK, INK, INK, INK],
   },
 
   /**
-   * The same four brights, but cycling rather than mirroring — so the
-   * repeat lands on the "b" and the word feels like it has momentum
-   * rather than symmetry.
+   * The same idea taken literally — a white "bros" on both grounds. Included
+   * precisely so the light-mode failure is visible rather than described.
    */
   B: {
-    name: "Cycle — four brights, twice through",
-    note: "Same palette, no symmetry. The eye reads left-to-right motion instead of a centre. Puts pink on 'e' and 'b', the two strongest letterforms.",
+    name: "Head — bright 'emel', literally white 'bros'",
+    note: "'white' taken at face value. Look at this one on the light ground: 'bros' is #ffffff on a #f5f6f7 background, so half the wordmark disappears. Dark mode is exactly what you were picturing.",
+    colors: [PINK, YELLOW, GREEN, BLUE, WHITE, WHITE, WHITE, WHITE],
+  },
+
+  /**
+   * Head, but the tail steps back rather than matching body text — so the
+   * colour clearly leads and "bros" reads as a second beat.
+   */
+  C: {
+    name: "Head — bright 'emel', muted 'bros'",
+    note: "Same shape as A, but 'bros' drops to the muted token instead of full ink. Gives the lockup a clear front and back rather than two equal halves.",
+    colors: [PINK, YELLOW, GREEN, BLUE, MUTED, MUTED, MUTED, MUTED],
+  },
+
+  /**
+   * Head with yellow removed. #66 measured yellow at 1.33:1 on the light
+   * ground, and in every Head scheme it lands on the "m" — right in the
+   * middle of the coloured half. This is the version that survives light
+   * mode without touching the palette tokens.
+   */
+  D: {
+    name: "Head — no yellow, ink 'bros'",
+    note: "A, minus the letter that vanishes. Yellow is 1.33:1 on the light ground, and in Head it always lands on the 'm'. Here 'emel' runs pink-green-blue-pink instead. Cheapest fix that needs no palette change.",
+    colors: [PINK, GREEN, BLUE, PINK, INK, INK, INK, INK],
+  },
+
+  /**
+   * Round two's favourite, carried forward unchanged as the baseline the
+   * Head family is being judged against.
+   */
+  E: {
+    name: "Cycle — four brights, twice through (round-two favourite)",
+    note: "Unchanged from round two, here as the baseline. Four brights cycling with no symmetry; the eye reads left-to-right motion. Still carries the light-mode yellow problem on the 'm' and the 'r'.",
     colors: [PINK, YELLOW, GREEN, BLUE, PINK, YELLOW, GREEN, BLUE],
   },
 
   /**
-   * Two solid blocks on the compound word. Much calmer — the colour
-   * carries the word's structure rather than decorating each letter.
-   */
-  C: {
-    name: "Syllable — 'emel' and 'bros' as blocks",
-    note: "Colour as structure, not decoration: it says the name is two words. Only two brights spent, so the header stays quiet.",
-    colors: [PINK, PINK, PINK, PINK, BLUE, BLUE, BLUE, BLUE],
-  },
-
-  /**
-   * Ink-first: the name is body ink, with the brights confined to the
-   * letters that bookend it. Keeps the header chrome neutral, which is
-   * the stated colour discipline (#18: neutrals carry ~90%).
-   */
-  D: {
-    name: "Bookends — ink with coloured ends",
-    note: "Nearly all ink. Only the opening 'e' and closing 's' are bright, so the lockup hints at the palette without spending it. Most compatible with #18's 'neutrals carry 90%' rule.",
-    colors: [PINK, INK, INK, INK, INK, INK, INK, BLUE],
-  },
-
-  /**
-   * A middle position: the first word stays ink so the name reads as a
-   * word first, then the second word runs the full palette.
-   */
-  E: {
-    name: "Tail — ink 'emel', bright 'bros'",
-    note: "Reads as a word first and a logo second. All four brights still appear, but only across half the lockup, so they don't fight the UI chrome beside them.",
-    colors: [INK, INK, INK, INK, BLUE, GREEN, YELLOW, PINK],
-  },
-
-  /**
-   * No brand brights at all — the wordmark takes the *signed-in member's*
-   * accent. Makes the header personal rather than corporate, and echoes
-   * the avatar sitting opposite it.
+   * The hybrid: the full cycle is kept, but the second pass is faded toward
+   * the ground — so "emel" still leads without "bros" going fully neutral.
    */
   F: {
-    name: "Member — wordmark takes your accent",
-    note: "One colour, and it's yours — the wordmark matches the avatar across the header. Note this breaks #18's rule that the four brights only ever appear as a set for the brand signature.",
-    colors: [INK, INK, INK, INK, INK, INK, INK, INK], // overridden at render
+    name: "Cycle — full brights, faded 'bros'",
+    note: "Bridges the two you liked. The whole word keeps the cycle, but 'bros' runs at half strength toward the ground, so colour still leads without the tail going flat neutral.",
+    colors: [
+      PINK,
+      YELLOW,
+      GREEN,
+      BLUE,
+      fade(PINK, 45),
+      fade(YELLOW, 45),
+      fade(GREEN, 45),
+      fade(BLUE, 45),
+    ],
   },
-};
-
-const ACCENT_VAR: Record<MemberAccent, string> = {
-  pink: PINK,
-  yellow: YELLOW,
-  green: GREEN,
-  blue: BLUE,
 };
 
 /** The single-line live-text wordmark, coloured per letter. */
@@ -177,11 +195,7 @@ function InitialAvatar({
 
 function makeVariant(key: VariantKey) {
   return function Variant({ accent, displayName }: VariantProps) {
-    const scheme = SCHEMES[key];
-    const colors =
-      key === "F"
-        ? (Array(8).fill(ACCENT_VAR[accent]) as unknown as Scheme)
-        : scheme.colors;
+    const colors = SCHEMES[key].colors;
 
     return (
       <div className={cn(SHELL, "py-3")}>

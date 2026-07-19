@@ -169,12 +169,19 @@ export default async function DesignSystemPage({
       <main className="mx-auto flex max-w-3xl flex-col gap-12 px-6 py-12">
         <section aria-labelledby="header-lockup">
           <h2 id="header-lockup" className="mb-2 text-lg font-extrabold">
-            #68 round two — colouring the single-line wordmark
+            #68 round three — Head vs Cycle
           </h2>
           <p className="mb-2 text-sm text-muted-foreground">
-            Structure is settled: single-line multicoloured live text, with the
-            initial avatar. Only the per-letter colouring is still open. All six
-            schemes are stacked below so they compare directly.
+            Two families, from the two you liked. <strong>A–D are Head</strong>:
+            brights on &ldquo;emel&rdquo;, neutral &ldquo;bros&rdquo; — the
+            inverse of Tail. <strong>E–F are Cycle</strong>: the round-two
+            favourite, plus a faded-tail hybrid.
+          </p>
+          <p className="mb-2 text-sm text-muted-foreground">
+            <strong>Compare A and B on the light ground.</strong> A reads
+            &ldquo;white&rdquo; as the theme-aware ink token; B takes it
+            literally, and half the wordmark disappears on <code>#f5f6f7</code>.
+            That is the whole trade in one pair.
           </p>
           <p className="mb-6 text-sm text-muted-foreground">
             The sticky header above is scheme <strong>{variant}</strong> live —
