@@ -14,8 +14,9 @@ export const metadata: Metadata = {
  * swatches lie and components do not. Delete once #69 resolves.
  *
  * Every hex here is derived, not eyeballed: the "ink" cuts are each bright
- * darkened along its own hue/saturation until it clears 4.5:1 against
- * #ffffff (the card, which is the harsher of the two light grounds).
+ * darkened in OKLCH — hue and chroma held at the artwork's values, lightness
+ * dropped — until it clears 4.5:1 against #ffffff (the card, which is the
+ * harsher of the two light grounds). See the INK comment for why not HSL.
  */
 
 type Treatment = {
@@ -35,13 +36,37 @@ const ART = {
   ink: "#073b4c",
 };
 
-/** Each bright darkened to 4.5:1 on white. */
+/**
+ * Each bright darkened to 4.5:1 on white — computed in OKLCH, holding the
+ * artwork's hue and chroma fixed and dropping lightness only.
+ *
+ * The first pass did this in HSL and the pink came out reading red, which is
+ * a real failure mode and not a matter of taste: HSL darkening drifted it
+ * +6.9° of hue toward red AND raised chroma 14% (#ef476f -> #e91447). Hue and
+ * chroma are perceptually meaningless in HSL, so "same hue, less lightness"
+ * simply isn't what the space does. OKLCH holds both, so #db325f is the same
+ * pink as the logo, only darker.
+ */
 const INK = {
-  pink: "#e91447",
-  yellow: "#9d6e00",
-  green: "#048765",
-  blue: "#1080a5",
+  pink: "#db325f",
+  yellow: "#9a6f00",
+  green: "#008858",
+  blue: "#0080a8",
 };
+
+/**
+ * Pink is the one the eye is most sensitive to here, since it does the most
+ * work in direction A. This ladder walks OKLCH hue away from the artwork
+ * toward magenta at constant lightness/chroma, so the exact pink can be
+ * chosen by eye rather than argued about. All rungs clear 4.5:1 on white.
+ */
+const PINK_LADDER = [
+  { hex: "#db325f", note: "hue-locked to artwork (0°)" },
+  { hex: "#da3369", note: "−4° — a touch pinker" },
+  { hex: "#d83372", note: "−8° — clearly pinker" },
+  { hex: "#d6347b", note: "−12° — pinker still" },
+  { hex: "#d43685", note: "−16° — approaching magenta" },
+];
 
 const TREATMENTS: Treatment[] = [
   {
@@ -352,6 +377,50 @@ export default function ThemeAuditPage() {
           </section>
         ))}
       </div>
+
+      <section className="mt-10">
+        <h2 className="font-heading text-lg font-bold">Pick the action pink</h2>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Direction A needs one darker pink to carry filled buttons. The first
+          attempt (<code>#e91447</code>) read red, because darkening in HSL
+          drifted the hue <strong>+6.9° toward red</strong> and raised chroma{" "}
+          <strong>14%</strong>. Recomputed in OKLCH — which holds hue and chroma
+          as the eye actually sees them — <code>#db325f</code> is the same pink
+          as the logo, only darker. The ladder walks further toward magenta if
+          you want it pinker than the artwork. Every rung clears 4.5:1.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <div className="flex flex-col gap-1">
+            <div
+              className="flex h-16 w-40 items-center justify-center rounded-lg text-xs font-semibold"
+              style={{ background: ART.pink, color: "#073b4c" }}
+            >
+              artwork
+            </div>
+            <span className="text-[11px] text-muted-foreground">
+              {ART.pink} — fails on white
+            </span>
+          </div>
+          <div
+            className="w-px self-stretch"
+            style={{ background: "#dee1e3" }}
+            aria-hidden
+          />
+          {PINK_LADDER.map((p) => (
+            <div key={p.hex} className="flex flex-col gap-1">
+              <button
+                className="h-16 w-40 rounded-lg text-xs font-semibold"
+                style={{ background: p.hex, color: "#ffffff" }}
+              >
+                Start a game
+              </button>
+              <span className="text-[11px] text-muted-foreground">
+                {p.hex} — {p.note}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="mt-10">
         <h2 className="font-heading text-lg font-bold">
