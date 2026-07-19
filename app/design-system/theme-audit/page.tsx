@@ -68,6 +68,58 @@ const PINK_LADDER = [
   { hex: "#d43685", note: "−16° — approaching magenta" },
 ];
 
+/**
+ * Dark mode, per the owner's call: anchor on the artwork values rather than
+ * today's ad-hoc per-colour nudges, and desaturate all four by the SAME
+ * amount. Each rung multiplies OKLCH chroma, holding hue and lightness.
+ *
+ * Desaturation is a purely aesthetic knob here — it does not buy contrast.
+ * Blue on the dark card is 3.97:1 at full chroma and 3.87:1 at ZERO chroma
+ * (i.e. plain grey): contrast is driven by lightness, not saturation. So the
+ * rung is chosen by eye for glare, and legibility is handled by the ink tier.
+ */
+const DESAT_LADDER = [
+  {
+    f: "1.00",
+    note: "artwork, untouched",
+    c: ["#ef476f", "#ffd166", "#06d6a0", "#118ab2"],
+  },
+  {
+    f: "0.90",
+    note: "barely off",
+    c: ["#e75372", "#fbd275", "#3dd3a2", "#2b89ad"],
+  },
+  {
+    f: "0.85",
+    note: "default — takes the glare off",
+    c: ["#e35874", "#f9d27c", "#4ad2a4", "#3389aa"],
+  },
+  {
+    f: "0.80",
+    note: "visibly softer",
+    c: ["#df5c75", "#f7d382", "#55d0a5", "#3a88a8"],
+  },
+  {
+    f: "0.70",
+    note: "muted",
+    c: ["#d66579", "#f3d48e", "#67cda7", "#4687a3"],
+  },
+];
+
+/**
+ * The dark ink tier at the default 0.85 desaturation — the same colours
+ * LIGHTENED until they clear 4.5:1 on the dark card. Yellow and green already
+ * clear it as fills and so are unchanged; only pink and blue move. This is
+ * what makes direction A symmetric: "ink" means "the cut that is legible on
+ * whichever ground you are standing on", darker in light, lighter in dark.
+ */
+const DARK_INK = {
+  pink: "#e55a76",
+  yellow: "#f9d27c",
+  green: "#4ad2a4",
+  blue: "#3f93b5",
+};
+
 const TREATMENTS: Treatment[] = [
   {
     id: "a",
@@ -416,6 +468,69 @@ export default function ThemeAuditPage() {
               </button>
               <span className="text-[11px] text-muted-foreground">
                 {p.hex} — {p.note}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="font-heading text-lg font-bold">
+          Dark mode — pick the desaturation
+        </h2>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Dark mode anchors on the <strong>artwork values</strong> rather than
+          today&rsquo;s ad-hoc per-colour nudges, with all four desaturated by
+          the same factor. Note that desaturation is{" "}
+          <strong>purely aesthetic</strong> here: blue on the dark card is
+          3.97:1 at full chroma and 3.87:1 at <em>zero</em> chroma, so
+          saturation buys no legibility at all — lightness does. Pick the rung
+          on glare alone; the ink tier below handles text.
+        </p>
+        <div
+          className="mt-3 space-y-2 rounded-xl p-4"
+          style={{ background: "#10262c" }}
+        >
+          {DESAT_LADDER.map((r) => (
+            <div key={r.f} className="flex items-center gap-3">
+              <span
+                className="w-12 shrink-0 text-[11px] font-semibold"
+                style={{ color: "#9fb8bd" }}
+              >
+                ×{r.f}
+              </span>
+              <div className="flex gap-1.5">
+                {r.c.map((h) => (
+                  <span
+                    key={h}
+                    className="h-9 w-24 rounded-md"
+                    style={{ background: h }}
+                    title={h}
+                  />
+                ))}
+              </div>
+              <span className="text-[11px]" style={{ color: "#9fb8bd" }}>
+                {r.note}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 max-w-3xl text-sm text-muted-foreground">
+          And the dark <strong>ink</strong> tier at ×0.85 — the same colours
+          lightened until they clear 4.5:1 on the dark card. Yellow and green
+          already pass as fills and do not move; only pink and blue do.
+        </p>
+        <div
+          className="mt-2 flex flex-wrap gap-3 rounded-xl p-4"
+          style={{ background: "#10262c" }}
+        >
+          {Object.entries(DARK_INK).map(([k, h]) => (
+            <div key={k} className="flex flex-col gap-1">
+              <span className="text-sm font-semibold" style={{ color: h }}>
+                {k} text on the dark card
+              </span>
+              <span className="text-[11px]" style={{ color: "#9fb8bd" }}>
+                {h}
               </span>
             </div>
           ))}
