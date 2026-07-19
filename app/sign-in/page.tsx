@@ -8,6 +8,12 @@ import { Button } from "@/components/ui/button";
 /**
  * The four brights cycling across the live-text wordmark — the same lockup the
  * header uses (#68), so the front door and the signed-in shell agree.
+ *
+ * These are the *fill* tokens. #69 ruled the brights are fills only and a
+ * parallel ink tier carries text, but the ink tokens do not exist yet (#73), so
+ * this cycles fills in the meantime and inherits the header's known defect:
+ * yellow is 1.33:1 on the light ground, landing on the `m` and `r`. Move this
+ * to the ink tier when #73 lands — the same edge #68 records for the header.
  */
 const WORDMARK_CYCLE = [
   "text-c-pink",
