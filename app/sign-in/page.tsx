@@ -1,13 +1,31 @@
 "use client";
 
-import { useState } from "react";
+/**
+ * PROTOTYPE WIRING — wayfinder #70. The real sign-in flow below is unchanged;
+ * only the rendering swaps on `?variant=`. Fold the winner in and delete
+ * `prototype-variants.tsx` + the switcher when the ticket resolves.
+ */
+
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { createClient } from "@/platform/supabase/client";
-import { Button } from "@/components/ui/button";
+import { PrototypeSwitcher } from "@/components/prototype-switcher";
 
-export default function SignInPage() {
+import {
+  PROTOTYPE_VARIANTS,
+  VariantA,
+  VariantB,
+  VariantC,
+  VariantD,
+  type VariantProps,
+} from "./prototype-variants";
+
+function SignInVariants() {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const variant = searchParams.get("variant") ?? "A";
 
   async function handleSignIn() {
     setIsPending(true);
@@ -25,20 +43,23 @@ export default function SignInPage() {
     }
   }
 
+  const props: VariantProps = { onSignIn: handleSignIn, isPending, error };
+
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Emelbros</h1>
-        <p className="text-muted-foreground">
-          Sign in with your family Google account.
-        </p>
-      </div>
+    <>
+      {variant === "A" && <VariantA {...props} />}
+      {variant === "B" && <VariantB {...props} />}
+      {variant === "C" && <VariantC {...props} />}
+      {variant === "D" && <VariantD {...props} />}
+      <PrototypeSwitcher variants={PROTOTYPE_VARIANTS} current={variant} />
+    </>
+  );
+}
 
-      <Button onClick={handleSignIn} disabled={isPending} className="w-full">
-        {isPending ? "Redirecting…" : "Sign in with Google"}
-      </Button>
-
-      {error && <p className="text-destructive text-sm">{error}</p>}
-    </main>
+export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInVariants />
+    </Suspense>
   );
 }
