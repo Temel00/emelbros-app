@@ -53,7 +53,7 @@ function HeaderFrames({ variant }: { variant: VariantKey }) {
                   style={{ width: frame.width }}
                 >
                   <div className="border-b border-border">
-                    {render({ accent: "green" })}
+                    {render({ accent: "green", displayName: "Tyler" })}
                   </div>
                   {/* A strip of page content so the header is judged against
                       something, not against white space. */}
@@ -66,6 +66,56 @@ function HeaderFrames({ variant }: { variant: VariantKey }) {
             ))}
           </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * PROTOTYPE (#68) — all six colour schemes stacked, on both grounds. Colour
+ * options only compare properly side by side; flipping between them one at a
+ * time hides how differently loud they are.
+ */
+function SchemeStack() {
+  return (
+    <div className="flex flex-col gap-8">
+      {(["light", "dark"] as const).map((scheme) => (
+        <div key={scheme} className="flex flex-col gap-3">
+          <p className="text-xs font-bold tracking-wide uppercase">
+            {scheme} ground
+          </p>
+          <div
+            className={`${scheme === "dark" ? "dark" : ""} divide-y divide-border overflow-hidden rounded-lg border border-border bg-background`}
+          >
+            {VARIANT_KEYS.map((key) => (
+              <div key={key} className="flex flex-col gap-1 py-1">
+                <p className="px-4 pt-1 font-mono text-[11px] text-muted-foreground sm:px-6">
+                  {key} — {VARIANTS[key].name}
+                </p>
+                {VARIANTS[key].render({
+                  accent: "green",
+                  displayName: "Tyler",
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The initial avatar across all four member accents. */
+function AvatarRow() {
+  return (
+    <div className="flex items-center gap-4">
+      {MEMBER_ACCENTS.map((accent, i) => (
+        <span
+          key={accent}
+          className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-extrabold text-white ${ACCENT_BG[accent]}`}
+        >
+          {["T", "M", "E", "B"][i]}
+        </span>
       ))}
     </div>
   );
@@ -113,21 +163,45 @@ export default async function DesignSystemPage({
       {/* PROTOTYPE (#68) — the variant mounted as the real sticky header, so
           it is judged against live content scrolling underneath it. */}
       <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-        {renderHeader({ accent: "green" })}
+        {renderHeader({ accent: "green", displayName: "Tyler" })}
       </header>
 
       <main className="mx-auto flex max-w-3xl flex-col gap-12 px-6 py-12">
         <section aria-labelledby="header-lockup">
           <h2 id="header-lockup" className="mb-2 text-lg font-extrabold">
-            #68 — Header lockup, variant {variant}: {VARIANTS[variant].name}
+            #68 round two — colouring the single-line wordmark
+          </h2>
+          <p className="mb-2 text-sm text-muted-foreground">
+            Structure is settled: single-line multicoloured live text, with the
+            initial avatar. Only the per-letter colouring is still open. All six
+            schemes are stacked below so they compare directly.
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            The sticky header above is scheme <strong>{variant}</strong> live —
+            cycle with ← / → or the bar at the bottom.
+          </p>
+          <SchemeStack />
+        </section>
+
+        <section aria-labelledby="scheme-detail">
+          <h2 id="scheme-detail" className="mb-2 text-lg font-extrabold">
+            {variant} — {VARIANTS[variant].name}
           </h2>
           <p className="mb-6 text-sm text-muted-foreground">
-            The sticky header above is this variant, live. The frames below are
-            the same component at fixed widths — they use container queries, not
-            viewport breakpoints, so the crowding is real without resizing.
-            Cycle variants with ← / → or the bar at the bottom.
+            {VARIANTS[variant].note}
           </p>
           <HeaderFrames variant={variant} />
+        </section>
+
+        <section aria-labelledby="avatar">
+          <h2 id="avatar" className="mb-2 text-lg font-extrabold">
+            The initial avatar, across the four accents
+          </h2>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Carried over from round one&apos;s variant D. Needs a display name,
+            which <code>profiles</code> does not have yet — that is #72.
+          </p>
+          <AvatarRow />
         </section>
 
         <header className="flex items-center justify-between">
