@@ -1,76 +1,50 @@
 "use client";
 
-/**
- * PROTOTYPE WIRING — wayfinder #70. The real sign-in flow below is unchanged;
- * only the rendering swaps on `?variant=`. Fold the winner in and delete
- * `prototype-variants.tsx`, `prototype-positions.tsx` and the switcher when
- * the ticket resolves.
- *
- * Round one keys (A–D) still resolve by URL. The switcher cycles round two:
- * the D positioning options, D0–D4.
- *
- * `?frames=1` renders the current variant in 320/390/430/768 iframes — the
- * question this round is about small screens, and resizing a browser by hand
- * to check four of them is a bad way to spend an evening.
- */
-
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 import { createClient } from "@/platform/supabase/client";
-import { PrototypeSwitcher } from "@/components/prototype-switcher";
+import { Button } from "@/components/ui/button";
 
-import {
-  VariantA,
-  VariantB,
-  VariantC,
-  VariantD,
-  type VariantProps,
-} from "./prototype-variants";
-import {
-  PositionD0,
-  PositionD1,
-  PositionD2,
-  PositionD3,
-  PositionD4,
-} from "./prototype-positions";
-import {
-  CONVERGE_VARIANTS,
-  ConvergeE0,
-  ConvergeE1,
-  ConvergeE2,
-  ConvergeE3,
-  ConvergeE4,
-} from "./prototype-converge";
+/**
+ * The four brights cycling across the live-text wordmark — the same lockup the
+ * header uses (#68), so the front door and the signed-in shell agree.
+ */
+const WORDMARK_CYCLE = [
+  "text-c-pink",
+  "text-c-yellow",
+  "text-c-green",
+  "text-c-blue",
+] as const;
 
-const RENDERERS: Record<string, (props: VariantProps) => React.ReactNode> = {
-  A: VariantA,
-  B: VariantB,
-  C: VariantC,
-  D: VariantD,
-  D0: PositionD0,
-  D1: PositionD1,
-  D2: PositionD2,
-  D3: PositionD3,
-  D4: PositionD4,
-  E0: ConvergeE0,
-  E1: ConvergeE1,
-  E2: ConvergeE2,
-  E3: ConvergeE3,
-  E4: ConvergeE4,
-};
+function Wordmark() {
+  return (
+    <span
+      role="img"
+      aria-label="Emelbros"
+      className="font-brand block text-4xl sm:text-5xl"
+    >
+      {"emelbros".split("").map((letter, i) => (
+        <span key={i} aria-hidden className={WORDMARK_CYCLE[i % 4]}>
+          {letter}
+        </span>
+      ))}
+    </span>
+  );
+}
 
-const FRAME_WIDTHS = [320, 390, 430, 768];
-
-function SignInVariants() {
+/**
+ * Two panels meeting at a colour line. The flex direction flips at `md`, which
+ * flips what the alignment utilities mean — `items-center` centres horizontally
+ * when stacked and vertically when side by side, and `justify-end`/`justify-start`
+ * pulls each block toward the seam either way. So the layout rule is written
+ * once and reads correctly at both sizes; only the padding names a breakpoint.
+ *
+ * No AppHeader here: it renders a sign-out button and a member accent dot, and
+ * its `getProfile` guard redirects to this page — rendering it would loop.
+ */
+export default function SignInPage() {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const searchParams = useSearchParams();
-  const variant = searchParams.get("variant") ?? "E1";
-  const showFrames = searchParams.get("frames") === "1";
-  // `frames=0` marks the document as being *inside* one of the iframes, so it
-  // renders the bare variant without a switcher bar in every frame.
-  const embedded = searchParams.get("frames") === "0";
 
   async function handleSignIn() {
     setIsPending(true);
@@ -88,47 +62,41 @@ function SignInVariants() {
     }
   }
 
-  const Render = RENDERERS[variant] ?? ConvergeE1;
-  const props: VariantProps = { onSignIn: handleSignIn, isPending, error };
-
-  if (showFrames) {
-    return (
-      <>
-        <div className="flex flex-1 flex-wrap items-start justify-center gap-6 overflow-x-auto p-6 pb-24">
-          {FRAME_WIDTHS.map((width) => (
-            <figure key={width} className="shrink-0 space-y-2">
-              <figcaption className="text-center font-mono text-xs text-muted-foreground">
-                {width}px
-              </figcaption>
-              <iframe
-                title={`${variant} at ${width}px`}
-                src={`/sign-in?variant=${variant}&frames=0`}
-                width={width}
-                height={720}
-                className="rounded-lg border border-border bg-background shadow-sm"
-              />
-            </figure>
-          ))}
+  return (
+    <main className="flex flex-1 flex-col md:flex-row">
+      <section className="flex flex-1 flex-col items-center justify-end bg-secondary px-8 pt-12 pb-8 md:flex-row md:py-12 md:pr-8 md:pl-12">
+        <div className="w-full max-w-xs space-y-3">
+          <Wordmark />
+          <p className="text-lg text-foreground/80">
+            The family&apos;s own corner of the internet — darts, lists, habits,
+            and whatever comes next.
+          </p>
         </div>
-        <PrototypeSwitcher variants={CONVERGE_VARIANTS} current={variant} />
-      </>
-    );
-  }
+      </section>
 
-  if (embedded) return <Render {...props} />;
+      <section className="flex flex-1 flex-col items-center justify-start px-8 pt-8 pb-12 md:flex-row md:py-12 md:pr-12 md:pl-8">
+        <div className="w-full max-w-xs space-y-6">
+          <div className="space-y-1.5">
+            <h1 className="text-xl font-semibold text-foreground">
+              Welcome back
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Sign in with the Google account you use at home.
+            </p>
+          </div>
 
-  return (
-    <>
-      <Render {...props} />
-      <PrototypeSwitcher variants={CONVERGE_VARIANTS} current={variant} />
-    </>
-  );
-}
-
-export default function SignInPage() {
-  return (
-    <Suspense>
-      <SignInVariants />
-    </Suspense>
+          <div className="space-y-3">
+            <Button
+              onClick={handleSignIn}
+              disabled={isPending}
+              className="w-full"
+            >
+              {isPending ? "Redirecting…" : "Continue with Google"}
+            </Button>
+            {error && <p className="text-destructive text-sm">{error}</p>}
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
