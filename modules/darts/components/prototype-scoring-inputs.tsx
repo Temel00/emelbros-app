@@ -3,14 +3,17 @@
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #74 resolves.
  *
- * Round two. Round one (five shapes: board variants + a grid + a two-step
- * pad) settled the *shape* — the owner picked the grid, variant C. This round
- * only varies the **face of a number key when a multiplier is armed**: how the
- * base number (8) and the computed value (24 on a treble) share the key.
+ * Round three. Round one settled the shape (the grid, variant C); round two
+ * settled that the *total* should be the dominant number, coloured by the
+ * multiplier (variant C1). This round keeps C1's big coloured total and only
+ * varies **how the base segment rides along** — the owner didn't want C1's
+ * "8×3" caption, and asked for a C3-style "T8"/"D8" corner tag instead, plus
+ * one genuinely out-of-the-box take.
  *
- * All four are the same grid — 20 numbers in numeric order, a sticky S/D/T
- * control that resets to Single after each dart, and the same bull/25/miss
- * row. They differ *only* in the number-key face, so the comparison is clean.
+ * All variants are the same grid — 20 numbers in numeric order, a sticky
+ * S/D/T control that resets to Single after each dart, the same bull/25/miss
+ * row — differing only in the number-key face. C1 is carried forward as the
+ * baseline to compare against.
  *
  * Still a drop-in replacement for `Dartboard`: same
  * `{ disabled, checkoutTarget, onThrow }` seam, one `ThrownDart` at a time
@@ -53,6 +56,11 @@ function armedColour(multiple: 1 | 2 | 3): string | undefined {
       : undefined;
 }
 
+/** The corner tag for an armed multiplier: "D8" / "T8". */
+function tag(segment: number, multiple: 1 | 2 | 3) {
+  return `${multiple === 3 ? "T" : "D"}${segment}`;
+}
+
 function isTarget(
   checkoutTarget: ThrownDart | null,
   segment: number,
@@ -85,8 +93,8 @@ type FaceRenderer = (args: {
 }) => Face;
 
 /**
- * The grid every C-family variant shares: sticky multiplier control, the
- * 20-key numeric grid (each key's face supplied by `renderFace`), and the
+ * The grid every variant shares: sticky multiplier control, the 20-key
+ * numeric grid (each key's face supplied by `renderFace`), and the
  * bull / 25 / miss row. Multiplier resets to Single after each dart.
  */
 function CGrid({
@@ -219,54 +227,13 @@ function CGrid({
 }
 
 // ---------------------------------------------------------------------------
-// Variant C — original (baseline for this round)
+// Variant C1 — total dominant (round-two baseline, carried forward)
 // ---------------------------------------------------------------------------
 
 /**
- * Exactly round one's C. Big base number, computed value as a small caption
- * underneath when a multiplier is armed. Kept so the three new faces are
- * judged against it, not against memory.
- */
-export function VariantC(props: ScoringInputProps) {
-  return (
-    <CGrid
-      {...props}
-      renderFace={({ segment, multiple, computed }) => ({
-        node: (
-          <>
-            <span
-              className="text-xl font-black"
-              style={
-                armedColour(multiple)
-                  ? { color: armedColour(multiple) }
-                  : undefined
-              }
-            >
-              {segment}
-            </span>
-            {multiple > 1 && (
-              <span className="text-[10px] font-bold opacity-70">
-                {computed}
-              </span>
-            )}
-          </>
-        ),
-      })}
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Variant C1 — total dominant
-// ---------------------------------------------------------------------------
-
-/**
- * "The 24 gets bigger on the 8." Once a multiplier is armed, the value you're
- * actually scoring becomes the big number and the base drops to a small
- * "8×3" caption above it. The bet: mid-leg you're doing subtraction, and the
- * number that matters for that is the total, not the segment. The risk: the
- * key you *aim your eye at* is still the base number (you know you want the
- * 8), so shrinking it may make the grid harder to scan.
+ * Round two's winner-so-far. Big coloured total; base as an "8×3" caption
+ * above. Kept as the baseline this round is measured against — the size and
+ * colour of the total are the parts the owner liked and every new face keeps.
  */
 export function VariantC1(props: ScoringInputProps) {
   return (
@@ -296,18 +263,21 @@ export function VariantC1(props: ScoringInputProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Variant C2 — diagonal corners
+// Variant T1 — centred total + corner tag (the explicit request)
 // ---------------------------------------------------------------------------
 
 /**
- * "8 top-left, 24 bottom-right." The base number anchors the corner you scan
- * for; the total sits diagonally opposite, coloured by the multiplier. Both
- * are legible without one hiding under the other. The bet: a stable base-number
- * position keeps the grid scannable while still surfacing the total. The risk:
- * two corners is busier than a centred number, and at 5-across the corners are
- * tight.
+ * The one the owner asked for: keep C1's big coloured total, but drop the
+ * "8×3" caption and show the base the C3 way — a small "T8"/"D8" tag in the
+ * upper-left corner. The total is centred and owns the key; the tag confirms
+ * which segment without competing for the middle.
+ *
+ * The bet: a corner tag reads as an annotation ("this is a treble 8") rather
+ * than a second number fighting the total, so the grid stays scannable. The
+ * risk: at 5-across the corner is small, and the tag is muted, not coloured —
+ * confirm it's still readable at a glance.
  */
-export function VariantC2(props: ScoringInputProps) {
+export function VariantT1(props: ScoringInputProps) {
   return (
     <CGrid
       {...props}
@@ -317,11 +287,11 @@ export function VariantC2(props: ScoringInputProps) {
           : {
               node: (
                 <>
-                  <span className="absolute top-1 left-2 text-xs font-bold text-muted-foreground">
-                    {segment}
+                  <span className="absolute top-1 left-1.5 text-[10px] font-bold text-muted-foreground">
+                    {tag(segment, multiple)}
                   </span>
                   <span
-                    className="absolute right-2 bottom-0.5 text-2xl font-black"
+                    className="text-3xl leading-none font-black"
                     style={{ color: armedColour(multiple) }}
                   >
                     {computed}
@@ -335,21 +305,22 @@ export function VariantC2(props: ScoringInputProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Variant C3 — colour flood (creative)
+// Variant T2 — corner chip + colour accent bar
 // ---------------------------------------------------------------------------
 
 /**
- * The creative one. Arming a multiplier doesn't just tint a number — it floods
- * the whole key in the multiplier's colour and shows the total big, with a
- * small "T8" tag in the corner so you can still confirm the segment. The armed
- * grid becomes an unmistakable block of green or blue: you can see *at a
- * glance* that a multiplier is live, which is the exact failure mode of a
- * sticky multiplier (throwing a treble you forgot was armed). The risk: twenty
- * flooded keys is a lot of colour, and it leans on colour to signal state —
- * though the corner tag and the total both carry it too, so it isn't
- * colour-only.
+ * A step up in at-a-glance state from T1, a step short of C3's full flood.
+ * Same centred coloured total, but the corner tag becomes a filled chip in
+ * the multiplier colour, and a thin colour bar sits along the bottom edge of
+ * every armed key. Three signals for "a multiplier is live" — the coloured
+ * total, the chip, the bar — none of them a whole-key flood.
+ *
+ * The bet: the bottom bar makes the armed state legible across the whole grid
+ * peripherally, without the heaviness of twenty flooded keys. The risk: it's
+ * more chrome per key, and the chip + bar + total is a lot of the multiplier
+ * colour repeated three ways.
  */
-export function VariantC3(props: ScoringInputProps) {
+export function VariantT2(props: ScoringInputProps) {
   return (
     <CGrid
       {...props}
@@ -357,15 +328,75 @@ export function VariantC3(props: ScoringInputProps) {
         multiple === 1
           ? { node: <span className="text-2xl font-black">{segment}</span> }
           : {
-              className: "border-transparent text-background",
-              style: { backgroundColor: armedColour(multiple) },
               node: (
                 <>
-                  <span className="absolute top-1 left-1.5 text-[10px] font-black tracking-wide opacity-90">
-                    {multiple === 3 ? "T" : "D"}
+                  <span
+                    className="absolute top-1 left-1 rounded px-1 text-[10px] font-black text-background"
+                    style={{ backgroundColor: armedColour(multiple) }}
+                  >
+                    {tag(segment, multiple)}
+                  </span>
+                  <span
+                    className="text-3xl leading-none font-black"
+                    style={{ color: armedColour(multiple) }}
+                  >
+                    {computed}
+                  </span>
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-0 bottom-0 h-1"
+                    style={{ backgroundColor: armedColour(multiple) }}
+                  />
+                </>
+              ),
+            }
+      }
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Variant G — ghost segment (the out-of-the-box one)
+// ---------------------------------------------------------------------------
+
+/**
+ * The creative take, deliberately unlike C3's colour flood. Arming a
+ * multiplier turns the *base segment* into a huge translucent watermark
+ * filling the key, with the coloured total sitting bold and solid on top of
+ * it. You read the total to score; the ghost behind it tells you the segment
+ * and the multiplier (via the small "×3") without a tag in the corner at all.
+ *
+ * The bet: the base is present but unmistakably secondary — literally in the
+ * background — which matches how it's used (you already know you wanted the
+ * 8; you need the 24). It also gives each armed key a distinctive texture
+ * that isn't just a colour swatch. The risk: a big number behind a big number
+ * can read as visual noise; the watermark has to stay faint enough to recede.
+ */
+export function VariantG(props: ScoringInputProps) {
+  return (
+    <CGrid
+      {...props}
+      renderFace={({ segment, multiple, computed }) =>
+        multiple === 1
+          ? { node: <span className="text-2xl font-black">{segment}</span> }
+          : {
+              node: (
+                <>
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl font-black text-muted-foreground/20"
+                  >
                     {segment}
                   </span>
-                  <span className="text-3xl font-black">{computed}</span>
+                  <span
+                    className="relative text-2xl leading-none font-black"
+                    style={{ color: armedColour(multiple) }}
+                  >
+                    {computed}
+                  </span>
+                  <span className="relative text-[9px] font-bold text-muted-foreground">
+                    ×{multiple}
+                  </span>
                 </>
               ),
             }
@@ -376,27 +407,27 @@ export function VariantC3(props: ScoringInputProps) {
 
 export const SCORING_VARIANTS = [
   {
-    key: "C",
-    name: "Original (caption below)",
-    Component: VariantC,
-    note: "Round one's C. Big base number, small computed value underneath when armed.",
+    key: "T1",
+    name: "Centred total + corner tag",
+    Component: VariantT1,
+    note: "The request: big coloured total centred, small 'T8'/'D8' tag upper-left.",
+  },
+  {
+    key: "T2",
+    name: "Corner chip + accent bar",
+    Component: VariantT2,
+    note: "T1 plus a filled colour chip and a thin bottom bar — more at-a-glance state, no full flood.",
+  },
+  {
+    key: "G",
+    name: "Ghost segment (creative)",
+    Component: VariantG,
+    note: "The base segment becomes a big translucent watermark; the coloured total sits solid on top.",
   },
   {
     key: "C1",
-    name: "Total dominant",
+    name: "Total dominant (baseline)",
     Component: VariantC1,
-    note: "Armed: the computed total becomes the big number, base shrinks to an '8×3' caption above.",
-  },
-  {
-    key: "C2",
-    name: "Diagonal corners",
-    Component: VariantC2,
-    note: "Armed: base number top-left, computed total bottom-right, coloured by multiplier.",
-  },
-  {
-    key: "C3",
-    name: "Colour flood (creative)",
-    Component: VariantC3,
-    note: "Armed: the whole key floods with the multiplier colour, big total, corner 'T8' tag.",
+    note: "Round two's C1, carried forward: big coloured total with an '8×3' caption above.",
   },
 ] as const;
