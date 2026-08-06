@@ -33,7 +33,7 @@ export default async function ScoreboardPrototypePage({
       <AppHeader memberId={member.id} supabase={supabase} />
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 p-4 sm:p-6">
         <Suspense>
-          <PrototypeScoringHarness variant={variant ?? "0"} />
+          <PrototypeScoringHarness variant={variant ?? "C"} />
         </Suspense>
       </main>
     </>
