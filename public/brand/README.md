@@ -4,17 +4,17 @@ Handed over for [#66](https://github.com/Temel00/emelbros-app/issues/66).
 
 ## Use these
 
-| File | What it is |
-| --- | --- |
+| File           | What it is                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------------- |
 | `wordmark.svg` | Full "emelbros" lockup, two-line stack, four brights. Text **outlined** — no font dependency. |
-| `glyph.svg` | Mark-only pink `e`, derived from the wordmark. viewBox tight to the ink. |
+| `glyph.svg`    | Mark-only pink `e`, derived from the wordmark. viewBox tight to the ink.                      |
 
 ## Do not use these
 
-| File | Why |
-| --- | --- |
+| File                      | Why                                                                                                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `logo_v1.3_FullColor.svg` | Authored Inkscape source. Its text is **live `Bagel Fat One`**, not outlined — it only renders correctly on a machine with the font installed. Kept as the editable original. |
-| `logo_v1.3_Glyph.png` | 26×26 raster. Too small for any icon use; superseded by `glyph.svg`. |
+| `logo_v1.3_Glyph.png`     | 26×26 raster. Too small for any icon use; superseded by `glyph.svg`.                                                                                                          |
 
 ## Constraints found while checking these
 

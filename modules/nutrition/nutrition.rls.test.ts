@@ -5,7 +5,7 @@ import type { Database } from "@/types/database";
 
 /**
  * RLS integration tests for the nutrition module (nutrition.md §2, §10;
- * acceptance criteria of #104, testing conventions #13). These hit a live
+ * acceptance criteria of #104 and #112, testing conventions #13). These hit a live
  * local Supabase stack (`supabase start`) rather than mocks, so — per the
  * `**\/*.rls.test.{ts,tsx}` exclude in vitest.config.ts — they are kept out
  * of the default `vitest run` and are run explicitly once a local stack is
@@ -16,11 +16,13 @@ import type { Database } from "@/types/database";
  *   SUPABASE_ANON_KEY=<local anon key> \
  *   vitest run --config vitest.rls.config.ts
  *
- * What's under test is the fixed-Family template on both tables: any
- * signed-in member reads and writes every row (the kitchen is unowned),
- * and signed out, neither table exists. The `bystander` member — who
- * created nothing — is the one who proves it, since there is no owner
- * clause to fall back on.
+ * What's under test is the fixed-Family template on the food, pantry and
+ * recipe tables: any signed-in member reads and writes every row (the
+ * kitchen is unowned), and signed out, none of them exist. The
+ * `bystander` member — who created nothing — is the one who proves it,
+ * since there is no owner clause to fall back on. `nutrition_recipe_ingredient`
+ * is the module's first inherited table, so it is tested for reachability
+ * through its parent recipe rather than for a policy of its own.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
@@ -88,12 +90,51 @@ async function createPantryItem(foodId: string, creator: Member) {
   return data.id as string;
 }
 
+/** Inserts a recipe via the service-role client, bypassing RLS. */
+async function createRecipe(creator: Member) {
+  const { data, error } = await admin
+    .from("nutrition_recipe")
+    .insert({
+      title: `Porridge ${Math.random().toString(36).slice(2)}`,
+      servings: 2,
+      instructions: "Simmer the oats.",
+      created_by: creator.id,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
+/**
+ * Inserts an ingredient line via the service-role client, bypassing RLS.
+ * `foodId` is optional because an unlinked line ("salt to taste") is a
+ * first-class shape, not a degenerate one (nutrition.md §3.3).
+ */
+async function createIngredient(recipeId: string, foodId?: string) {
+  const { data, error } = await admin
+    .from("nutrition_recipe_ingredient")
+    .insert({
+      recipe_id: recipeId,
+      food_id: foodId ?? null,
+      display_text: "2 cloves garlic, minced",
+      quantity: foodId ? 2 : null,
+      unit: foodId ? "each" : null,
+      position: 0,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
 describe("nutrition RLS", () => {
   let cook: Member;
   let bystander: Member;
   // Signed-out client: the anon key with no session at all.
   const anonymous = createClient<Database>(SUPABASE_URL, ANON_KEY);
   let leftoverFoodIds: string[] = [];
+  let leftoverRecipeIds: string[] = [];
 
   beforeAll(async () => {
     cook = await createMember("cook");
@@ -101,7 +142,15 @@ describe("nutrition RLS", () => {
   });
 
   afterEach(async () => {
-    // Pantry lines cascade with their food, so deleting the food is enough.
+    // Ingredient lines cascade with their recipe, and pantry lines with
+    // their food, so deleting the two parents is enough. Recipes go first:
+    // an ingredient line holds a food reference that is only set to null,
+    // not cascaded, so the food outlives it either way.
+    for (const id of leftoverRecipeIds) {
+      await admin.from("nutrition_recipe").delete().eq("id", id);
+    }
+    leftoverRecipeIds = [];
+
     for (const id of leftoverFoodIds) {
       await admin.from("nutrition_food").delete().eq("id", id);
     }
@@ -318,5 +367,206 @@ describe("nutrition RLS", () => {
       .select("id")
       .eq("id", itemId);
     expect(data).toEqual([]);
+  });
+
+  // === nutrition_recipe / nutrition_recipe_ingredient ================
+  //
+  // The recipe is another fixed-Family table, so `bystander` proves the
+  // same point here as above. The ingredient line is the module's first
+  // **inherited** table: it carries no scope of its own and is reachable
+  // only through a parent recipe the caller can already reach.
+
+  it("lets any signed-in member add a recipe to the box", async () => {
+    const { data, error } = await cook.client
+      .from("nutrition_recipe")
+      .insert({ title: "Porridge", servings: 2, created_by: cook.id })
+      .select("id")
+      .single();
+
+    expect(error).toBeNull();
+    if (data) leftoverRecipeIds.push(data.id);
+  });
+
+  it("lets a member who wrote nothing read the recipe box (fixed Family)", async () => {
+    const recipeId = await createRecipe(cook);
+    leftoverRecipeIds.push(recipeId);
+
+    const { data, error } = await bystander.client
+      .from("nutrition_recipe")
+      .select("id")
+      .eq("id", recipeId);
+
+    expect(error).toBeNull();
+    expect(data).toEqual([{ id: recipeId }]);
+  });
+
+  it("lets any member edit and archive a recipe someone else wrote", async () => {
+    const recipeId = await createRecipe(cook);
+    leftoverRecipeIds.push(recipeId);
+
+    const archivedAt = new Date().toISOString();
+    const { error, count } = await bystander.client
+      .from("nutrition_recipe")
+      .update(
+        { title: "Better porridge", archived_at: archivedAt },
+        { count: "exact" },
+      )
+      .eq("id", recipeId);
+
+    expect(error).toBeNull();
+    expect(count).toBe(1);
+  });
+
+  it("lets any member delete a recipe someone else wrote", async () => {
+    const recipeId = await createRecipe(cook);
+
+    const { error, count } = await bystander.client
+      .from("nutrition_recipe")
+      .delete({ count: "exact" })
+      .eq("id", recipeId);
+
+    expect(error).toBeNull();
+    expect(count).toBe(1);
+  });
+
+  it("hides the recipe box from a signed-out caller", async () => {
+    const recipeId = await createRecipe(cook);
+    leftoverRecipeIds.push(recipeId);
+
+    const { data, error } = await anonymous
+      .from("nutrition_recipe")
+      .select("id")
+      .eq("id", recipeId);
+
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it("blocks a signed-out caller from adding a recipe", async () => {
+    const { data, error } = await anonymous
+      .from("nutrition_recipe")
+      .insert({ title: "Sneaky stew", servings: 1 })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("lets any signed-in member add an ingredient line to any recipe", async () => {
+    const recipeId = await createRecipe(cook);
+    leftoverRecipeIds.push(recipeId);
+
+    const { error } = await bystander.client
+      .from("nutrition_recipe_ingredient")
+      .insert({
+        recipe_id: recipeId,
+        display_text: "salt to taste",
+        position: 0,
+      })
+      .select("id")
+      .single();
+
+    expect(error).toBeNull();
+  });
+
+  it("reaches an ingredient line only through a visible parent recipe", async () => {
+    const recipeId = await createRecipe(cook);
+    leftoverRecipeIds.push(recipeId);
+    const ingredientId = await createIngredient(recipeId);
+
+    // A signed-in member can see the recipe, so the line comes with it.
+    const { data: visible, error } = await bystander.client
+      .from("nutrition_recipe_ingredient")
+      .select("id")
+      .eq("id", ingredientId);
+    expect(error).toBeNull();
+    expect(visible).toEqual([{ id: ingredientId }]);
+
+    // Signed out, the parent recipe does not exist — and neither does the
+    // line, even though the row is really there (the admin read proves it).
+    const { data: hidden } = await anonymous
+      .from("nutrition_recipe_ingredient")
+      .select("id")
+      .eq("id", ingredientId);
+    expect(hidden).toEqual([]);
+
+    const { data: reallyThere } = await admin
+      .from("nutrition_recipe_ingredient")
+      .select("id")
+      .eq("id", ingredientId);
+    expect(reallyThere).toEqual([{ id: ingredientId }]);
+  });
+
+  it("blocks a signed-out caller from adding an ingredient line", async () => {
+    const recipeId = await createRecipe(cook);
+    leftoverRecipeIds.push(recipeId);
+
+    const { data, error } = await anonymous
+      .from("nutrition_recipe_ingredient")
+      .insert({
+        recipe_id: recipeId,
+        display_text: "smuggled garlic",
+        position: 0,
+      })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("refuses an ingredient line whose parent recipe does not exist", async () => {
+    const { data, error } = await cook.client
+      .from("nutrition_recipe_ingredient")
+      .insert({
+        recipe_id: "00000000-0000-0000-0000-000000000000",
+        display_text: "orphaned line",
+        position: 0,
+      })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("cascades ingredient lines away with the recipe they belong to", async () => {
+    const recipeId = await createRecipe(cook);
+    const ingredientId = await createIngredient(recipeId);
+
+    const { error } = await cook.client
+      .from("nutrition_recipe")
+      .delete()
+      .eq("id", recipeId);
+    expect(error).toBeNull();
+
+    const { data } = await admin
+      .from("nutrition_recipe_ingredient")
+      .select("id")
+      .eq("id", ingredientId);
+    expect(data).toEqual([]);
+  });
+
+  it("unlinks rather than deletes an ingredient line when its food goes", async () => {
+    const foodId = await createFood(cook);
+    const recipeId = await createRecipe(cook);
+    leftoverRecipeIds.push(recipeId);
+    const ingredientId = await createIngredient(recipeId, foodId);
+
+    const { error } = await cook.client
+      .from("nutrition_food")
+      .delete()
+      .eq("id", foodId);
+    expect(error).toBeNull();
+
+    const { data } = await admin
+      .from("nutrition_recipe_ingredient")
+      .select("id, food_id, display_text")
+      .eq("id", ingredientId)
+      .single();
+
+    expect(data?.food_id).toBeNull();
+    expect(data?.display_text).not.toBe("");
   });
 });

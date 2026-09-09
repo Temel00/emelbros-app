@@ -521,6 +521,87 @@ export type Database = {
           },
         ];
       };
+      nutrition_recipe: {
+        Row: {
+          id: string;
+          title: string;
+          servings: number;
+          instructions: string | null;
+          notes: string | null;
+          created_by: string | null;
+          archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          servings?: number;
+          instructions?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          servings?: number;
+          instructions?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      nutrition_recipe_ingredient: {
+        Row: {
+          id: string;
+          recipe_id: string;
+          food_id: string | null;
+          display_text: string;
+          quantity: number | null;
+          unit: string | null;
+          position: number;
+        };
+        Insert: {
+          id?: string;
+          recipe_id: string;
+          food_id?: string | null;
+          display_text: string;
+          quantity?: number | null;
+          unit?: string | null;
+          position?: number;
+        };
+        Update: {
+          id?: string;
+          recipe_id?: string;
+          food_id?: string | null;
+          display_text?: string;
+          quantity?: number | null;
+          unit?: string | null;
+          position?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_recipe_ingredient_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_recipe";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "nutrition_recipe_ingredient_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_food";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

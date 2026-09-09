@@ -25,3 +25,13 @@ export function trimToNull(value: string | null | undefined): string | null {
 export function isValidAmount(value: number): boolean {
   return Number.isFinite(value) && value >= 0;
 }
+
+/**
+ * A servings count: a whole number of at least one, mirroring the
+ * migration's `nutrition_recipe_servings_positive` check. Half a serving
+ * is a portion-size question the log answers, not something a recipe
+ * yields, so fractions are rejected here rather than silently rounded.
+ */
+export function isServingsCount(value: number): boolean {
+  return Number.isInteger(value) && value >= 1;
+}

@@ -158,3 +158,227 @@ export async function deletePantryItem(
 
   if (error) throw error;
 }
+
+// === nutrition_recipe / nutrition_recipe_ingredient ==================
+
+export type RecipeRow = Database["public"]["Tables"]["nutrition_recipe"]["Row"];
+export type RecipeIngredientRow =
+  Database["public"]["Tables"]["nutrition_recipe_ingredient"]["Row"];
+
+/**
+ * An ingredient line with the dictionary food it points at, or `null` for
+ * an unlinked line like "salt to taste" (nutrition.md §3.3).
+ */
+export type RecipeIngredientWithFood = RecipeIngredientRow & {
+  food: FoodRow | null;
+};
+
+/** A recipe with its ingredient lines in `position` order. */
+export type RecipeWithIngredients = RecipeRow & {
+  ingredients: RecipeIngredientWithFood[];
+};
+
+/**
+ * The recipe box (nutrition.md §3.3): active recipes only, alphabetical.
+ * Archiving is not deletion — an archived recipe is still referenced by
+ * past plan entries and log provenance — so it is filtered out here rather
+ * than removed.
+ */
+export async function getRecipes(
+  supabase: SupabaseClient<Database>,
+): Promise<RecipeRow[]> {
+  const { data, error } = await supabase
+    .from("nutrition_recipe")
+    .select("*")
+    .is("archived_at", null)
+    .order("title", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * One recipe with its ordered ingredient lines and each line's food, in a
+ * single round trip. Returns `null` when the id matches nothing the caller
+ * can see — an archived recipe still resolves, since this is the detail
+ * view an archived recipe is read through.
+ */
+export async function getRecipe(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<RecipeWithIngredients | null> {
+  const { data, error } = await supabase
+    .from("nutrition_recipe")
+    .select(
+      "*, ingredients:nutrition_recipe_ingredient(*, food:nutrition_food(*))",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const recipe = data as unknown as RecipeWithIngredients;
+  return {
+    ...recipe,
+    ingredients: [...recipe.ingredients].sort(
+      (a, b) => a.position - b.position,
+    ),
+  };
+}
+
+export async function insertRecipe(
+  supabase: SupabaseClient<Database>,
+  recipe: {
+    title: string;
+    servings: number;
+    instructions: string | null;
+    notes: string | null;
+    createdBy: string;
+  },
+): Promise<RecipeRow> {
+  const { data, error } = await supabase
+    .from("nutrition_recipe")
+    .insert({
+      title: recipe.title,
+      servings: recipe.servings,
+      instructions: recipe.instructions,
+      notes: recipe.notes,
+      created_by: recipe.createdBy,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateRecipe(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  patch: {
+    title: string;
+    servings: number;
+    instructions: string | null;
+    notes: string | null;
+  },
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_recipe")
+    .update({
+      title: patch.title,
+      servings: patch.servings,
+      instructions: patch.instructions,
+      notes: patch.notes,
+    })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+/**
+ * Retires a recipe from the box, or restores it. `archived_at` is a
+ * timestamp rather than a flag so "when did this leave the box" survives.
+ */
+export async function setRecipeArchived(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  archived: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_recipe")
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+/** Deletes a recipe outright; ingredient lines cascade with it. */
+export async function deleteRecipe(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_recipe")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+export async function insertRecipeIngredient(
+  supabase: SupabaseClient<Database>,
+  ingredient: {
+    recipeId: string;
+    foodId: string | null;
+    displayText: string;
+    quantity: number | null;
+    unit: string | null;
+    position: number;
+  },
+): Promise<RecipeIngredientRow> {
+  const { data, error } = await supabase
+    .from("nutrition_recipe_ingredient")
+    .insert({
+      recipe_id: ingredient.recipeId,
+      food_id: ingredient.foodId,
+      display_text: ingredient.displayText,
+      quantity: ingredient.quantity,
+      unit: ingredient.unit,
+      position: ingredient.position,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateRecipeIngredient(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  patch: {
+    foodId: string | null;
+    displayText: string;
+    quantity: number | null;
+    unit: string | null;
+  },
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_recipe_ingredient")
+    .update({
+      food_id: patch.foodId,
+      display_text: patch.displayText,
+      quantity: patch.quantity,
+      unit: patch.unit,
+    })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+/** Writes one line's `position`; a reorder calls this once per line. */
+export async function updateRecipeIngredientPosition(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  position: number,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_recipe_ingredient")
+    .update({ position })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+export async function deleteRecipeIngredient(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_recipe_ingredient")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+}
