@@ -6,15 +6,30 @@ import { getCurrentMember } from "@/platform/auth";
 import { createClient } from "@/platform/supabase/server";
 import {
   isBlank,
+  isServingsCount,
   isValidAmount,
   trimToNull,
 } from "@/modules/nutrition/lib/validation";
 import {
+  moveIngredient,
+  nextIngredientPosition,
+} from "@/modules/nutrition/lib/ingredient-order";
+import {
   deletePantryItem,
+  deleteRecipe,
+  deleteRecipeIngredient,
+  getRecipe,
   insertFood,
   insertPantryItem,
+  insertRecipe,
+  insertRecipeIngredient,
+  setRecipeArchived,
   updatePantryItem,
+  updateRecipe,
+  updateRecipeIngredient,
+  updateRecipeIngredientPosition,
   type FoodRow,
+  type RecipeRow,
 } from "@/modules/nutrition/queries";
 
 /**
@@ -178,5 +193,186 @@ export async function deletePantryItemAction(itemId: string) {
   const supabase = await createClient();
 
   await deletePantryItem(supabase, itemId);
+  revalidatePath("/nutrition");
+}
+
+/**
+ * Recipes (nutrition.md §3.3, #112). Same story as the pantry: the recipe
+ * box is fixed Family, so any signed-in member may write any recipe or any
+ * of its ingredient lines, and RLS is what says so.
+ */
+export type RecipeInput = {
+  title: string;
+  servings: number;
+  instructions?: string | null;
+  notes?: string | null;
+};
+
+function validateRecipe(input: RecipeInput) {
+  if (isBlank(input.title)) throw new Error("A recipe title is required");
+  if (!isServingsCount(input.servings)) {
+    throw new Error("Servings must be a whole number of at least one");
+  }
+}
+
+export async function createRecipeAction(
+  input: RecipeInput,
+): Promise<RecipeRow> {
+  validateRecipe(input);
+
+  const member = await requireMember();
+  const supabase = await createClient();
+
+  const recipe = await insertRecipe(supabase, {
+    title: input.title.trim(),
+    servings: input.servings,
+    instructions: trimToNull(input.instructions),
+    notes: trimToNull(input.notes),
+    createdBy: member.id,
+  });
+
+  revalidatePath("/nutrition");
+  return recipe;
+}
+
+export async function updateRecipeAction(recipeId: string, input: RecipeInput) {
+  validateRecipe(input);
+
+  await requireMember();
+  const supabase = await createClient();
+
+  await updateRecipe(supabase, recipeId, {
+    title: input.title.trim(),
+    servings: input.servings,
+    instructions: trimToNull(input.instructions),
+    notes: trimToNull(input.notes),
+  });
+
+  revalidatePath("/nutrition");
+}
+
+/**
+ * Retires a recipe from the box, or puts it back. Archiving never deletes:
+ * past plan entries and log provenance still point at the row.
+ */
+export async function setRecipeArchivedAction(
+  recipeId: string,
+  archived: boolean,
+) {
+  await requireMember();
+  const supabase = await createClient();
+
+  await setRecipeArchived(supabase, recipeId, archived);
+  revalidatePath("/nutrition");
+}
+
+export async function deleteRecipeAction(recipeId: string) {
+  await requireMember();
+  const supabase = await createClient();
+
+  await deleteRecipe(supabase, recipeId);
+  revalidatePath("/nutrition");
+}
+
+export type RecipeIngredientInput = {
+  displayText: string;
+  foodId?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+};
+
+function validateIngredient(input: RecipeIngredientInput) {
+  if (isBlank(input.displayText)) {
+    throw new Error("An ingredient line needs some text");
+  }
+  if (input.quantity != null && !isValidAmount(input.quantity)) {
+    throw new Error("Quantity must be zero or more");
+  }
+}
+
+/**
+ * Appends an ingredient line (§3.3). The line lands after every existing
+ * one; its `food_id`, quantity and unit are optional, since "salt to
+ * taste" is a legitimate line that simply contributes nothing to the
+ * pantry diff or the nutrition roll-up.
+ */
+export async function addRecipeIngredientAction(
+  recipeId: string,
+  input: RecipeIngredientInput,
+) {
+  validateIngredient(input);
+
+  await requireMember();
+  const supabase = await createClient();
+
+  const recipe = await getRecipe(supabase, recipeId);
+  if (!recipe) throw new Error("Recipe not found");
+
+  await insertRecipeIngredient(supabase, {
+    recipeId,
+    foodId: trimToNull(input.foodId),
+    displayText: input.displayText.trim(),
+    quantity: input.quantity ?? null,
+    unit: trimToNull(input.unit),
+    position: nextIngredientPosition(recipe.ingredients),
+  });
+
+  revalidatePath("/nutrition");
+}
+
+export async function updateRecipeIngredientAction(
+  ingredientId: string,
+  input: RecipeIngredientInput,
+) {
+  validateIngredient(input);
+
+  await requireMember();
+  const supabase = await createClient();
+
+  await updateRecipeIngredient(supabase, ingredientId, {
+    foodId: trimToNull(input.foodId),
+    displayText: input.displayText.trim(),
+    quantity: input.quantity ?? null,
+    unit: trimToNull(input.unit),
+  });
+
+  revalidatePath("/nutrition");
+}
+
+export async function deleteRecipeIngredientAction(ingredientId: string) {
+  await requireMember();
+  const supabase = await createClient();
+
+  await deleteRecipeIngredient(supabase, ingredientId);
+  revalidatePath("/nutrition");
+}
+
+/**
+ * Nudges one ingredient line up or down a place. Positions are rewritten
+ * as contiguous indices from the resulting order, so a recipe edited by
+ * two members at once converges on a sane order rather than accumulating
+ * gaps. A move off either end is a no-op and writes nothing.
+ */
+export async function moveRecipeIngredientAction(
+  recipeId: string,
+  ingredientId: string,
+  direction: "up" | "down",
+) {
+  await requireMember();
+  const supabase = await createClient();
+
+  const recipe = await getRecipe(supabase, recipeId);
+  if (!recipe) throw new Error("Recipe not found");
+
+  const currentOrder = recipe.ingredients.map((line) => line.id);
+  const nextOrder = moveIngredient(currentOrder, ingredientId, direction);
+  if (nextOrder.every((id, index) => id === currentOrder[index])) return;
+
+  await Promise.all(
+    nextOrder.map((id, position) =>
+      updateRecipeIngredientPosition(supabase, id, position),
+    ),
+  );
+
   revalidatePath("/nutrition");
 }

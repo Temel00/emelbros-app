@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   isBlank,
+  isServingsCount,
   isValidAmount,
   trimToNull,
 } from "@/modules/nutrition/lib/validation";
@@ -39,5 +40,23 @@ describe("isValidAmount", () => {
     expect(isValidAmount(-1)).toBe(false);
     expect(isValidAmount(Number.NaN)).toBe(false);
     expect(isValidAmount(Number.POSITIVE_INFINITY)).toBe(false);
+  });
+});
+
+describe("isServingsCount", () => {
+  it("accepts a whole number of servings", () => {
+    expect(isServingsCount(4)).toBe(true);
+  });
+
+  it("rejects zero, negatives and fractions", () => {
+    expect(isServingsCount(0)).toBe(false);
+    expect(isServingsCount(-2)).toBe(false);
+    expect(isServingsCount(1.5)).toBe(false);
+  });
+
+  it("rejects what a blank or overflowing form field produces", () => {
+    expect(isServingsCount(Number(""))).toBe(false);
+    expect(isServingsCount(Number("nope"))).toBe(false);
+    expect(isServingsCount(Number("1e999"))).toBe(false);
   });
 });
