@@ -1,6 +1,7 @@
 import { dartsManifest } from "@/modules/darts/manifest";
 import { habitsManifest } from "@/modules/habits/manifest";
 import { listsManifest } from "@/modules/lists/manifest";
+import { nutritionManifest } from "@/modules/nutrition/manifest";
 import type { ModuleManifest } from "@/platform/module-manifest";
 
 /**
@@ -13,4 +14,5 @@ export const modules: ModuleManifest[] = [
   listsManifest,
   dartsManifest,
   habitsManifest,
+  nutritionManifest,
 ];
