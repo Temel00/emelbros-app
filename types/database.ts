@@ -429,6 +429,98 @@ export type Database = {
           },
         ];
       };
+      nutrition_food: {
+        Row: {
+          id: string;
+          name: string;
+          brand: string | null;
+          barcode: string | null;
+          unit: string;
+          calories_per_unit: number;
+          protein_g_per_unit: number;
+          carbs_g_per_unit: number;
+          fat_g_per_unit: number;
+          fiber_g_per_unit: number | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          brand?: string | null;
+          barcode?: string | null;
+          unit: string;
+          calories_per_unit: number;
+          protein_g_per_unit: number;
+          carbs_g_per_unit: number;
+          fat_g_per_unit: number;
+          fiber_g_per_unit?: number | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          brand?: string | null;
+          barcode?: string | null;
+          unit?: string;
+          calories_per_unit?: number;
+          protein_g_per_unit?: number;
+          carbs_g_per_unit?: number;
+          fat_g_per_unit?: number;
+          fiber_g_per_unit?: number | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      nutrition_pantry_item: {
+        Row: {
+          id: string;
+          food_id: string;
+          quantity: number;
+          unit: string;
+          location: string;
+          expires_on: string | null;
+          added_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          food_id: string;
+          quantity: number;
+          unit: string;
+          location: string;
+          expires_on?: string | null;
+          added_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          food_id?: string;
+          quantity?: number;
+          unit?: string;
+          location?: string;
+          expires_on?: string | null;
+          added_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_pantry_item_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_food";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
