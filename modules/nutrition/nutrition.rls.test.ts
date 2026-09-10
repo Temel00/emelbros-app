@@ -16,13 +16,15 @@ import type { Database } from "@/types/database";
  *   SUPABASE_ANON_KEY=<local anon key> \
  *   vitest run --config vitest.rls.config.ts
  *
- * What's under test is the fixed-Family template on the food, pantry and
- * recipe tables: any signed-in member reads and writes every row (the
- * kitchen is unowned), and signed out, none of them exist. The
+ * What's under test is the fixed-Family template on the food, pantry,
+ * recipe and meal-plan tables: any signed-in member reads and writes every
+ * row (the kitchen is unowned), and signed out, none of them exist. The
  * `bystander` member — who created nothing — is the one who proves it,
  * since there is no owner clause to fall back on. `nutrition_recipe_ingredient`
  * is the module's first inherited table, so it is tested for reachability
  * through its parent recipe rather than for a policy of its own.
+ * `nutrition_meal_plan_entry` (#115) adds its own check constraint —
+ * exactly one of `recipe_id` / `freeform_title` — proven directly here.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
@@ -128,6 +130,33 @@ async function createIngredient(recipeId: string, foodId?: string) {
   return data.id as string;
 }
 
+/**
+ * Inserts a meal plan entry via the service-role client, bypassing RLS.
+ * Defaults to a freeform entry; pass `{ recipeId }` for a recipe-linked
+ * one — the check constraint means it's always exactly one or the other.
+ */
+async function createMealPlanEntry(
+  creator: Member,
+  target: { recipeId: string } | { freeformTitle: string } = {
+    freeformTitle: "Leftovers",
+  },
+) {
+  const { data, error } = await admin
+    .from("nutrition_meal_plan_entry")
+    .insert({
+      plan_date: "2026-09-10",
+      meal_slot: "dinner",
+      recipe_id: "recipeId" in target ? target.recipeId : null,
+      freeform_title: "freeformTitle" in target ? target.freeformTitle : null,
+      servings_planned: 2,
+      created_by: creator.id,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
 describe("nutrition RLS", () => {
   let cook: Member;
   let bystander: Member;
@@ -135,6 +164,7 @@ describe("nutrition RLS", () => {
   const anonymous = createClient<Database>(SUPABASE_URL, ANON_KEY);
   let leftoverFoodIds: string[] = [];
   let leftoverRecipeIds: string[] = [];
+  let leftoverMealPlanEntryIds: string[] = [];
 
   beforeAll(async () => {
     cook = await createMember("cook");
@@ -142,6 +172,12 @@ describe("nutrition RLS", () => {
   });
 
   afterEach(async () => {
+    // Meal plan entries first: one may still point at a recipe below.
+    for (const id of leftoverMealPlanEntryIds) {
+      await admin.from("nutrition_meal_plan_entry").delete().eq("id", id);
+    }
+    leftoverMealPlanEntryIds = [];
+
     // Ingredient lines cascade with their recipe, and pantry lines with
     // their food, so deleting the two parents is enough. Recipes go first:
     // an ingredient line holds a food reference that is only set to null,
@@ -568,5 +604,170 @@ describe("nutrition RLS", () => {
 
     expect(data?.food_id).toBeNull();
     expect(data?.display_text).not.toBe("");
+  });
+
+  // === nutrition_meal_plan_entry ======================================
+  //
+  // Another fixed-Family table (#115): `bystander` proves the same point
+  // as above, plus the table's own check constraint — exactly one of
+  // `recipe_id` / `freeform_title` — and its cascade off a deleted recipe.
+
+  it("lets any signed-in member plan a freeform meal", async () => {
+    const { data, error } = await cook.client
+      .from("nutrition_meal_plan_entry")
+      .insert({
+        plan_date: "2026-09-10",
+        meal_slot: "dinner",
+        freeform_title: "Eating out",
+        servings_planned: 2,
+        created_by: cook.id,
+      })
+      .select("id")
+      .single();
+
+    expect(error).toBeNull();
+    if (data) leftoverMealPlanEntryIds.push(data.id);
+  });
+
+  it("lets any signed-in member plan a recipe onto a date and slot", async () => {
+    const recipeId = await createRecipe(cook);
+    leftoverRecipeIds.push(recipeId);
+
+    const { data, error } = await cook.client
+      .from("nutrition_meal_plan_entry")
+      .insert({
+        plan_date: "2026-09-10",
+        meal_slot: "dinner",
+        recipe_id: recipeId,
+        servings_planned: 2,
+        created_by: cook.id,
+      })
+      .select("id")
+      .single();
+
+    expect(error).toBeNull();
+    if (data) leftoverMealPlanEntryIds.push(data.id);
+  });
+
+  it("lets a member who planned nothing read the plan (fixed Family)", async () => {
+    const entryId = await createMealPlanEntry(cook);
+    leftoverMealPlanEntryIds.push(entryId);
+
+    const { data, error } = await bystander.client
+      .from("nutrition_meal_plan_entry")
+      .select("id")
+      .eq("id", entryId)
+      .maybeSingle();
+
+    expect(error).toBeNull();
+    expect(data?.id).toBe(entryId);
+  });
+
+  it("lets a member edit a plan entry someone else made", async () => {
+    const entryId = await createMealPlanEntry(cook);
+    leftoverMealPlanEntryIds.push(entryId);
+
+    const { error, count } = await bystander.client
+      .from("nutrition_meal_plan_entry")
+      .update({ meal_slot: "lunch" }, { count: "exact" })
+      .eq("id", entryId);
+
+    expect(error).toBeNull();
+    expect(count).toBe(1);
+  });
+
+  it("lets a member remove a plan entry someone else made", async () => {
+    const entryId = await createMealPlanEntry(cook);
+
+    const { error, count } = await bystander.client
+      .from("nutrition_meal_plan_entry")
+      .delete({ count: "exact" })
+      .eq("id", entryId);
+
+    expect(error).toBeNull();
+    expect(count).toBe(1);
+  });
+
+  it("hides the plan from a signed-out caller", async () => {
+    const entryId = await createMealPlanEntry(cook);
+    leftoverMealPlanEntryIds.push(entryId);
+
+    const { data, error } = await anonymous
+      .from("nutrition_meal_plan_entry")
+      .select("id")
+      .eq("id", entryId);
+
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it("blocks a signed-out caller from planning a meal", async () => {
+    const { data, error } = await anonymous
+      .from("nutrition_meal_plan_entry")
+      .insert({
+        plan_date: "2026-09-10",
+        meal_slot: "dinner",
+        freeform_title: "Uninvited dinner",
+        servings_planned: 1,
+      })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("rejects a plan entry with both a recipe and a freeform title", async () => {
+    const recipeId = await createRecipe(cook);
+    leftoverRecipeIds.push(recipeId);
+
+    const { data, error } = await cook.client
+      .from("nutrition_meal_plan_entry")
+      .insert({
+        plan_date: "2026-09-10",
+        meal_slot: "dinner",
+        recipe_id: recipeId,
+        freeform_title: "Also leftovers",
+        servings_planned: 1,
+        created_by: cook.id,
+      })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("rejects a plan entry with neither a recipe nor a freeform title", async () => {
+    const { data, error } = await cook.client
+      .from("nutrition_meal_plan_entry")
+      .insert({
+        plan_date: "2026-09-10",
+        meal_slot: "dinner",
+        servings_planned: 1,
+        created_by: cook.id,
+      })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("cascades a plan entry away when the recipe it points at is deleted", async () => {
+    const recipeId = await createRecipe(cook);
+    const entryId = await createMealPlanEntry(cook, { recipeId });
+
+    const { error } = await cook.client
+      .from("nutrition_recipe")
+      .delete()
+      .eq("id", recipeId);
+    expect(error).toBeNull();
+
+    const { data } = await admin
+      .from("nutrition_meal_plan_entry")
+      .select("id")
+      .eq("id", entryId);
+    expect(data).toEqual([]);
   });
 });

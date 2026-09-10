@@ -382,3 +382,175 @@ export async function deleteRecipeIngredient(
 
   if (error) throw error;
 }
+
+// === nutrition_meal_plan_entry ========================================
+
+export type MealPlanEntryRow =
+  Database["public"]["Tables"]["nutrition_meal_plan_entry"]["Row"];
+
+/** A plan entry with the recipe it points at, or `null` for a freeform one. */
+export type MealPlanEntryWithRecipe = MealPlanEntryRow & {
+  recipe: RecipeRow | null;
+};
+
+/**
+ * Plan entries for a date range, inclusive (nutrition.md §3.4) — the week
+ * calendar's read. Ordered by date, then by creation so same-day entries
+ * stay in the order they were planned; grouping by `meal_slot` is a render
+ * concern, done in the view (mirrors `getPantryItems`' location grouping).
+ */
+export async function getMealPlanEntries(
+  supabase: SupabaseClient<Database>,
+  startDate: string,
+  endDate: string,
+): Promise<MealPlanEntryWithRecipe[]> {
+  const { data, error } = await supabase
+    .from("nutrition_meal_plan_entry")
+    .select("*, recipe:nutrition_recipe(*)")
+    .gte("plan_date", startDate)
+    .lte("plan_date", endDate)
+    .order("plan_date", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data as MealPlanEntryWithRecipe[];
+}
+
+export async function insertMealPlanEntry(
+  supabase: SupabaseClient<Database>,
+  entry: {
+    planDate: string;
+    mealSlot: string;
+    recipeId: string | null;
+    freeformTitle: string | null;
+    servingsPlanned: number;
+    createdBy: string;
+  },
+): Promise<MealPlanEntryRow> {
+  const { data, error } = await supabase
+    .from("nutrition_meal_plan_entry")
+    .insert({
+      plan_date: entry.planDate,
+      meal_slot: entry.mealSlot,
+      recipe_id: entry.recipeId,
+      freeform_title: entry.freeformTitle,
+      servings_planned: entry.servingsPlanned,
+      created_by: entry.createdBy,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateMealPlanEntry(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  patch: {
+    planDate: string;
+    mealSlot: string;
+    recipeId: string | null;
+    freeformTitle: string | null;
+    servingsPlanned: number;
+  },
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_meal_plan_entry")
+    .update({
+      plan_date: patch.planDate,
+      meal_slot: patch.mealSlot,
+      recipe_id: patch.recipeId,
+      freeform_title: patch.freeformTitle,
+      servings_planned: patch.servingsPlanned,
+    })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+export async function deleteMealPlanEntry(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_meal_plan_entry")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+type RecipeIngredientForCooking = Pick<
+  RecipeIngredientRow,
+  "food_id" | "quantity" | "unit"
+>;
+
+export type MealPlanEntryForCooking = MealPlanEntryRow & {
+  recipe: (RecipeRow & { ingredients: RecipeIngredientForCooking[] }) | null;
+};
+
+/**
+ * One plan entry with just enough of its recipe — servings and each
+ * ingredient line's food/quantity/unit — to compute the cook decrement
+ * (`lib/pantry-decrement.ts`). `null` recipe means a freeform entry: cooking
+ * it sets `cooked_at` with nothing to decrement against.
+ */
+export async function getMealPlanEntryForCooking(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<MealPlanEntryForCooking | null> {
+  const { data, error } = await supabase
+    .from("nutrition_meal_plan_entry")
+    .select(
+      "*, recipe:nutrition_recipe(*, ingredients:nutrition_recipe_ingredient(food_id, quantity, unit))",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as unknown as MealPlanEntryForCooking | null;
+}
+
+/** Every pantry row for a set of foods — the cook decrement's match pool. */
+export async function getPantryItemsForFoods(
+  supabase: SupabaseClient<Database>,
+  foodIds: string[],
+): Promise<PantryItemRow[]> {
+  if (foodIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("nutrition_pantry_item")
+    .select("*")
+    .in("food_id", foodIds);
+
+  if (error) throw error;
+  return data;
+}
+
+/** Writes the decrements `computeCookDecrements` returned, one row each. */
+export async function applyPantryDecrements(
+  supabase: SupabaseClient<Database>,
+  decrements: { pantryItemId: string; quantity: number }[],
+): Promise<void> {
+  for (const decrement of decrements) {
+    const { error } = await supabase
+      .from("nutrition_pantry_item")
+      .update({ quantity: decrement.quantity })
+      .eq("id", decrement.pantryItemId);
+
+    if (error) throw error;
+  }
+}
+
+export async function markMealPlanEntryCooked(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_meal_plan_entry")
+    .update({ cooked_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) throw error;
+}
