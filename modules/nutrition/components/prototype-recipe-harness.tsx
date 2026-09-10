@@ -13,11 +13,17 @@ import { mockRecipes } from "./prototype-recipe-data";
 import { VariantA } from "./prototype-recipe-variant-a";
 import { VariantB } from "./prototype-recipe-variant-b";
 import { VariantC } from "./prototype-recipe-variant-c";
+import { VariantD } from "./prototype-recipe-variant-d";
+import { VariantE } from "./prototype-recipe-variant-e";
+import { VariantF } from "./prototype-recipe-variant-f";
 
 const VARIANTS = [
   { key: "A", name: "Stay with Pantry" },
   { key: "B", name: "Cards + cook mode" },
   { key: "C", name: "Mobile sheet-driven" },
+  { key: "D", name: "Spreadsheet ingredients" },
+  { key: "E", name: "Food-first linked rows" },
+  { key: "F", name: "Inventory preview cards" },
 ];
 
 export function PrototypeRecipeHarness({
@@ -35,6 +41,9 @@ export function PrototypeRecipeHarness({
       {variant === "A" && <VariantA recipes={recipes} foods={foods} />}
       {variant === "B" && <VariantB recipes={recipes} foods={foods} />}
       {variant === "C" && <VariantC recipes={recipes} foods={foods} />}
+      {variant === "D" && <VariantD recipes={recipes} foods={foods} />}
+      {variant === "E" && <VariantE recipes={recipes} foods={foods} />}
+      {variant === "F" && <VariantF recipes={recipes} foods={foods} />}
       <PrototypeSwitcher variants={VARIANTS} current={variant} />
     </>
   );

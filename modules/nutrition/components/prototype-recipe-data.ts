@@ -17,10 +17,40 @@ export type MockIngredient = {
 export type MockRecipe = {
   id: string;
   title: string;
+  category: string;
   servings: number;
+  prepTimeMinutes: number | null;
+  cookTimeMinutes: number | null;
   instructions: string;
   ingredients: MockIngredient[];
 };
+
+/** `prep + cook`, or `null` when neither is known — round 2's table needs a Total column. */
+export function totalTimeMinutes(recipe: MockRecipe): number | null {
+  if (recipe.prepTimeMinutes == null && recipe.cookTimeMinutes == null) {
+    return null;
+  }
+  return (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
+}
+
+/** `25 min` / `1 hr 10 min` — the box and detail header both need this. */
+export function formatMinutes(minutes: number | null): string {
+  if (minutes == null) return "—";
+  if (minutes < 60) return `${minutes} min`;
+  const hrs = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hrs} hr` : `${hrs} hr ${rest} min`;
+}
+
+export const RECIPE_CATEGORIES = [
+  "Weeknight",
+  "Roast",
+  "Batch cook",
+  "Breakfast",
+  "Quick",
+  "Soup",
+  "Salad",
+] as const;
 
 function ingredient(
   id: string,
@@ -43,7 +73,10 @@ function seedRecipes(): MockRecipe[] {
     {
       id: "r1",
       title: "Weeknight garlic pasta",
+      category: "Weeknight",
       servings: 4,
+      prepTimeMinutes: 10,
+      cookTimeMinutes: 15,
       instructions:
         "Boil the pasta in salted water until just shy of al dente.\n\nMeanwhile, warm the olive oil in a wide pan and add the garlic, chilli flakes, and a pinch of salt. Cook gently until the garlic is fragrant but not coloured, about 2 minutes.\n\nDrain the pasta, reserving a cup of the water. Toss the pasta into the pan with a splash of the pasta water, the parmesan, and the parsley. Toss vigorously off the heat until glossy.",
       ingredients: [
@@ -59,7 +92,10 @@ function seedRecipes(): MockRecipe[] {
     {
       id: "r2",
       title: "Sunday roast chicken",
+      category: "Roast",
       servings: 6,
+      prepTimeMinutes: 20,
+      cookTimeMinutes: 90,
       instructions:
         "Pat the chicken dry and season generously inside and out. Stuff the cavity with the lemon and thyme.\n\nRoast at 200°C for roughly 20 minutes per 500g plus 20 minutes, basting once halfway through.\n\nRest for 15 minutes before carving. Deglaze the pan with the stock for a quick gravy.",
       ingredients: [
@@ -74,7 +110,10 @@ function seedRecipes(): MockRecipe[] {
     {
       id: "r3",
       title: "Big family chilli",
+      category: "Batch cook",
       servings: 8,
+      prepTimeMinutes: 25,
+      cookTimeMinutes: 75,
       instructions:
         "Brown the beef in batches in a large pot, setting each batch aside.\n\nSoften the onion, pepper, and garlic in the same pot. Return the beef, add the spices, and toast for a minute before adding the tomatoes, beans, and stock.\n\nSimmer uncovered for at least an hour, stirring occasionally, until it's thick enough to hold its shape on a spoon.",
       ingredients: [
@@ -97,7 +136,10 @@ function seedRecipes(): MockRecipe[] {
     {
       id: "r4",
       title: "Five-minute scrambled eggs",
+      category: "Breakfast",
       servings: 2,
+      prepTimeMinutes: 2,
+      cookTimeMinutes: 5,
       instructions:
         "Whisk the eggs with a splash of milk and a pinch of salt.\n\nMelt the butter in a nonstick pan over low heat. Add the eggs and stir slowly and constantly, pulling the pan off the heat when they're still slightly wet — they keep cooking off the heat.",
       ingredients: [
@@ -141,7 +183,12 @@ function seedRecipes(): MockRecipe[] {
   const quick: MockRecipe[] = quickTitles.map((title, i) => ({
     id: `q${i + 1}`,
     title,
+    category: RECIPE_CATEGORIES[i % RECIPE_CATEGORIES.length],
     servings: [2, 4, 6][i % 3],
+    // Every 7th recipe has no times logged yet, so the table's "—" empty
+    // state and a totally-unset row both show up in the density case.
+    prepTimeMinutes: i % 7 === 6 ? null : 5 + (i % 5) * 5,
+    cookTimeMinutes: i % 7 === 6 ? null : 10 + (i % 6) * 10,
     instructions: "Instructions not written up yet.",
     ingredients: [],
   }));
