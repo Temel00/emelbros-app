@@ -231,7 +231,7 @@ export async function createRecipeAction(
     createdBy: member.id,
   });
 
-  revalidatePath("/nutrition");
+  revalidatePath("/nutrition/recipes");
   return recipe;
 }
 
@@ -248,7 +248,8 @@ export async function updateRecipeAction(recipeId: string, input: RecipeInput) {
     notes: trimToNull(input.notes),
   });
 
-  revalidatePath("/nutrition");
+  revalidatePath("/nutrition/recipes");
+  revalidatePath(`/nutrition/recipes/${recipeId}`);
 }
 
 /**
@@ -263,7 +264,8 @@ export async function setRecipeArchivedAction(
   const supabase = await createClient();
 
   await setRecipeArchived(supabase, recipeId, archived);
-  revalidatePath("/nutrition");
+  revalidatePath("/nutrition/recipes");
+  revalidatePath(`/nutrition/recipes/${recipeId}`);
 }
 
 export async function deleteRecipeAction(recipeId: string) {
@@ -271,7 +273,7 @@ export async function deleteRecipeAction(recipeId: string) {
   const supabase = await createClient();
 
   await deleteRecipe(supabase, recipeId);
-  revalidatePath("/nutrition");
+  revalidatePath("/nutrition/recipes");
 }
 
 export type RecipeIngredientInput = {
@@ -317,10 +319,11 @@ export async function addRecipeIngredientAction(
     position: nextIngredientPosition(recipe.ingredients),
   });
 
-  revalidatePath("/nutrition");
+  revalidatePath(`/nutrition/recipes/${recipeId}`);
 }
 
 export async function updateRecipeIngredientAction(
+  recipeId: string,
   ingredientId: string,
   input: RecipeIngredientInput,
 ) {
@@ -336,15 +339,18 @@ export async function updateRecipeIngredientAction(
     unit: trimToNull(input.unit),
   });
 
-  revalidatePath("/nutrition");
+  revalidatePath(`/nutrition/recipes/${recipeId}`);
 }
 
-export async function deleteRecipeIngredientAction(ingredientId: string) {
+export async function deleteRecipeIngredientAction(
+  recipeId: string,
+  ingredientId: string,
+) {
   await requireMember();
   const supabase = await createClient();
 
   await deleteRecipeIngredient(supabase, ingredientId);
-  revalidatePath("/nutrition");
+  revalidatePath(`/nutrition/recipes/${recipeId}`);
 }
 
 /**
@@ -374,5 +380,5 @@ export async function moveRecipeIngredientAction(
     ),
   );
 
-  revalidatePath("/nutrition");
+  revalidatePath(`/nutrition/recipes/${recipeId}`);
 }
