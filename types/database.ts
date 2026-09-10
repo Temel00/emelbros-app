@@ -602,6 +602,53 @@ export type Database = {
           },
         ];
       };
+      nutrition_meal_plan_entry: {
+        Row: {
+          id: string;
+          plan_date: string;
+          meal_slot: string;
+          recipe_id: string | null;
+          freeform_title: string | null;
+          servings_planned: number;
+          cooked_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          plan_date: string;
+          meal_slot: string;
+          recipe_id?: string | null;
+          freeform_title?: string | null;
+          servings_planned?: number;
+          cooked_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          plan_date?: string;
+          meal_slot?: string;
+          recipe_id?: string | null;
+          freeform_title?: string | null;
+          servings_planned?: number;
+          cooked_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_meal_plan_entry_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_recipe";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

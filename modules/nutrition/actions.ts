@@ -14,21 +14,30 @@ import {
   moveIngredient,
   nextIngredientPosition,
 } from "@/modules/nutrition/lib/ingredient-order";
+import { computeCookDecrements } from "@/modules/nutrition/lib/pantry-decrement";
 import {
+  applyPantryDecrements,
+  deleteMealPlanEntry,
   deletePantryItem,
   deleteRecipe,
   deleteRecipeIngredient,
+  getMealPlanEntryForCooking,
+  getPantryItemsForFoods,
   getRecipe,
   insertFood,
+  insertMealPlanEntry,
   insertPantryItem,
   insertRecipe,
   insertRecipeIngredient,
+  markMealPlanEntryCooked,
   setRecipeArchived,
+  updateMealPlanEntry,
   updatePantryItem,
   updateRecipe,
   updateRecipeIngredient,
   updateRecipeIngredientPosition,
   type FoodRow,
+  type MealPlanEntryRow,
   type RecipeRow,
 } from "@/modules/nutrition/queries";
 
@@ -381,4 +390,139 @@ export async function moveRecipeIngredientAction(
   );
 
   revalidatePath(`/nutrition/recipes/${recipeId}`);
+}
+
+/**
+ * Meal plan (nutrition.md §3.4, #115). Fixed Family like the rest of the
+ * kitchen: any signed-in member plans, edits or removes any entry.
+ */
+export type MealPlanEntryInput = {
+  planDate: string;
+  mealSlot: string;
+  recipeId?: string | null;
+  freeformTitle?: string | null;
+  servingsPlanned: number;
+};
+
+function validateMealPlanEntry(input: MealPlanEntryInput): {
+  recipeId: string | null;
+  freeformTitle: string | null;
+} {
+  if (isBlank(input.planDate)) throw new Error("A plan date is required");
+  if (isBlank(input.mealSlot)) throw new Error("A meal slot is required");
+  if (!isValidAmount(input.servingsPlanned) || input.servingsPlanned <= 0) {
+    throw new Error("Servings planned must be greater than zero");
+  }
+
+  const recipeId = trimToNull(input.recipeId ?? null);
+  const freeformTitle = trimToNull(input.freeformTitle ?? null);
+  if ((recipeId !== null) === (freeformTitle !== null)) {
+    throw new Error(
+      "Pick a recipe or enter a freeform title for the meal — not both, not neither",
+    );
+  }
+
+  return { recipeId, freeformTitle };
+}
+
+/**
+ * Assigns a recipe (or a freeform title, for "leftovers" / "eating out") to
+ * a date and meal slot (§3.4).
+ */
+export async function createMealPlanEntryAction(
+  input: MealPlanEntryInput,
+): Promise<MealPlanEntryRow> {
+  const { recipeId, freeformTitle } = validateMealPlanEntry(input);
+
+  const member = await requireMember();
+  const supabase = await createClient();
+
+  const entry = await insertMealPlanEntry(supabase, {
+    planDate: input.planDate,
+    mealSlot: input.mealSlot,
+    recipeId,
+    freeformTitle,
+    servingsPlanned: input.servingsPlanned,
+    createdBy: member.id,
+  });
+
+  revalidatePath("/nutrition/plan");
+  return entry;
+}
+
+export async function updateMealPlanEntryAction(
+  entryId: string,
+  input: MealPlanEntryInput,
+) {
+  const { recipeId, freeformTitle } = validateMealPlanEntry(input);
+
+  await requireMember();
+  const supabase = await createClient();
+
+  await updateMealPlanEntry(supabase, entryId, {
+    planDate: input.planDate,
+    mealSlot: input.mealSlot,
+    recipeId,
+    freeformTitle,
+    servingsPlanned: input.servingsPlanned,
+  });
+
+  revalidatePath("/nutrition/plan");
+}
+
+export async function deleteMealPlanEntryAction(entryId: string) {
+  await requireMember();
+  const supabase = await createClient();
+
+  await deleteMealPlanEntry(supabase, entryId);
+  revalidatePath("/nutrition/plan");
+}
+
+/**
+ * Marks a plan entry cooked (§3.4): sets `cooked_at` and, for a
+ * recipe-linked entry, decrements the matching pantry rows by that
+ * recipe's linked ingredients scaled to `servings_planned`
+ * (`lib/pantry-decrement.ts`). A freeform entry ("leftovers") has no
+ * recipe to decrement against, so only `cooked_at` is set. Re-marking an
+ * already-cooked entry is a no-op — cooking is not undone by unmarking in
+ * v1, so this guards against a double decrement from a repeat click rather
+ * than modelling "un-cook".
+ */
+export async function markMealPlanEntryCookedAction(entryId: string) {
+  await requireMember();
+  const supabase = await createClient();
+
+  const entry = await getMealPlanEntryForCooking(supabase, entryId);
+  if (!entry) throw new Error("Plan entry not found");
+  if (entry.cooked_at) return;
+
+  if (entry.recipe) {
+    const foodIds = entry.recipe.ingredients
+      .map((line) => line.food_id)
+      .filter((id): id is string => id !== null);
+
+    const pantryRows = await getPantryItemsForFoods(supabase, foodIds);
+
+    const decrements = computeCookDecrements(
+      entry.recipe.servings,
+      entry.servings_planned,
+      entry.recipe.ingredients.map((line) => ({
+        foodId: line.food_id,
+        quantity: line.quantity,
+        unit: line.unit,
+      })),
+      pantryRows.map((row) => ({
+        id: row.id,
+        foodId: row.food_id,
+        quantity: row.quantity,
+        unit: row.unit,
+      })),
+    );
+
+    await applyPantryDecrements(supabase, decrements);
+    revalidatePath("/nutrition/pantry");
+  }
+
+  await markMealPlanEntryCooked(supabase, entryId);
+  revalidatePath("/nutrition/plan");
 }

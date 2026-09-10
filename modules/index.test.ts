@@ -26,7 +26,7 @@ describe("module registry", () => {
   it("registers the nutrition module", () => {
     const nutrition = modules.find((mod) => mod.slug === "nutrition");
     expect(nutrition).toBeDefined();
-    // Every Phase 1 table is Family — the kitchen is shared
+    // Every Phase 1 and Phase 2a table is Family — the kitchen is shared
     // (docs/modules/nutrition.md §2) — with the ingredient line carrying
     // no scope of its own and riding its parent recipe.
     expect(nutrition?.scopes).toEqual([
@@ -38,6 +38,7 @@ describe("module registry", () => {
         policy: "inherited",
         from: "nutrition_recipe",
       },
+      { table: "nutrition_meal_plan_entry", policy: "fixed", scope: "family" },
     ]);
     // The Nutrition widget is about today's log, so it ships with Phase 3.
     expect(nutrition?.widgets).toEqual([]);
