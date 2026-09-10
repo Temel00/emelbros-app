@@ -3,11 +3,12 @@
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #113 resolves.
  *
- * Round 2 shared pieces: the spreadsheet-style recipe box and the Option-B
- * detail shell (Details / Instructions panels + cook mode), lifted out so
- * variants D, E, and F can hold those two decisions constant and differ
- * only in the ingredient-editing widget — the thing this round is actually
- * comparing.
+ * The validated shell: the spreadsheet-style recipe box and the Option-B
+ * detail shell (Details / Instructions panels + cook mode). Round 2 compared
+ * three ingredient-editing widgets against this same box + detail shell;
+ * prototype-recipe-variant-e.tsx's food-first linking won and is the only
+ * one left. Kept split out from that file since this half of the screen is
+ * the settled base future prototype rounds should build on top of.
  */
 
 import {

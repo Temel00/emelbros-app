@@ -3,15 +3,20 @@
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #113 resolves.
  *
- * Round 2, variant E — "Food-first linked rows": the opposite bet from D.
- * Instead of typing free text and optionally attaching a food, you search
- * and pick the food *first* — the ingredient line's text is then a rollup
- * generated from amount + unit + food name, not an independently-editable
- * field. The unit still rolls up from the food's base unit but is a
- * recipe-scoped override (a food tracked in grams can still read "2 tbsp"
- * on this recipe). Unlinking hands the generated text back as a normal
- * freeform line to edit by hand — for "salt to taste" lines that were never
- * going to have amount/unit/food in the first place.
+ * "Food-first linked rows" — the winning direction from round 2 (owner
+ * review, 2026-09-09), now the only ingredient-editing widget left. You
+ * search and pick the food *first*; the ingredient line's text is then a
+ * rollup generated from amount + unit + food name, not an independently-
+ * editable field. The unit still rolls up from the food's base unit but is
+ * a recipe-scoped override (a food tracked in grams can still read
+ * "2 tbsp" on this recipe). Unlinking hands the generated text back as a
+ * normal freeform line to edit by hand — for "salt to taste" lines that
+ * were never going to have amount/unit/food in the first place.
+ *
+ * This amount+unit+linked-food shape is deliberately ready for a later
+ * planning feature to read off and debit the pantry when a recipe is
+ * cooked — that deduction logic itself is out of scope here and still to
+ * be ironed out.
  */
 
 import { ChevronDown, ChevronUp, Search, Trash2, X } from "lucide-react";
