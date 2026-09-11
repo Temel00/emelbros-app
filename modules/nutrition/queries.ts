@@ -558,3 +558,207 @@ export async function markMealPlanEntryCooked(
 
   if (error) throw error;
 }
+
+// === nutrition_shopping_list_item ====================================
+
+export type ShoppingListItemRow =
+  Database["public"]["Tables"]["nutrition_shopping_list_item"]["Row"];
+
+type RecipeIngredientForGeneration = {
+  food_id: string | null;
+  quantity: number | null;
+  unit: string | null;
+  food: { name: string } | null;
+};
+
+export type MealPlanEntryForGeneration = MealPlanEntryRow & {
+  recipe: (RecipeRow & { ingredients: RecipeIngredientForGeneration[] }) | null;
+};
+
+/**
+ * Plan entries for a date range with just enough of their recipe —
+ * servings and each ingredient line's food id/name/quantity/unit — to
+ * compute the shopping-list shortfall
+ * (`lib/shopping-list-generation.ts`). Mirrors
+ * `getMealPlanEntryForCooking`'s shape, over a range instead of one id. A
+ * freeform entry's `recipe` is `null` and contributes nothing to generate
+ * against.
+ */
+export async function getMealPlanEntriesForGeneration(
+  supabase: SupabaseClient<Database>,
+  startDate: string,
+  endDate: string,
+): Promise<MealPlanEntryForGeneration[]> {
+  const { data, error } = await supabase
+    .from("nutrition_meal_plan_entry")
+    .select(
+      "*, recipe:nutrition_recipe(*, ingredients:nutrition_recipe_ingredient(food_id, quantity, unit, food:nutrition_food(name)))",
+    )
+    .gte("plan_date", startDate)
+    .lte("plan_date", endDate);
+
+  if (error) throw error;
+  return data as unknown as MealPlanEntryForGeneration[];
+}
+
+/** Every shopping-list line, `auto` lines first then `manual`, oldest first within each — the read behind the (future) shopping list screen. */
+export async function getShoppingListItems(
+  supabase: SupabaseClient<Database>,
+): Promise<ShoppingListItemRow[]> {
+  const { data, error } = await supabase
+    .from("nutrition_shopping_list_item")
+    .select("*")
+    .order("source", { ascending: false })
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getShoppingListItem(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<ShoppingListItemRow | null> {
+  const { data, error } = await supabase
+    .from("nutrition_shopping_list_item")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Regenerates the `auto` lines (nutrition.md §3.4, §10): every existing
+ * `auto` line is replaced with the freshly computed shortfalls in one
+ * transition, `manual` lines are never touched since they aren't part of
+ * this table scan.
+ */
+export async function replaceAutoShoppingListItems(
+  supabase: SupabaseClient<Database>,
+  items: {
+    foodId: string;
+    displayText: string;
+    quantity: number;
+    unit: string;
+  }[],
+): Promise<void> {
+  const { error: deleteError } = await supabase
+    .from("nutrition_shopping_list_item")
+    .delete()
+    .eq("source", "auto");
+
+  if (deleteError) throw deleteError;
+  if (items.length === 0) return;
+
+  const { error: insertError } = await supabase
+    .from("nutrition_shopping_list_item")
+    .insert(
+      items.map((item) => ({
+        food_id: item.foodId,
+        display_text: item.displayText,
+        quantity: item.quantity,
+        unit: item.unit,
+        source: "auto",
+      })),
+    );
+
+  if (insertError) throw insertError;
+}
+
+export async function insertManualShoppingListItem(
+  supabase: SupabaseClient<Database>,
+  item: {
+    foodId: string | null;
+    displayText: string;
+    quantity: number | null;
+    unit: string | null;
+    addedBy: string;
+  },
+): Promise<ShoppingListItemRow> {
+  const { data, error } = await supabase
+    .from("nutrition_shopping_list_item")
+    .insert({
+      food_id: item.foodId,
+      display_text: item.displayText,
+      quantity: item.quantity,
+      unit: item.unit,
+      source: "manual",
+      added_by: item.addedBy,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateShoppingListItem(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  patch: {
+    foodId: string | null;
+    displayText: string;
+    quantity: number | null;
+    unit: string | null;
+  },
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_shopping_list_item")
+    .update({
+      food_id: patch.foodId,
+      display_text: patch.displayText,
+      quantity: patch.quantity,
+      unit: patch.unit,
+    })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+export async function deleteShoppingListItem(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_shopping_list_item")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+export async function setShoppingListItemCheckedOff(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_shopping_list_item")
+    .update({ checked_off: true })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+/**
+ * Finds the pantry row a restock adds into: same food, same unit (no
+ * conversion, §8). Mirrors `pantry-decrement.ts`'s own matching rule and
+ * its "first match wins" judgment call when more than one row qualifies.
+ */
+export async function getPantryItemForFoodUnit(
+  supabase: SupabaseClient<Database>,
+  foodId: string,
+  unit: string,
+): Promise<PantryItemRow | null> {
+  const { data, error } = await supabase
+    .from("nutrition_pantry_item")
+    .select("*")
+    .eq("food_id", foodId)
+    .eq("unit", unit)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}

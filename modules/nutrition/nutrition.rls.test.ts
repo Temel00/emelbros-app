@@ -25,6 +25,9 @@ import type { Database } from "@/types/database";
  * through its parent recipe rather than for a policy of its own.
  * `nutrition_meal_plan_entry` (#115) adds its own check constraint —
  * exactly one of `recipe_id` / `freeform_title` — proven directly here.
+ * `nutrition_shopping_list_item` (#118) is another fixed-Family table, and
+ * its `food_id` link survives (unlinks rather than cascades) a deleted
+ * food, unlike the pantry line's own link to the same table.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
@@ -157,6 +160,27 @@ async function createMealPlanEntry(
   return data.id as string;
 }
 
+/** Inserts a shopping-list line via the service-role client, bypassing RLS. */
+async function createShoppingListItem(
+  creator: Member,
+  overrides: { foodId?: string | null; source?: string } = {},
+) {
+  const { data, error } = await admin
+    .from("nutrition_shopping_list_item")
+    .insert({
+      food_id: overrides.foodId ?? null,
+      display_text: "2 cups flour",
+      quantity: 2,
+      unit: "cup",
+      source: overrides.source ?? "manual",
+      added_by: creator.id,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
 describe("nutrition RLS", () => {
   let cook: Member;
   let bystander: Member;
@@ -165,6 +189,7 @@ describe("nutrition RLS", () => {
   let leftoverFoodIds: string[] = [];
   let leftoverRecipeIds: string[] = [];
   let leftoverMealPlanEntryIds: string[] = [];
+  let leftoverShoppingListItemIds: string[] = [];
 
   beforeAll(async () => {
     cook = await createMember("cook");
@@ -172,7 +197,14 @@ describe("nutrition RLS", () => {
   });
 
   afterEach(async () => {
-    // Meal plan entries first: one may still point at a recipe below.
+    // Shopping-list lines first: one may still point at a food below, and
+    // its link only unlinks (not cascades) on food deletion.
+    for (const id of leftoverShoppingListItemIds) {
+      await admin.from("nutrition_shopping_list_item").delete().eq("id", id);
+    }
+    leftoverShoppingListItemIds = [];
+
+    // Meal plan entries next: one may still point at a recipe below.
     for (const id of leftoverMealPlanEntryIds) {
       await admin.from("nutrition_meal_plan_entry").delete().eq("id", id);
     }
@@ -769,5 +801,125 @@ describe("nutrition RLS", () => {
       .select("id")
       .eq("id", entryId);
     expect(data).toEqual([]);
+  });
+
+  // === nutrition_shopping_list_item ===================================
+  //
+  // Another fixed-Family table (#118): `bystander` proves the same point
+  // as above, plus its `food_id` link unlinking (not cascading) when the
+  // food it points at is deleted — unlike the pantry line's own link.
+
+  it("lets any signed-in member add a manual shopping-list line", async () => {
+    const { data, error } = await cook.client
+      .from("nutrition_shopping_list_item")
+      .insert({
+        display_text: "Birthday candles",
+        source: "manual",
+        added_by: cook.id,
+      })
+      .select("id")
+      .single();
+
+    expect(error).toBeNull();
+    if (data) leftoverShoppingListItemIds.push(data.id);
+  });
+
+  it("lets a member who added nothing read the list (fixed Family)", async () => {
+    const itemId = await createShoppingListItem(cook);
+    leftoverShoppingListItemIds.push(itemId);
+
+    const { data, error } = await bystander.client
+      .from("nutrition_shopping_list_item")
+      .select("id")
+      .eq("id", itemId)
+      .maybeSingle();
+
+    expect(error).toBeNull();
+    expect(data?.id).toBe(itemId);
+  });
+
+  it("lets a member check off a line someone else added", async () => {
+    const itemId = await createShoppingListItem(cook);
+    leftoverShoppingListItemIds.push(itemId);
+
+    const { error, count } = await bystander.client
+      .from("nutrition_shopping_list_item")
+      .update({ checked_off: true }, { count: "exact" })
+      .eq("id", itemId);
+
+    expect(error).toBeNull();
+    expect(count).toBe(1);
+  });
+
+  it("lets a member delete a line someone else added", async () => {
+    const itemId = await createShoppingListItem(cook);
+
+    const { error, count } = await bystander.client
+      .from("nutrition_shopping_list_item")
+      .delete({ count: "exact" })
+      .eq("id", itemId);
+
+    expect(error).toBeNull();
+    expect(count).toBe(1);
+  });
+
+  it("hides the shopping list from a signed-out caller", async () => {
+    const itemId = await createShoppingListItem(cook);
+    leftoverShoppingListItemIds.push(itemId);
+
+    const { data, error } = await anonymous
+      .from("nutrition_shopping_list_item")
+      .select("id")
+      .eq("id", itemId);
+
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it("blocks a signed-out caller from adding a shopping-list line", async () => {
+    const { data, error } = await anonymous
+      .from("nutrition_shopping_list_item")
+      .insert({ display_text: "Contraband snacks", source: "manual" })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("rejects a shopping-list line with a source other than auto/manual", async () => {
+    const { data, error } = await cook.client
+      .from("nutrition_shopping_list_item")
+      .insert({
+        display_text: "Mystery line",
+        source: "bogus",
+        added_by: cook.id,
+      })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("unlinks rather than deletes a shopping-list line when its food goes", async () => {
+    const foodId = await createFood(cook);
+    const itemId = await createShoppingListItem(cook, { foodId });
+    leftoverShoppingListItemIds.push(itemId);
+
+    const { error } = await cook.client
+      .from("nutrition_food")
+      .delete()
+      .eq("id", foodId);
+    expect(error).toBeNull();
+
+    const { data } = await admin
+      .from("nutrition_shopping_list_item")
+      .select("id, food_id, display_text")
+      .eq("id", itemId)
+      .single();
+
+    expect(data?.food_id).toBeNull();
+    expect(data?.display_text).not.toBe("");
   });
 });

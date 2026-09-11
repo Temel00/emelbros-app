@@ -15,27 +15,37 @@ import {
   nextIngredientPosition,
 } from "@/modules/nutrition/lib/ingredient-order";
 import { computeCookDecrements } from "@/modules/nutrition/lib/pantry-decrement";
+import { computeShoppingListShortfalls } from "@/modules/nutrition/lib/shopping-list-generation";
+import { DEFAULT_PANTRY_LOCATION } from "@/modules/nutrition/lib/locations";
 import {
   applyPantryDecrements,
   deleteMealPlanEntry,
   deletePantryItem,
   deleteRecipe,
   deleteRecipeIngredient,
+  deleteShoppingListItem,
+  getMealPlanEntriesForGeneration,
   getMealPlanEntryForCooking,
+  getPantryItemForFoodUnit,
   getPantryItemsForFoods,
   getRecipe,
+  getShoppingListItem,
   insertFood,
   insertMealPlanEntry,
+  insertManualShoppingListItem,
   insertPantryItem,
   insertRecipe,
   insertRecipeIngredient,
   markMealPlanEntryCooked,
+  replaceAutoShoppingListItems,
   setRecipeArchived,
+  setShoppingListItemCheckedOff,
   updateMealPlanEntry,
   updatePantryItem,
   updateRecipe,
   updateRecipeIngredient,
   updateRecipeIngredientPosition,
+  updateShoppingListItem,
   type FoodRow,
   type MealPlanEntryRow,
   type RecipeRow,
@@ -547,4 +557,188 @@ export async function markMealPlanEntryCookedAction(
   await markMealPlanEntryCooked(supabase, entryId);
   revalidatePath("/nutrition/plan");
   return decrementLines;
+}
+
+/**
+ * Regenerates the shopping list's `auto` lines for a date range (§3.4):
+ * sums the range's planned recipes' linked ingredients, scaled to servings
+ * planned, subtracts the pantry, and replaces every existing `auto` line
+ * with the shortfall (`lib/shopping-list-generation.ts`). `manual` lines
+ * are untouched — regeneration only ever replaces the lines it itself
+ * wrote.
+ */
+export async function generateShoppingListAction(
+  startDate: string,
+  endDate: string,
+) {
+  await requireMember();
+  const supabase = await createClient();
+
+  const entries = await getMealPlanEntriesForGeneration(
+    supabase,
+    startDate,
+    endDate,
+  );
+
+  const plannedEntries = entries
+    .filter((entry) => entry.recipe !== null)
+    .map((entry) => ({
+      recipeServings: entry.recipe!.servings,
+      servingsPlanned: entry.servings_planned,
+      lines: entry.recipe!.ingredients.map((line) => ({
+        foodId: line.food_id,
+        foodName: line.food?.name ?? "",
+        quantity: line.quantity,
+        unit: line.unit,
+      })),
+    }));
+
+  const foodIds = plannedEntries.flatMap((entry) =>
+    entry.lines
+      .map((line) => line.foodId)
+      .filter((id): id is string => id !== null),
+  );
+
+  const pantryRows = await getPantryItemsForFoods(supabase, foodIds);
+
+  const shortfalls = computeShoppingListShortfalls(
+    plannedEntries,
+    pantryRows.map((row) => ({
+      foodId: row.food_id,
+      quantity: row.quantity,
+      unit: row.unit,
+    })),
+  );
+
+  await replaceAutoShoppingListItems(
+    supabase,
+    shortfalls.map((shortfall) => ({
+      foodId: shortfall.foodId,
+      displayText: shortfall.displayText,
+      quantity: shortfall.quantity,
+      unit: shortfall.unit,
+    })),
+  );
+
+  revalidatePath("/nutrition/shopping-list");
+}
+
+export type AddManualShoppingListItemInput = {
+  foodId?: string | null;
+  displayText: string;
+  quantity?: number | null;
+  unit?: string | null;
+};
+
+function validateShoppingListItem(input: {
+  displayText: string;
+  quantity?: number | null;
+}) {
+  if (isBlank(input.displayText)) throw new Error("Item text is required");
+  if (
+    input.quantity !== undefined &&
+    input.quantity !== null &&
+    !isValidAmount(input.quantity)
+  )
+    throw new Error("Quantity must be a positive number");
+}
+
+export async function addManualShoppingListItemAction(
+  input: AddManualShoppingListItemInput,
+) {
+  validateShoppingListItem(input);
+  const member = await requireMember();
+  const supabase = await createClient();
+
+  await insertManualShoppingListItem(supabase, {
+    foodId: input.foodId ?? null,
+    displayText: input.displayText,
+    quantity: input.quantity ?? null,
+    unit: trimToNull(input.unit ?? null),
+    addedBy: member.id,
+  });
+
+  revalidatePath("/nutrition/shopping-list");
+}
+
+export type UpdateManualShoppingListItemInput = {
+  foodId?: string | null;
+  displayText: string;
+  quantity?: number | null;
+  unit?: string | null;
+};
+
+export async function updateManualShoppingListItemAction(
+  itemId: string,
+  input: UpdateManualShoppingListItemInput,
+) {
+  validateShoppingListItem(input);
+  await requireMember();
+  const supabase = await createClient();
+
+  await updateShoppingListItem(supabase, itemId, {
+    foodId: input.foodId ?? null,
+    displayText: input.displayText,
+    quantity: input.quantity ?? null,
+    unit: trimToNull(input.unit ?? null),
+  });
+
+  revalidatePath("/nutrition/shopping-list");
+}
+
+export async function deleteShoppingListItemAction(itemId: string) {
+  await requireMember();
+  const supabase = await createClient();
+
+  await deleteShoppingListItem(supabase, itemId);
+  revalidatePath("/nutrition/shopping-list");
+}
+
+/**
+ * Checks off a line (§3.4): if it's an `auto` line linked to a food, its
+ * quantity restocks the matching pantry row (same food, same unit — no
+ * conversion, §8; first match wins, `lib/pantry-decrement.ts`'s own rule),
+ * creating one at the default location if none exists. Re-checking an
+ * already-checked line is a no-op, guarding against a double restock from
+ * a repeat click.
+ */
+export async function checkOffShoppingListItemAction(itemId: string) {
+  const member = await requireMember();
+  const supabase = await createClient();
+
+  const item = await getShoppingListItem(supabase, itemId);
+  if (!item) throw new Error("Shopping list item not found");
+  if (item.checked_off) return;
+
+  if (item.food_id && item.unit && item.quantity !== null) {
+    const pantryRow = await getPantryItemForFoodUnit(
+      supabase,
+      item.food_id,
+      item.unit,
+    );
+
+    if (pantryRow) {
+      await updatePantryItem(supabase, pantryRow.id, {
+        quantity: pantryRow.quantity + item.quantity,
+        unit: pantryRow.unit,
+        location: pantryRow.location,
+        expiresOn: pantryRow.expires_on,
+        addedBy: pantryRow.added_by ?? member.id,
+      });
+    } else {
+      await insertPantryItem(supabase, {
+        foodId: item.food_id,
+        quantity: item.quantity,
+        unit: item.unit,
+        location: DEFAULT_PANTRY_LOCATION,
+        expiresOn: null,
+        addedBy: member.id,
+      });
+    }
+
+    revalidatePath("/nutrition/pantry");
+  }
+
+  await setShoppingListItemCheckedOff(supabase, itemId);
+  revalidatePath("/nutrition/shopping-list");
 }
