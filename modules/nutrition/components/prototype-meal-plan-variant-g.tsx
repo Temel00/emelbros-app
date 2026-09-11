@@ -52,12 +52,12 @@ export function PrototypeVariantG({
         {days.map((day) => (
           <div
             key={day.date}
-            className={`border-r border-b border-border px-2 py-2 text-center last:border-r-0 ${
+            className={`min-w-0 border-r border-b border-border px-2 py-2 text-center last:border-r-0 ${
               day.date === todayIso ? "bg-primary/5" : "bg-muted/30"
             }`}
           >
-            <div className="text-xs font-semibold">{day.label}</div>
-            <div className="text-[0.65rem] text-muted-foreground">
+            <div className="truncate text-xs font-semibold">{day.label}</div>
+            <div className="truncate text-[0.65rem] text-muted-foreground">
               {day.dayOfMonth}
             </div>
           </div>
@@ -78,7 +78,7 @@ export function PrototypeVariantG({
                 return (
                   <div
                     key={day.date}
-                    className="flex min-h-16 flex-col items-start gap-1 border-r border-b border-border p-1.5 last:border-r-0"
+                    className="flex min-h-16 min-w-0 flex-col items-stretch gap-1 border-r border-b border-border p-1.5 last:border-r-0"
                   >
                     {items.map((entry) => (
                       <Chip

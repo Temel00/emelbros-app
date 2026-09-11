@@ -640,12 +640,12 @@ export function Chip({
 
   return (
     <div
-      className={`flex items-center gap-1.5 rounded-full border py-1 pr-1 pl-2 text-sm ${
+      className={`flex w-full min-w-0 max-w-full items-center gap-1.5 rounded-full border py-1 pr-1 pl-2 text-sm ${
         cooked ? "border-primary/30 bg-primary/5" : "border-border bg-card"
       }`}
     >
       <span
-        className={`size-1.5 rounded-full ${SLOT_DOT[entry.mealSlot] ?? "bg-muted-foreground"}`}
+        className={`size-1.5 shrink-0 rounded-full ${SLOT_DOT[entry.mealSlot] ?? "bg-muted-foreground"}`}
       />
       <Icon className="size-3.5 shrink-0 text-muted-foreground" />
       {recipe ? (
@@ -654,7 +654,7 @@ export function Chip({
           trigger={
             <button
               type="button"
-              className={`max-w-32 truncate font-medium hover:underline ${cooked ? "text-muted-foreground line-through" : ""}`}
+              className={`min-w-0 flex-1 truncate text-left font-medium hover:underline ${cooked ? "text-muted-foreground line-through" : ""}`}
             >
               {entryTitle(entry)}
             </button>
@@ -662,13 +662,13 @@ export function Chip({
         />
       ) : (
         <span
-          className={`max-w-32 truncate font-medium ${cooked ? "text-muted-foreground line-through" : ""}`}
+          className={`min-w-0 flex-1 truncate font-medium ${cooked ? "text-muted-foreground line-through" : ""}`}
         >
           {entryTitle(entry)}
         </span>
       )}
       {entry.servingsPlanned !== 1 && (
-        <span className="text-xs text-muted-foreground">
+        <span className="shrink-0 text-xs text-muted-foreground">
           ×{entry.servingsPlanned}
         </span>
       )}
