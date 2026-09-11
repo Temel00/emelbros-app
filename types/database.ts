@@ -649,6 +649,53 @@ export type Database = {
           },
         ];
       };
+      nutrition_shopping_list_item: {
+        Row: {
+          id: string;
+          food_id: string | null;
+          display_text: string;
+          quantity: number | null;
+          unit: string | null;
+          source: string;
+          checked_off: boolean;
+          added_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          food_id?: string | null;
+          display_text: string;
+          quantity?: number | null;
+          unit?: string | null;
+          source: string;
+          checked_off?: boolean;
+          added_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          food_id?: string | null;
+          display_text?: string;
+          quantity?: number | null;
+          unit?: string | null;
+          source?: string;
+          checked_off?: boolean;
+          added_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_shopping_list_item_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_food";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

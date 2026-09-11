@@ -39,6 +39,11 @@ describe("module registry", () => {
         from: "nutrition_recipe",
       },
       { table: "nutrition_meal_plan_entry", policy: "fixed", scope: "family" },
+      {
+        table: "nutrition_shopping_list_item",
+        policy: "fixed",
+        scope: "family",
+      },
     ]);
     // The Nutrition widget is about today's log, so it ships with Phase 3.
     expect(nutrition?.widgets).toEqual([]);
