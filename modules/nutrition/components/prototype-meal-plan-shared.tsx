@@ -14,7 +14,15 @@
  * here writes to `nutrition_meal_plan_entry`.
  */
 
-import { Apple, Coffee, Sandwich, Search, UtensilsCrossed } from "lucide-react";
+import {
+  Apple,
+  Check,
+  Coffee,
+  Plus,
+  Sandwich,
+  Search,
+  UtensilsCrossed,
+} from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, type ReactElement } from "react";
 
@@ -592,6 +600,244 @@ export function RecipeQuickView({
         </DialogFooter>
       </DialogContent>
     </DialogRoot>
+  );
+}
+
+export const todayIso = new Date().toISOString().slice(0, 10);
+
+export type AssignFn = (
+  date: string,
+  slot: string,
+  input: {
+    recipeId: string | null;
+    recipeTitle: string | null;
+    freeformTitle: string | null;
+    servingsPlanned: number;
+  },
+) => void;
+
+/**
+ * One item, one chip: a slot-colour dot, the slot icon, the title (opens
+ * the recipe quick-view when there's a recipe behind it, plain text when
+ * freeform), and a trailing check button that toggles cooked as a separate
+ * control from the name — round 3 standardises on this split everywhere
+ * rather than repeating round 2's D-vs-E ambiguity in every new layout.
+ */
+export function Chip({
+  entry,
+  recipeSummaries,
+  onToggleCooked,
+}: {
+  entry: MockPlanEntry;
+  recipeSummaries: RecipeSummary[];
+  onToggleCooked: (entryId: string) => void;
+}) {
+  const Icon = SLOT_ICON[entry.mealSlot] ?? SLOT_ICON.dinner;
+  const cooked = Boolean(entry.cookedAt);
+  const recipe = entry.recipeId
+    ? recipeSummaries.find((r) => r.id === entry.recipeId)
+    : undefined;
+
+  return (
+    <div
+      className={`flex items-center gap-1.5 rounded-full border py-1 pr-1 pl-2 text-sm ${
+        cooked ? "border-primary/30 bg-primary/5" : "border-border bg-card"
+      }`}
+    >
+      <span
+        className={`size-1.5 rounded-full ${SLOT_DOT[entry.mealSlot] ?? "bg-muted-foreground"}`}
+      />
+      <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+      {recipe ? (
+        <RecipeQuickView
+          recipe={recipe}
+          trigger={
+            <button
+              type="button"
+              className={`max-w-32 truncate font-medium hover:underline ${cooked ? "text-muted-foreground line-through" : ""}`}
+            >
+              {entryTitle(entry)}
+            </button>
+          }
+        />
+      ) : (
+        <span
+          className={`max-w-32 truncate font-medium ${cooked ? "text-muted-foreground line-through" : ""}`}
+        >
+          {entryTitle(entry)}
+        </span>
+      )}
+      {entry.servingsPlanned !== 1 && (
+        <span className="text-xs text-muted-foreground">
+          ×{entry.servingsPlanned}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={() => onToggleCooked(entry.id)}
+        aria-label={cooked ? "Mark not cooked" : "Mark cooked"}
+        className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${
+          cooked
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-muted-foreground/40"
+        }`}
+      >
+        {cooked && <Check className="size-2.5" strokeWidth={3} />}
+      </button>
+    </div>
+  );
+}
+
+/** A day's items as wrapping chips, plus a trailing "+ Add" trigger. */
+export function DayChipList({
+  date,
+  entries,
+  recipes,
+  recipeSummaries,
+  onAssign,
+  onToggleCooked,
+}: {
+  date: string;
+  entries: MockPlanEntry[];
+  recipes: RecipeRow[];
+  recipeSummaries: RecipeSummary[];
+  onAssign: AssignFn;
+  onToggleCooked: (entryId: string) => void;
+}) {
+  const dayEntries = entriesOnDate(entries, date);
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {dayEntries.length === 0 && (
+        <span className="text-xs text-muted-foreground">Nothing planned</span>
+      )}
+      {dayEntries.map((entry) => (
+        <Chip
+          key={entry.id}
+          entry={entry}
+          recipeSummaries={recipeSummaries}
+          onToggleCooked={onToggleCooked}
+        />
+      ))}
+      <AssignMealDialog
+        slots={mealSlots()}
+        recipes={recipes}
+        onAssign={(slot, input) => onAssign(date, slot, input)}
+        trigger={
+          <button
+            type="button"
+            className="flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-1 text-xs text-muted-foreground hover:border-primary hover:text-primary"
+          >
+            <Plus className="size-3" />
+            Add
+          </button>
+        }
+      />
+    </div>
+  );
+}
+
+/**
+ * The month view every round-2 variant converged on independently and
+ * that survived the owner's round-2 reaction unchanged — a Monday-aligned
+ * 6-week grid of dot-summary cells, tap a day for a chip-list peek with
+ * the ability to add right there. Shared once now instead of duplicated
+ * per variant, since round 3 is only replaying the week view.
+ */
+export function MonthGridView({
+  monthGrid,
+  entries,
+  recipes,
+  recipeSummaries,
+  onAssign,
+  onToggleCooked,
+}: {
+  monthGrid: MonthDay[][];
+  entries: MockPlanEntry[];
+  recipes: RecipeRow[];
+  recipeSummaries: RecipeSummary[];
+  onAssign: AssignFn;
+  onToggleCooked: (entryId: string) => void;
+}) {
+  const [peekDate, setPeekDate] = useState<string | null>(null);
+
+  return (
+    <div className="mx-auto w-full max-w-3xl">
+      <div className="grid grid-cols-7 gap-1.5">
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
+          <div
+            key={label}
+            className="px-1 text-center text-xs font-medium text-muted-foreground"
+          >
+            {label}
+          </div>
+        ))}
+        {monthGrid.flat().map((day) => {
+          const dayEntries = entriesOnDate(entries, day.date);
+          const shown = dayEntries.slice(0, 4);
+          const overflow = dayEntries.length - shown.length;
+
+          return (
+            <button
+              key={day.date}
+              type="button"
+              onClick={() => setPeekDate(day.date)}
+              className={`flex min-h-16 flex-col items-start gap-1 rounded-lg border p-1.5 text-left ${
+                day.inCurrentMonth
+                  ? "border-border bg-card"
+                  : "border-transparent text-muted-foreground/50"
+              } ${day.date === todayIso ? "ring-1 ring-primary" : ""}`}
+            >
+              <span className="text-xs font-medium">{day.dayNumber}</span>
+              <div className="flex flex-wrap gap-0.5">
+                {shown.map((entry) => (
+                  <span
+                    key={entry.id}
+                    title={entryTitle(entry)}
+                    className={`size-1.5 rounded-full ${SLOT_DOT[entry.mealSlot] ?? "bg-muted-foreground"} ${entry.cookedAt ? "opacity-40" : ""}`}
+                  />
+                ))}
+                {overflow > 0 && (
+                  <span className="text-[0.6rem] text-muted-foreground">
+                    +{overflow}
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <DialogRoot
+        open={peekDate !== null}
+        onOpenChange={(next) => !next && setPeekDate(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {peekDate &&
+                new Date(`${peekDate}T00:00:00`).toLocaleDateString(undefined, {
+                  weekday: "long",
+                  month: "short",
+                  day: "numeric",
+                })}
+            </DialogTitle>
+          </DialogHeader>
+          {peekDate && (
+            <div className="pt-2">
+              <DayChipList
+                date={peekDate}
+                entries={entries}
+                recipes={recipes}
+                recipeSummaries={recipeSummaries}
+                onAssign={onAssign}
+                onToggleCooked={onToggleCooked}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </DialogRoot>
+    </div>
   );
 }
 

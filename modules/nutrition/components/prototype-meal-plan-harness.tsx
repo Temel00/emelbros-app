@@ -3,11 +3,14 @@
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #116 resolves.
  *
- * Round 2, after round 1 (day list / day strip / grid-and-rail) didn't
- * land: a week/month toggle, slots that hold more than one item, and
- * recipes you can click into. Two compact-list directions to react to —
- * see prototype-meal-plan-variant-d.tsx and -e.tsx for what differs
- * between them.
+ * Round 3, after round 2's reaction: the month view (shared here as
+ * `MonthGridView`, unchanged) landed on both D and E, so it's kept as-is
+ * and shared across everything below. The week view didn't land on
+ * either — "cluttered, hard to tell days apart" — so round 3 replaces it
+ * with three structurally different attempts: F (day board — swipeable
+ * per-day cards), G (slot lanes — a real day×slot grid), H (accordion —
+ * one collapsed line per day, tap to expand). See each variant file for
+ * what it's testing.
  */
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -21,17 +24,20 @@ import {
   buildMockEntries,
   getMonthGrid,
   getWeekDays,
+  MonthGridView,
   type MockPlanEntry,
   type RecipeSummary,
 } from "@/modules/nutrition/components/prototype-meal-plan-shared";
-import { PrototypeVariantD } from "@/modules/nutrition/components/prototype-meal-plan-variant-d";
-import { PrototypeVariantE } from "@/modules/nutrition/components/prototype-meal-plan-variant-e";
+import { PrototypeVariantF } from "@/modules/nutrition/components/prototype-meal-plan-variant-f";
+import { PrototypeVariantG } from "@/modules/nutrition/components/prototype-meal-plan-variant-g";
+import { PrototypeVariantH } from "@/modules/nutrition/components/prototype-meal-plan-variant-h";
 import { PrototypeSwitcher } from "@/components/prototype/prototype-switcher";
 import type { RecipeRow } from "@/modules/nutrition/queries";
 
 const VARIANTS = [
-  { key: "D", name: "Compact chips" },
-  { key: "E", name: "Grouped lines" },
+  { key: "F", name: "Day board" },
+  { key: "G", name: "Slot lanes" },
+  { key: "H", name: "Accordion" },
 ];
 
 export function PrototypeMealPlanHarness({
@@ -42,7 +48,7 @@ export function PrototypeMealPlanHarness({
   recipeSummaries: RecipeSummary[];
 }) {
   const searchParams = useSearchParams();
-  const variant = searchParams.get("variant") ?? "D";
+  const variant = searchParams.get("variant") ?? "F";
 
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [anchor, setAnchor] = useState(() => new Date());
@@ -104,9 +110,8 @@ export function PrototypeMealPlanHarness({
     setAnchor(new Date());
   }
 
-  const props = {
+  const weekProps = {
     days,
-    monthGrid,
     entries,
     recipes,
     recipeSummaries,
@@ -150,8 +155,22 @@ export function PrototypeMealPlanHarness({
         </div>
       </div>
 
-      {variant === "D" && <PrototypeVariantD viewMode={viewMode} {...props} />}
-      {variant === "E" && <PrototypeVariantE viewMode={viewMode} {...props} />}
+      {viewMode === "month" ? (
+        <MonthGridView
+          monthGrid={monthGrid}
+          entries={entries}
+          recipes={recipes}
+          recipeSummaries={recipeSummaries}
+          onAssign={assignEntry}
+          onToggleCooked={toggleCooked}
+        />
+      ) : (
+        <>
+          {variant === "F" && <PrototypeVariantF {...weekProps} />}
+          {variant === "G" && <PrototypeVariantG {...weekProps} />}
+          {variant === "H" && <PrototypeVariantH {...weekProps} />}
+        </>
+      )}
       <PrototypeSwitcher variants={VARIANTS} current={variant} />
     </div>
   );
