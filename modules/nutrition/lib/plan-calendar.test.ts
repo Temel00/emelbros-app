@@ -68,7 +68,9 @@ describe("getMonthGrid", () => {
 
   it("is Monday-aligned", () => {
     const grid = getMonthGrid(new Date("2026-02-15T12:00:00"));
-    const firstRowDates = grid[0].map((d) => new Date(`${d.date}T00:00:00`).getDay());
+    const firstRowDates = grid[0].map((d) =>
+      new Date(`${d.date}T00:00:00`).getDay(),
+    );
     expect(firstRowDates[0]).toBe(1); // Monday
     expect(firstRowDates[6]).toBe(0); // Sunday
   });
@@ -117,9 +119,9 @@ describe("entriesOnDate / entriesAt", () => {
   });
 
   it("filters entries to a date and slot", () => {
-    expect(entriesAt(entries, "2026-01-05", "dinner").map((e) => e.id)).toEqual([
-      "b",
-    ]);
+    expect(entriesAt(entries, "2026-01-05", "dinner").map((e) => e.id)).toEqual(
+      ["b"],
+    );
   });
 
   it("returns nothing for a date with no entries", () => {
@@ -138,7 +140,11 @@ describe("entryTitle", () => {
   });
 
   it("falls back to the freeform title otherwise", () => {
-    const freeform = entry({ recipe_id: null, freeform_title: "Leftovers", recipe: null });
+    const freeform = entry({
+      recipe_id: null,
+      freeform_title: "Leftovers",
+      recipe: null,
+    });
     expect(entryTitle(freeform)).toBe("Leftovers");
   });
 

@@ -91,8 +91,8 @@ export default async function MealPlanPage({
         <div>
           <h1 className="text-xl font-semibold">Meal plan</h1>
           <p className="text-sm text-muted-foreground">
-            What the household is eating. Anyone can plan, edit, or mark a
-            meal cooked.
+            What the household is eating. Anyone can plan, edit, or mark a meal
+            cooked.
           </p>
         </div>
 
@@ -102,7 +102,10 @@ export default async function MealPlanPage({
               size="icon-sm"
               variant="outline"
               render={
-                <Link href={hrefFor({ anchor: prevAnchor })} aria-label="Previous">
+                <Link
+                  href={hrefFor({ anchor: prevAnchor })}
+                  aria-label="Previous"
+                >
                   <ChevronLeft />
                 </Link>
               }

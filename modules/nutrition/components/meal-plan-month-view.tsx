@@ -106,7 +106,11 @@ export function MealPlanMonthView({
           </DialogHeader>
           {peekDate && (
             <div className="pt-2">
-              <DayChipList date={peekDate} entries={entries} recipes={recipes} />
+              <DayChipList
+                date={peekDate}
+                entries={entries}
+                recipes={recipes}
+              />
             </div>
           )}
         </DialogContent>

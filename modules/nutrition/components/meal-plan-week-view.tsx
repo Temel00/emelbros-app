@@ -2,10 +2,17 @@ import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { AssignMealDialog } from "@/modules/nutrition/components/assign-meal-dialog";
-import { mealSlotDotClass, mealSlotIcon } from "@/modules/nutrition/components/meal-slot-badge";
+import {
+  mealSlotDotClass,
+  mealSlotIcon,
+} from "@/modules/nutrition/components/meal-slot-badge";
 import { PlanChip } from "@/modules/nutrition/components/plan-chip";
 import { mealSlots } from "@/modules/nutrition/lib/meal-slots";
-import { entriesAt, todayIso, type PlanDay } from "@/modules/nutrition/lib/plan-calendar";
+import {
+  entriesAt,
+  todayIso,
+  type PlanDay,
+} from "@/modules/nutrition/lib/plan-calendar";
 import type {
   MealPlanEntryWithRecipe,
   RecipeRow,
