@@ -9,8 +9,12 @@ import { cn } from "@/lib/utils";
  * "Not yet specified") — this is just enough for the two views that exist
  * today to reach each other, not a sub-nav framework to build later views on.
  */
-export function NutritionNav({ active }: { active: "pantry" | "recipes" }) {
-  const linkClass = (key: "pantry" | "recipes") =>
+export function NutritionNav({
+  active,
+}: {
+  active: "pantry" | "recipes" | "plan";
+}) {
+  const linkClass = (key: "pantry" | "recipes" | "plan") =>
     cn(
       "rounded-lg px-2.5 py-1 text-sm font-medium",
       active === key
@@ -25,6 +29,9 @@ export function NutritionNav({ active }: { active: "pantry" | "recipes" }) {
       </Link>
       <Link href="/nutrition/recipes" className={linkClass("recipes")}>
         Recipes
+      </Link>
+      <Link href="/nutrition/plan" className={linkClass("plan")}>
+        Plan
       </Link>
     </nav>
   );

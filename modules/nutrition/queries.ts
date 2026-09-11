@@ -512,20 +512,24 @@ export async function getMealPlanEntryForCooking(
   return data as unknown as MealPlanEntryForCooking | null;
 }
 
-/** Every pantry row for a set of foods — the cook decrement's match pool. */
+/**
+ * Every pantry row for a set of foods — the cook decrement's match pool.
+ * Joins the food name so a cook decrement can be surfaced by name ("used 2
+ * cups flour") without a second round trip.
+ */
 export async function getPantryItemsForFoods(
   supabase: SupabaseClient<Database>,
   foodIds: string[],
-): Promise<PantryItemRow[]> {
+): Promise<PantryItemWithFood[]> {
   if (foodIds.length === 0) return [];
 
   const { data, error } = await supabase
     .from("nutrition_pantry_item")
-    .select("*")
+    .select("*, food:nutrition_food(*)")
     .in("food_id", foodIds);
 
   if (error) throw error;
-  return data;
+  return data as PantryItemWithFood[];
 }
 
 /** Writes the decrements `computeCookDecrements` returned, one row each. */
