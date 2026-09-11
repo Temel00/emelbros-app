@@ -559,44 +559,86 @@ export function AssignMealDialog({
 }
 
 /**
- * The "little window view" of a recipe clicked from the plan: title,
- * servings, ingredient count, and a real link into the shipped recipe
- * detail page (#114, `/nutrition/recipes/[id]`) for "read the whole
- * thing" — a genuine navigation, so the browser back button is the way
- * back, not a prototype-only illusion of one. Only recipe-linked entries
- * are clickable; freeform entries (leftovers, eating out) have nothing to
- * peek at.
+ * Everything about one planned item lives here now, not on the chip's
+ * face: recipe details (when linked), the planned serving count, the
+ * cooked toggle, and — for recipe-linked entries — a real link into the
+ * shipped recipe detail page (#114, `/nutrition/recipes/[id]`), which
+ * opens straight to its cook mode whenever the recipe has content. A
+ * genuine navigation, so the browser back button is the way back, not a
+ * prototype-only illusion of one.
  */
-export function RecipeQuickView({
-  recipe,
+export function EntryDetailsDialog({
+  entry,
+  recipeSummaries,
+  onToggleCooked,
   trigger,
 }: {
-  recipe: RecipeSummary;
+  entry: MockPlanEntry;
+  recipeSummaries: RecipeSummary[];
+  onToggleCooked: (entryId: string) => void;
   trigger: ReactElement;
 }) {
   const [open, setOpen] = useState(false);
+  const cooked = Boolean(entry.cookedAt);
+  const recipe = entry.recipeId
+    ? recipeSummaries.find((r) => r.id === entry.recipeId)
+    : undefined;
+  const Icon = SLOT_ICON[entry.mealSlot] ?? SLOT_ICON.dinner;
+  const slotLabel =
+    mealSlots().find((s) => s.key === entry.mealSlot)?.label ?? entry.mealSlot;
 
   return (
     <DialogRoot open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
       <DialogContent className="max-w-xs p-4">
-        <div className="flex flex-col gap-1">
-          <h3 className="pr-4 text-base font-bold">{recipe.title}</h3>
-          <p className="text-sm text-muted-foreground">
-            Serves {recipe.servings} · {recipe.ingredientCount}{" "}
-            {recipe.ingredientCount === 1 ? "ingredient" : "ingredients"}
+        <DialogHeader>
+          <DialogTitle>{entryTitle(entry)}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+          {recipe && (
+            <p>
+              Serves {recipe.servings} · {recipe.ingredientCount}{" "}
+              {recipe.ingredientCount === 1 ? "ingredient" : "ingredients"}
+            </p>
+          )}
+          <p className="flex items-center gap-1.5">
+            <Icon className="size-3.5 shrink-0" />
+            {slotLabel} · {entry.servingsPlanned}{" "}
+            {entry.servingsPlanned === 1 ? "serving" : "servings"} planned
           </p>
         </div>
-        <DialogFooter className="mt-3">
-          <Button
-            size="sm"
-            variant="outline"
-            render={
-              <Link href={`/nutrition/recipes/${recipe.id}`}>
-                Open full recipe
-              </Link>
-            }
-          />
+        <DialogFooter className="mt-3 w-full items-center justify-between">
+          <button
+            type="button"
+            onClick={() => onToggleCooked(entry.id)}
+            className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-sm font-medium ${
+              cooked
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <span
+              className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${
+                cooked
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-muted-foreground/40"
+              }`}
+            >
+              {cooked && <Check className="size-2.5" strokeWidth={3} />}
+            </span>
+            {cooked ? "Cooked" : "Mark cooked"}
+          </button>
+          {recipe && (
+            <Button
+              size="sm"
+              variant="outline"
+              render={
+                <Link href={`/nutrition/recipes/${recipe.id}`}>
+                  Open in cook mode
+                </Link>
+              }
+            />
+          )}
         </DialogFooter>
       </DialogContent>
     </DialogRoot>
@@ -617,11 +659,11 @@ export type AssignFn = (
 ) => void;
 
 /**
- * One item, one chip: a slot-colour dot, the slot icon, the title (opens
- * the recipe quick-view when there's a recipe behind it, plain text when
- * freeform), and a trailing check button that toggles cooked as a separate
- * control from the name — round 3 standardises on this split everywhere
- * rather than repeating round 2's D-vs-E ambiguity in every new layout.
+ * One item, one chip — now text-only. Qty and the cooked toggle used to
+ * live on the chip's face; they, plus recipe details, now live behind a
+ * single tap on the whole chip (`EntryDetailsDialog`), which is what frees
+ * the chip up to just be the name and keeps it readable as the column
+ * narrows. A cooked item still reads at a glance (dimmed + struck through).
  */
 export function Chip({
   entry,
@@ -638,61 +680,35 @@ export function Chip({
 }) {
   const Icon = SLOT_ICON[entry.mealSlot] ?? SLOT_ICON.dinner;
   const cooked = Boolean(entry.cookedAt);
-  const recipe = entry.recipeId
-    ? recipeSummaries.find((r) => r.id === entry.recipeId)
-    : undefined;
 
   return (
-    <div
-      className={`flex w-full min-w-0 max-w-full items-center gap-1.5 rounded-full border py-1 pr-1 pl-2 text-sm ${
-        cooked ? "border-primary/30 bg-primary/5" : "border-border bg-card"
-      }`}
-    >
-      {showSlotIndicator && (
-        <>
-          <span
-            className={`size-1.5 shrink-0 rounded-full ${SLOT_DOT[entry.mealSlot] ?? "bg-muted-foreground"}`}
-          />
-          <Icon className="size-3.5 shrink-0 text-muted-foreground" />
-        </>
-      )}
-      {recipe ? (
-        <RecipeQuickView
-          recipe={recipe}
-          trigger={
-            <button
-              type="button"
-              className={`min-w-0 flex-1 truncate text-left font-medium hover:underline ${cooked ? "text-muted-foreground line-through" : ""}`}
-            >
-              {entryTitle(entry)}
-            </button>
-          }
-        />
-      ) : (
-        <span
-          className={`min-w-0 flex-1 truncate font-medium ${cooked ? "text-muted-foreground line-through" : ""}`}
+    <EntryDetailsDialog
+      entry={entry}
+      recipeSummaries={recipeSummaries}
+      onToggleCooked={onToggleCooked}
+      trigger={
+        <button
+          type="button"
+          className={`flex min-w-0 max-w-full items-center gap-1.5 rounded-full border py-1 px-2.5 text-left text-sm ${
+            cooked ? "border-primary/30 bg-primary/5" : "border-border bg-card"
+          }`}
         >
-          {entryTitle(entry)}
-        </span>
-      )}
-      {entry.servingsPlanned !== 1 && (
-        <span className="shrink-0 text-xs text-muted-foreground">
-          ×{entry.servingsPlanned}
-        </span>
-      )}
-      <button
-        type="button"
-        onClick={() => onToggleCooked(entry.id)}
-        aria-label={cooked ? "Mark not cooked" : "Mark cooked"}
-        className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${
-          cooked
-            ? "border-primary bg-primary text-primary-foreground"
-            : "border-muted-foreground/40"
-        }`}
-      >
-        {cooked && <Check className="size-2.5" strokeWidth={3} />}
-      </button>
-    </div>
+          {showSlotIndicator && (
+            <>
+              <span
+                className={`size-1.5 shrink-0 rounded-full ${SLOT_DOT[entry.mealSlot] ?? "bg-muted-foreground"}`}
+              />
+              <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+            </>
+          )}
+          <span
+            className={`min-w-0 flex-1 truncate font-medium ${cooked ? "text-muted-foreground line-through" : ""}`}
+          >
+            {entryTitle(entry)}
+          </span>
+        </button>
+      }
+    />
   );
 }
 
