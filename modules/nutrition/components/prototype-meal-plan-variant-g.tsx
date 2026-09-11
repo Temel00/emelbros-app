@@ -10,6 +10,7 @@ import {
   Chip,
   entryAt,
   mealSlots,
+  SLOT_DOT,
   SLOT_ICON,
   todayIso,
   type AssignFn,
@@ -68,6 +69,9 @@ export function PrototypeVariantG({
           return (
             <FragmentRow key={slot.key}>
               <div className="sticky left-0 z-10 flex items-center gap-1.5 border-r border-b border-border bg-background px-2 py-2">
+                <span
+                  className={`size-1.5 shrink-0 rounded-full ${SLOT_DOT[slot.key] ?? "bg-muted-foreground"}`}
+                />
                 <Icon className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground">
                   {slot.label}
@@ -86,6 +90,7 @@ export function PrototypeVariantG({
                         entry={entry}
                         recipeSummaries={recipeSummaries}
                         onToggleCooked={onToggleCooked}
+                        showSlotIndicator={false}
                       />
                     ))}
                     <AssignMealDialog

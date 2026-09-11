@@ -627,10 +627,14 @@ export function Chip({
   entry,
   recipeSummaries,
   onToggleCooked,
+  showSlotIndicator = true,
 }: {
   entry: MockPlanEntry;
   recipeSummaries: RecipeSummary[];
   onToggleCooked: (entryId: string) => void;
+  /** Hide the per-chip slot dot/icon when the surrounding layout already
+   * carries the slot indicator once (e.g. variant G's slot-lane column). */
+  showSlotIndicator?: boolean;
 }) {
   const Icon = SLOT_ICON[entry.mealSlot] ?? SLOT_ICON.dinner;
   const cooked = Boolean(entry.cookedAt);
@@ -644,10 +648,14 @@ export function Chip({
         cooked ? "border-primary/30 bg-primary/5" : "border-border bg-card"
       }`}
     >
-      <span
-        className={`size-1.5 shrink-0 rounded-full ${SLOT_DOT[entry.mealSlot] ?? "bg-muted-foreground"}`}
-      />
-      <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+      {showSlotIndicator && (
+        <>
+          <span
+            className={`size-1.5 shrink-0 rounded-full ${SLOT_DOT[entry.mealSlot] ?? "bg-muted-foreground"}`}
+          />
+          <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+        </>
+      )}
       {recipe ? (
         <RecipeQuickView
           recipe={recipe}
