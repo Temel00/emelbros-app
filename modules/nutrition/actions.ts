@@ -488,13 +488,24 @@ export async function deleteMealPlanEntryAction(entryId: string) {
  * v1, so this guards against a double decrement from a repeat click rather
  * than modelling "un-cook".
  */
-export async function markMealPlanEntryCookedAction(entryId: string) {
+/** One pantry quantity used by a cook, for surfacing what changed. */
+export type CookDecrementLine = {
+  foodName: string;
+  amountUsed: number;
+  unit: string;
+};
+
+export async function markMealPlanEntryCookedAction(
+  entryId: string,
+): Promise<CookDecrementLine[]> {
   await requireMember();
   const supabase = await createClient();
 
   const entry = await getMealPlanEntryForCooking(supabase, entryId);
   if (!entry) throw new Error("Plan entry not found");
-  if (entry.cooked_at) return;
+  if (entry.cooked_at) return [];
+
+  let decrementLines: CookDecrementLine[] = [];
 
   if (entry.recipe) {
     const foodIds = entry.recipe.ingredients
@@ -502,6 +513,7 @@ export async function markMealPlanEntryCookedAction(entryId: string) {
       .filter((id): id is string => id !== null);
 
     const pantryRows = await getPantryItemsForFoods(supabase, foodIds);
+    const pantryRowsById = new Map(pantryRows.map((row) => [row.id, row]));
 
     const decrements = computeCookDecrements(
       entry.recipe.servings,
@@ -519,10 +531,20 @@ export async function markMealPlanEntryCookedAction(entryId: string) {
       })),
     );
 
+    decrementLines = decrements.map((decrement) => {
+      const before = pantryRowsById.get(decrement.pantryItemId)!;
+      return {
+        foodName: before.food.name,
+        amountUsed: before.quantity - decrement.quantity,
+        unit: before.unit,
+      };
+    });
+
     await applyPantryDecrements(supabase, decrements);
     revalidatePath("/nutrition/pantry");
   }
 
   await markMealPlanEntryCooked(supabase, entryId);
   revalidatePath("/nutrition/plan");
+  return decrementLines;
 }
