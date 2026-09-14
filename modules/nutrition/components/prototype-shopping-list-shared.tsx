@@ -41,9 +41,7 @@ export const GENERATION_SCENARIOS: GenerationScenario[] = [
   "empty",
 ];
 
-export function nextScenario(
-  current: GenerationScenario,
-): GenerationScenario {
+export function nextScenario(current: GenerationScenario): GenerationScenario {
   const i = GENERATION_SCENARIOS.indexOf(current);
   return GENERATION_SCENARIOS[(i + 1) % GENERATION_SCENARIOS.length];
 }
@@ -166,6 +164,50 @@ export function buildAutoScenario(
       restockNote: null,
     };
   });
+}
+
+/** The pantry row backing a line's food, if any — grounds "link back to
+ * Inventory" and the current-stock readout in reality rather than inventing
+ * a second stock number. */
+export function findPantryStock(
+  pantryItems: PantryItemWithFood[],
+  foodId: string | null,
+): PantryItemWithFood | null {
+  if (!foodId) return null;
+  return pantryItems.find((p) => p.food_id === foodId) ?? null;
+}
+
+export type ShortageHint = { count: number; text: string };
+
+/**
+ * Stands in for real recipe-vs-pantry shortfall math (doesn't exist yet —
+ * that's #118's Generate logic, not this prototype). Shows once per session,
+ * before the first Generate, so the owner can react to the *idea* of a
+ * "you're short" nudge without a real ingredient-diff engine behind it.
+ */
+export function shortageHint(hasGeneratedOnce: boolean): ShortageHint | null {
+  if (hasGeneratedOnce) return null;
+  return {
+    count: 3,
+    text: "3 recipes on this week's plan need items you're low on.",
+  };
+}
+
+/**
+ * `Qty,Unit,Item` — the assumed CSV shape for the copy button. Not
+ * confirmed against a specific target (store app, spreadsheet template);
+ * flag this for the owner to correct if they had an exact format in mind.
+ */
+export function linesToCsv(lines: ShoppingLine[]): string {
+  const escape = (value: string) =>
+    value.includes(",") || value.includes('"')
+      ? `"${value.replace(/"/g, '""')}"`
+      : value;
+
+  const rows = lines.map(
+    (l) => `${l.quantity},${escape(l.unit)},${escape(l.displayText)}`,
+  );
+  return ["Qty,Unit,Item", ...rows].join("\n");
 }
 
 export type AutoLineDiff = {
