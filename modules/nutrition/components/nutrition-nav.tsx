@@ -6,15 +6,15 @@ import { cn } from "@/lib/utils";
  * A minimal two-way link between the nutrition module's views. Full
  * navigation for all six eventual views (pantry, recipes, plan, shopping,
  * log, overview) is deliberately not decided yet (wayfinder map #111,
- * "Not yet specified") — this is just enough for the two views that exist
+ * "Not yet specified") — this is just enough for the views that exist
  * today to reach each other, not a sub-nav framework to build later views on.
  */
 export function NutritionNav({
   active,
 }: {
-  active: "pantry" | "recipes" | "plan";
+  active: "pantry" | "recipes" | "plan" | "shopping";
 }) {
-  const linkClass = (key: "pantry" | "recipes" | "plan") =>
+  const linkClass = (key: "pantry" | "recipes" | "plan" | "shopping") =>
     cn(
       "rounded-lg px-2.5 py-1 text-sm font-medium",
       active === key
@@ -32,6 +32,9 @@ export function NutritionNav({
       </Link>
       <Link href="/nutrition/plan" className={linkClass("plan")}>
         Plan
+      </Link>
+      <Link href="/nutrition/shopping-list" className={linkClass("shopping")}>
+        Shopping
       </Link>
     </nav>
   );
