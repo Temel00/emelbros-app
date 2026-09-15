@@ -3,12 +3,11 @@ import type { ModuleManifest } from "@/platform/module-manifest";
 /**
  * The nutrition module manifest (ADR-0001, docs/modules/nutrition.md §5).
  *
- * The Phase 1 through 2b tables are declared here; the log table joins
- * this catalog as its own ticket lands (§7). All six are Family — the
- * kitchen is one shared thing (§2, §10) — with `nutrition_recipe_ingredient`
- * carrying no scope of its own and riding its parent recipe, the way
- * `darts_turn` rides `darts_game`. The lone Private table, `nutrition_log`,
- * arrives with Phase 3.
+ * The six Phase 1 through 2b tables are Family — the kitchen is one shared
+ * thing (§2, §10) — with `nutrition_recipe_ingredient` carrying no scope of
+ * its own and riding its parent recipe, the way `darts_turn` rides
+ * `darts_game`. `nutrition_log` (Phase 3, #121) is the lone Private table:
+ * a member's own eating history, not the shared kitchen.
  */
 export const nutritionManifest = {
   slug: "nutrition",
@@ -31,9 +30,10 @@ export const nutritionManifest = {
       policy: "fixed",
       scope: "family",
     },
+    { table: "nutrition_log", policy: "fixed", scope: "private" },
   ],
-  // No widget in v1's first phase — the Nutrition widget is about today's
-  // logged calories (§6), so it ships with the log in Phase 3.
+  // No widget yet — the Nutrition widget is about today's logged calories
+  // (§6), which is a later ticket than the log table itself.
   widgets: [],
   // None planned: a member's nutrition history is Private (§2), so there's
   // nothing to surface on a shared profile page (§5).

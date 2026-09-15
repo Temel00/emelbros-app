@@ -16,14 +16,17 @@ import {
 } from "@/modules/nutrition/lib/ingredient-order";
 import { computeCookDecrements } from "@/modules/nutrition/lib/pantry-decrement";
 import { computeShoppingListShortfalls } from "@/modules/nutrition/lib/shopping-list-generation";
+import { computeLogMacros } from "@/modules/nutrition/lib/macro-computation";
 import { DEFAULT_PANTRY_LOCATION } from "@/modules/nutrition/lib/locations";
 import {
   applyPantryDecrements,
+  deleteLogEntry,
   deleteMealPlanEntry,
   deletePantryItem,
   deleteRecipe,
   deleteRecipeIngredient,
   deleteShoppingListItem,
+  getFoodsByIds,
   getMealPlanEntriesForGeneration,
   getMealPlanEntryForCooking,
   getPantryItemForFoodUnit,
@@ -31,6 +34,7 @@ import {
   getRecipe,
   getShoppingListItem,
   insertFood,
+  insertLogEntry,
   insertMealPlanEntry,
   insertManualShoppingListItem,
   insertPantryItem,
@@ -40,6 +44,7 @@ import {
   replaceAutoShoppingListItems,
   setRecipeArchived,
   setShoppingListItemCheckedOff,
+  updateLogEntry,
   updateMealPlanEntry,
   updatePantryItem,
   updateRecipe,
@@ -47,6 +52,7 @@ import {
   updateRecipeIngredientPosition,
   updateShoppingListItem,
   type FoodRow,
+  type LogEntryRow,
   type MealPlanEntryRow,
   type RecipeRow,
 } from "@/modules/nutrition/queries";
@@ -741,4 +747,260 @@ export async function checkOffShoppingListItemAction(itemId: string) {
 
   await setShoppingListItemCheckedOff(supabase, itemId);
   revalidatePath("/nutrition/shopping-list");
+}
+
+// === Logging (§3.5, #121) ===============================================
+// Three ways in. Each computes its macros with `computeLogMacros`
+// (`lib/macro-computation.ts`) and writes the result as a snapshot —
+// `nutrition_log` never live-joins `nutrition_food`/`nutrition_recipe` for
+// its numbers, so editing a food's macros later cannot change what these
+// actions already wrote. Fixed Private (§2, §10): RLS scopes every one of
+// these to the caller's own rows, so unlike the Family tables above there's
+// no other member's row an action here could ever touch.
+
+function toFoodMacroRates(food: FoodRow) {
+  return {
+    id: food.id,
+    unit: food.unit,
+    caloriesPerUnit: food.calories_per_unit,
+    proteinGPerUnit: food.protein_g_per_unit,
+    carbsGPerUnit: food.carbs_g_per_unit,
+    fatGPerUnit: food.fat_g_per_unit,
+  };
+}
+
+function validateOptionalMacros(macros: {
+  calories: number | null;
+  proteinG: number | null;
+  carbsG: number | null;
+  fatG: number | null;
+}) {
+  const values = [macros.calories, macros.proteinG, macros.carbsG, macros.fatG];
+  if (values.some((value) => value != null && !isValidAmount(value))) {
+    throw new Error("Nutrition facts must be zero or more");
+  }
+}
+
+/**
+ * Logs a cooked plan entry (§3.5): the recipe's per-serving macros, scaled
+ * to a portion size that defaults to how much was planned but is
+ * adjustable at log time. Only takeable once the entry is marked cooked
+ * (`markMealPlanEntryCookedAction`) — that's what the plan UI gates the
+ * "log it" tap behind.
+ */
+export type LogCookedMealInput = {
+  loggedAt: string;
+  portionServings: number;
+  note?: string | null;
+};
+
+export async function logCookedMealEntryAction(
+  entryId: string,
+  input: LogCookedMealInput,
+): Promise<LogEntryRow> {
+  if (!isValidAmount(input.portionServings) || input.portionServings <= 0) {
+    throw new Error("Portion must be greater than zero");
+  }
+
+  const member = await requireMember();
+  const supabase = await createClient();
+
+  const entry = await getMealPlanEntryForCooking(supabase, entryId);
+  if (!entry) throw new Error("Plan entry not found");
+  if (!entry.cooked_at) {
+    throw new Error("Mark this meal cooked before logging it");
+  }
+  if (!entry.recipe) {
+    throw new Error("This plan entry has no recipe to log from");
+  }
+
+  const foodIds = entry.recipe.ingredients
+    .map((line) => line.food_id)
+    .filter((id): id is string => id !== null);
+  const foods = await getFoodsByIds(supabase, foodIds);
+
+  const macros = computeLogMacros({
+    kind: "cookedMeal",
+    recipeServings: entry.recipe.servings,
+    portionServings: input.portionServings,
+    ingredients: entry.recipe.ingredients.map((line) => ({
+      foodId: line.food_id,
+      quantity: line.quantity,
+      unit: line.unit,
+    })),
+    foods: foods.map(toFoodMacroRates),
+  });
+
+  const logEntry = await insertLogEntry(supabase, {
+    memberId: member.id,
+    loggedAt: input.loggedAt,
+    foodId: null,
+    recipeId: entry.recipe.id,
+    description: null,
+    quantity: input.portionServings,
+    unit: "serving",
+    calories: macros.calories,
+    proteinG: macros.proteinG,
+    carbsG: macros.carbsG,
+    fatG: macros.fatG,
+    note: trimToNull(input.note ?? null),
+  });
+
+  revalidatePath("/nutrition/log");
+  return logEntry;
+}
+
+/**
+ * Logs from the food dictionary (§3.5): a quantity of a chosen food:
+ * macros compute from that food's per-unit values, in the food's own unit.
+ */
+export type LogFoodInput = {
+  foodId: string;
+  loggedAt: string;
+  quantity: number;
+  note?: string | null;
+};
+
+export async function logFoodEntryAction(
+  input: LogFoodInput,
+): Promise<LogEntryRow> {
+  if (!isValidAmount(input.quantity) || input.quantity <= 0) {
+    throw new Error("Quantity must be greater than zero");
+  }
+
+  const member = await requireMember();
+  const supabase = await createClient();
+
+  const [food] = await getFoodsByIds(supabase, [input.foodId]);
+  if (!food) throw new Error("Food not found");
+
+  const macros = computeLogMacros({
+    kind: "food",
+    quantity: input.quantity,
+    food: toFoodMacroRates(food),
+  });
+
+  const logEntry = await insertLogEntry(supabase, {
+    memberId: member.id,
+    loggedAt: input.loggedAt,
+    foodId: food.id,
+    recipeId: null,
+    description: null,
+    quantity: input.quantity,
+    unit: food.unit,
+    calories: macros.calories,
+    proteinG: macros.proteinG,
+    carbsG: macros.carbsG,
+    fatG: macros.fatG,
+    note: trimToNull(input.note ?? null),
+  });
+
+  revalidatePath("/nutrition/log");
+  return logEntry;
+}
+
+/**
+ * Logs freeform (§3.5): a description, with an optional rough macro
+ * estimate entered directly — there's nothing to compute against, so
+ * `computeLogMacros` just passes the numbers through.
+ */
+export type LogFreeformInput = {
+  loggedAt: string;
+  description: string;
+  calories?: number | null;
+  proteinG?: number | null;
+  carbsG?: number | null;
+  fatG?: number | null;
+  note?: string | null;
+};
+
+export async function logFreeformEntryAction(
+  input: LogFreeformInput,
+): Promise<LogEntryRow> {
+  if (isBlank(input.description)) {
+    throw new Error("Description is required");
+  }
+
+  const macros = computeLogMacros({
+    kind: "freeform",
+    calories: input.calories ?? null,
+    proteinG: input.proteinG ?? null,
+    carbsG: input.carbsG ?? null,
+    fatG: input.fatG ?? null,
+  });
+  validateOptionalMacros(macros);
+
+  const member = await requireMember();
+  const supabase = await createClient();
+
+  const logEntry = await insertLogEntry(supabase, {
+    memberId: member.id,
+    loggedAt: input.loggedAt,
+    foodId: null,
+    recipeId: null,
+    description: input.description.trim(),
+    quantity: null,
+    unit: null,
+    calories: macros.calories,
+    proteinG: macros.proteinG,
+    carbsG: macros.carbsG,
+    fatG: macros.fatG,
+    note: trimToNull(input.note ?? null),
+  });
+
+  revalidatePath("/nutrition/log");
+  return logEntry;
+}
+
+export type UpdateLogEntryInput = {
+  loggedAt: string;
+  description: string | null;
+  quantity: number | null;
+  unit: string | null;
+  calories: number | null;
+  proteinG: number | null;
+  carbsG: number | null;
+  fatG: number | null;
+  note?: string | null;
+};
+
+/**
+ * Edits a logged entry's own fields directly — this never re-derives
+ * macros from a linked food/recipe (there is no live join to re-derive
+ * from), so it can't be used to "fix up" an entry by re-syncing it against
+ * a food's current values.
+ */
+export async function updateLogEntryAction(
+  id: string,
+  input: UpdateLogEntryInput,
+): Promise<void> {
+  if (input.quantity != null && !isValidAmount(input.quantity)) {
+    throw new Error("Quantity must be zero or more");
+  }
+  validateOptionalMacros(input);
+
+  await requireMember();
+  const supabase = await createClient();
+
+  await updateLogEntry(supabase, id, {
+    loggedAt: input.loggedAt,
+    description: trimToNull(input.description),
+    quantity: input.quantity,
+    unit: input.unit,
+    calories: input.calories,
+    proteinG: input.proteinG,
+    carbsG: input.carbsG,
+    fatG: input.fatG,
+    note: trimToNull(input.note ?? null),
+  });
+
+  revalidatePath("/nutrition/log");
+}
+
+export async function deleteLogEntryAction(id: string): Promise<void> {
+  await requireMember();
+  const supabase = await createClient();
+
+  await deleteLogEntry(supabase, id);
+  revalidatePath("/nutrition/log");
 }
