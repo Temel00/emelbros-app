@@ -15,7 +15,10 @@ import {
   nextIngredientPosition,
 } from "@/modules/nutrition/lib/ingredient-order";
 import { computeCookDecrements } from "@/modules/nutrition/lib/pantry-decrement";
-import { computeShoppingListShortfalls } from "@/modules/nutrition/lib/shopping-list-generation";
+import {
+  computeShoppingListShortfalls,
+  type ShoppingListShortfall,
+} from "@/modules/nutrition/lib/shopping-list-generation";
 import { computeLogMacros } from "@/modules/nutrition/lib/macro-computation";
 import { DEFAULT_PANTRY_LOCATION } from "@/modules/nutrition/lib/locations";
 import {
@@ -566,20 +569,16 @@ export async function markMealPlanEntryCookedAction(
 }
 
 /**
- * Regenerates the shopping list's `auto` lines for a date range (§3.4):
+ * The shortfall computation shared by generation and its preview (§3.4):
  * sums the range's planned recipes' linked ingredients, scaled to servings
- * planned, subtracts the pantry, and replaces every existing `auto` line
- * with the shortfall (`lib/shopping-list-generation.ts`). `manual` lines
- * are untouched — regeneration only ever replaces the lines it itself
- * wrote.
+ * planned, and subtracts the pantry (`lib/shopping-list-generation.ts`).
+ * Read-only — callers decide whether to write the result.
  */
-export async function generateShoppingListAction(
+async function computeShortfallsForRange(
+  supabase: Awaited<ReturnType<typeof createClient>>,
   startDate: string,
   endDate: string,
 ) {
-  await requireMember();
-  const supabase = await createClient();
-
   const entries = await getMealPlanEntriesForGeneration(
     supabase,
     startDate,
@@ -607,13 +606,33 @@ export async function generateShoppingListAction(
 
   const pantryRows = await getPantryItemsForFoods(supabase, foodIds);
 
-  const shortfalls = computeShoppingListShortfalls(
+  return computeShoppingListShortfalls(
     plannedEntries,
     pantryRows.map((row) => ({
       foodId: row.food_id,
       quantity: row.quantity,
       unit: row.unit,
     })),
+  );
+}
+
+/**
+ * Regenerates the shopping list's `auto` lines for a date range (§3.4),
+ * replacing every existing `auto` line with the freshly computed
+ * shortfall. `manual` lines are untouched — regeneration only ever
+ * replaces the lines it itself wrote.
+ */
+export async function generateShoppingListAction(
+  startDate: string,
+  endDate: string,
+) {
+  await requireMember();
+  const supabase = await createClient();
+
+  const shortfalls = await computeShortfallsForRange(
+    supabase,
+    startDate,
+    endDate,
   );
 
   await replaceAutoShoppingListItems(
@@ -627,6 +646,22 @@ export async function generateShoppingListAction(
   );
 
   revalidatePath("/nutrition/shopping-list");
+}
+
+/**
+ * Read-only counterpart to {@link generateShoppingListAction}: computes the
+ * same shortfalls but never writes them, so the UI can preview what
+ * generating would change (a diff against the current `auto` lines) before
+ * the member confirms.
+ */
+export async function previewShoppingListGenerationAction(
+  startDate: string,
+  endDate: string,
+): Promise<ShoppingListShortfall[]> {
+  await requireMember();
+  const supabase = await createClient();
+
+  return computeShortfallsForRange(supabase, startDate, endDate);
 }
 
 export type AddManualShoppingListItemInput = {
