@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { getPantryLocation } from "@/modules/nutrition/lib/locations";
 import type { ShoppingListVariantProps } from "@/modules/nutrition/components/prototype-shopping-list-harness";
 import { diffAutoLines } from "@/modules/nutrition/components/prototype-shopping-list-shared";
+import { formatQuantityUnit } from "@/modules/nutrition/components/prototype-shopping-list-units";
 
 export function VariantC(props: ShoppingListVariantProps) {
   const {
@@ -93,13 +94,11 @@ export function VariantC(props: ShoppingListVariantProps) {
                     onCheckedChange={() => toggleCheck(line.id)}
                   />
                 </td>
-                <td
-                  className={`p-2 ${line.checkedOff ? "line-through" : ""}`}
-                >
+                <td className={`p-2 ${line.checkedOff ? "line-through" : ""}`}>
                   {line.displayText}
                 </td>
                 <td className="p-2 tabular-nums">
-                  {line.quantity} {line.unit}
+                  {formatQuantityUnit(line.quantity, line.unit)}
                 </td>
                 <td className="p-2">
                   <span
@@ -113,9 +112,7 @@ export function VariantC(props: ShoppingListVariantProps) {
                   </span>
                 </td>
                 <td className="p-2 text-muted-foreground">
-                  {line.location
-                    ? getPantryLocation(line.location).label
-                    : "—"}
+                  {line.location ? getPantryLocation(line.location).label : "—"}
                 </td>
                 <td className="p-2">
                   {line.checkedOff && line.restockNote && (
@@ -185,7 +182,7 @@ export function VariantC(props: ShoppingListVariantProps) {
                       key={l.id}
                       className="text-green-700 dark:text-green-400"
                     >
-                      + {l.quantity} {l.unit} {l.displayText}
+                      + {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                     </li>
                   ))}
                   {diff.changed.map(({ previous, next }) => (
@@ -193,8 +190,9 @@ export function VariantC(props: ShoppingListVariantProps) {
                       key={next.id}
                       className="text-amber-700 dark:text-amber-400"
                     >
-                      ~ {next.displayText}: {previous.quantity} →{" "}
-                      {next.quantity} {next.unit}
+                      ~ {next.displayText}:{" "}
+                      {formatQuantityUnit(previous.quantity, previous.unit)} →{" "}
+                      {formatQuantityUnit(next.quantity, next.unit)}
                     </li>
                   ))}
                   {diff.removed.map((l) => (
@@ -202,7 +200,7 @@ export function VariantC(props: ShoppingListVariantProps) {
                       key={l.id}
                       className="text-muted-foreground line-through"
                     >
-                      − {l.quantity} {l.unit} {l.displayText}
+                      − {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                     </li>
                   ))}
                 </ul>
@@ -227,7 +225,11 @@ export function VariantC(props: ShoppingListVariantProps) {
 function AddRowForm({
   onAdd,
 }: {
-  onAdd: (input: { displayText: string; quantity: number; unit: string }) => void;
+  onAdd: (input: {
+    displayText: string;
+    quantity: number;
+    unit: string;
+  }) => void;
 }) {
   const [displayText, setDisplayText] = useState("");
   const [quantity, setQuantity] = useState("1");

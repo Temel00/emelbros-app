@@ -8,6 +8,10 @@
  * "Generate" scenarios are invented in memory here. Nothing in this file
  * reads or writes `nutrition_shopping_list_item`.
  */
+import {
+  formatQuantityUnit,
+  unitLabel,
+} from "@/modules/nutrition/components/prototype-shopping-list-units";
 import type { PantryItemWithFood } from "@/modules/nutrition/queries";
 
 export type ShoppingLineSource = "auto" | "manual";
@@ -84,7 +88,8 @@ export function buildSeedLines(
       // checked-off state looks like without requiring an interaction first.
       checkedOff: i === 0,
       location: p.location,
-      restockNote: i === 0 ? `+${quantity} ${p.unit} → pantry` : null,
+      restockNote:
+        i === 0 ? `+${formatQuantityUnit(quantity, p.unit)} → pantry` : null,
     };
   });
 
@@ -94,7 +99,7 @@ export function buildSeedLines(
       foodId: null,
       displayText: "Paper towels",
       quantity: 2,
-      unit: "rolls",
+      unit: "roll",
       source: "manual",
       checkedOff: false,
       location: null,
@@ -197,6 +202,9 @@ export function shortageHint(hasGeneratedOnce: boolean): ShortageHint | null {
  * `Qty,Unit,Item` — the assumed CSV shape for the copy button. Not
  * confirmed against a specific target (store app, spreadsheet template);
  * flag this for the owner to correct if they had an exact format in mind.
+ * The `Unit` column uses the same pluralized unit word as the on-screen
+ * text (prototype-shopping-list-units.ts), so "2,rolls,Paper towels" and
+ * "1,pack,Birthday candles" read the same phrasing either place.
  */
 export function linesToCsv(lines: ShoppingLine[]): string {
   const escape = (value: string) =>
@@ -205,7 +213,8 @@ export function linesToCsv(lines: ShoppingLine[]): string {
       : value;
 
   const rows = lines.map(
-    (l) => `${l.quantity},${escape(l.unit)},${escape(l.displayText)}`,
+    (l) =>
+      `${l.quantity},${escape(unitLabel(l.unit, l.quantity))},${escape(l.displayText)}`,
   );
   return ["Qty,Unit,Item", ...rows].join("\n");
 }

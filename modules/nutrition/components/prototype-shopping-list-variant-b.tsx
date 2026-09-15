@@ -33,6 +33,7 @@ import {
   diffAutoLines,
   type ShoppingLine,
 } from "@/modules/nutrition/components/prototype-shopping-list-shared";
+import { formatQuantityUnit } from "@/modules/nutrition/components/prototype-shopping-list-units";
 
 const NOT_IN_PANTRY_KEY = "__not_in_pantry__";
 
@@ -105,7 +106,8 @@ export function VariantB(props: ShoppingListVariantProps) {
                           : ""
                       }`}
                     >
-                      {line.quantity} {line.unit} {line.displayText}
+                      {formatQuantityUnit(line.quantity, line.unit)}{" "}
+                      {line.displayText}
                     </p>
                     <span
                       className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.65rem] font-medium ${
@@ -173,7 +175,7 @@ export function VariantB(props: ShoppingListVariantProps) {
                       key={l.id}
                       className="text-green-700 dark:text-green-400"
                     >
-                      + {l.quantity} {l.unit} {l.displayText}
+                      + {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                     </li>
                   ))}
                   {diff.changed.map(({ previous, next }) => (
@@ -181,8 +183,9 @@ export function VariantB(props: ShoppingListVariantProps) {
                       key={next.id}
                       className="text-amber-700 dark:text-amber-400"
                     >
-                      ~ {next.displayText}: {previous.quantity} →{" "}
-                      {next.quantity} {next.unit}
+                      ~ {next.displayText}:{" "}
+                      {formatQuantityUnit(previous.quantity, previous.unit)} →{" "}
+                      {formatQuantityUnit(next.quantity, next.unit)}
                     </li>
                   ))}
                   {diff.removed.map((l) => (
@@ -190,7 +193,7 @@ export function VariantB(props: ShoppingListVariantProps) {
                       key={l.id}
                       className="text-muted-foreground line-through"
                     >
-                      − {l.quantity} {l.unit} {l.displayText}
+                      − {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                     </li>
                   ))}
                 </ul>
@@ -244,7 +247,11 @@ function AddLineDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (input: { displayText: string; quantity: number; unit: string }) => void;
+  onAdd: (input: {
+    displayText: string;
+    quantity: number;
+    unit: string;
+  }) => void;
 }) {
   const [displayText, setDisplayText] = useState("");
   const [quantity, setQuantity] = useState("1");

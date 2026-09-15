@@ -24,6 +24,7 @@ import {
   type ShoppingLine,
   type ShortageHint,
 } from "@/modules/nutrition/components/prototype-shopping-list-shared";
+import { formatQuantityUnit } from "@/modules/nutrition/components/prototype-shopping-list-units";
 import { VariantA } from "@/modules/nutrition/components/prototype-shopping-list-variant-a";
 import { VariantB } from "@/modules/nutrition/components/prototype-shopping-list-variant-b";
 import { VariantC } from "@/modules/nutrition/components/prototype-shopping-list-variant-c";
@@ -94,7 +95,7 @@ export function PrototypeShoppingListHarness({
           // note is what makes that visible, cleared again on uncheck.
           restockNote:
             checkedOff && line.foodId
-              ? `+${line.quantity} ${line.unit} → pantry`
+              ? `+${formatQuantityUnit(line.quantity, line.unit)} → pantry`
               : null,
         };
       }),

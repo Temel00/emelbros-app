@@ -34,6 +34,7 @@ import {
   linesToCsv,
   type ShoppingLine,
 } from "@/modules/nutrition/components/prototype-shopping-list-shared";
+import { formatQuantityUnit } from "@/modules/nutrition/components/prototype-shopping-list-units";
 
 const NOT_IN_PANTRY_KEY = "__not_in_pantry__";
 
@@ -154,11 +155,12 @@ export function VariantD(props: ShoppingListVariantProps) {
                       />
                       {stock && (
                         <span
-                          title={`In your pantry: ${stock.quantity} ${stock.unit}`}
+                          title={`In your pantry: ${formatQuantityUnit(stock.quantity, stock.unit)}`}
                           className="flex shrink-0 items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[0.65rem] text-muted-foreground"
                         >
                           <Link2 className="size-3" />
-                          {stock.quantity} {stock.unit} on hand
+                          {formatQuantityUnit(stock.quantity, stock.unit)} on
+                          hand
                         </span>
                       )}
                     </div>
@@ -219,7 +221,7 @@ export function VariantD(props: ShoppingListVariantProps) {
                       key={l.id}
                       className="text-green-700 dark:text-green-400"
                     >
-                      + {l.quantity} {l.unit} {l.displayText}
+                      + {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                     </li>
                   ))}
                   {diff.changed.map(({ previous, next }) => (
@@ -227,8 +229,9 @@ export function VariantD(props: ShoppingListVariantProps) {
                       key={next.id}
                       className="text-amber-700 dark:text-amber-400"
                     >
-                      ~ {next.displayText}: {previous.quantity} →{" "}
-                      {next.quantity} {next.unit}
+                      ~ {next.displayText}:{" "}
+                      {formatQuantityUnit(previous.quantity, previous.unit)} →{" "}
+                      {formatQuantityUnit(next.quantity, next.unit)}
                     </li>
                   ))}
                   {diff.removed.map((l) => (
@@ -236,7 +239,7 @@ export function VariantD(props: ShoppingListVariantProps) {
                       key={l.id}
                       className="text-muted-foreground line-through"
                     >
-                      − {l.quantity} {l.unit} {l.displayText}
+                      − {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                     </li>
                   ))}
                 </ul>

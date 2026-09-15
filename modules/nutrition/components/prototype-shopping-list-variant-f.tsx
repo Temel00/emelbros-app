@@ -36,6 +36,7 @@ import {
   linesToCsv,
   type ShoppingLine,
 } from "@/modules/nutrition/components/prototype-shopping-list-shared";
+import { formatQuantityUnit } from "@/modules/nutrition/components/prototype-shopping-list-units";
 
 const NOT_IN_PANTRY_KEY = "__not_in_pantry__";
 
@@ -198,7 +199,8 @@ export function VariantF(props: ShoppingListVariantProps) {
                   )}
                   {isExpanded && stock && (
                     <div className="mt-2 ml-9 rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
-                      In your pantry: {stock.quantity} {stock.unit} (
+                      In your pantry:{" "}
+                      {formatQuantityUnit(stock.quantity, stock.unit)} (
                       {getPantryLocation(stock.location).label.toLowerCase()})
                     </div>
                   )}
@@ -244,7 +246,7 @@ export function VariantF(props: ShoppingListVariantProps) {
                       key={l.id}
                       className="text-green-700 dark:text-green-400"
                     >
-                      + {l.quantity} {l.unit} {l.displayText}
+                      + {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                     </li>
                   ))}
                   {diff.changed.map(({ previous, next }) => (
@@ -252,8 +254,9 @@ export function VariantF(props: ShoppingListVariantProps) {
                       key={next.id}
                       className="text-amber-700 dark:text-amber-400"
                     >
-                      ~ {next.displayText}: {previous.quantity} →{" "}
-                      {next.quantity} {next.unit}
+                      ~ {next.displayText}:{" "}
+                      {formatQuantityUnit(previous.quantity, previous.unit)} →{" "}
+                      {formatQuantityUnit(next.quantity, next.unit)}
                     </li>
                   ))}
                   {diff.removed.map((l) => (
@@ -261,7 +264,7 @@ export function VariantF(props: ShoppingListVariantProps) {
                       key={l.id}
                       className="text-muted-foreground line-through"
                     >
-                      − {l.quantity} {l.unit} {l.displayText}
+                      − {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                     </li>
                   ))}
                 </ul>

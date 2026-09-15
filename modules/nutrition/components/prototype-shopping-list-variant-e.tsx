@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { getPantryLocation } from "@/modules/nutrition/lib/locations";
 import type { ShoppingListVariantProps } from "@/modules/nutrition/components/prototype-shopping-list-harness";
 import {
@@ -34,6 +35,13 @@ import {
   linesToCsv,
   type ShoppingLine,
 } from "@/modules/nutrition/components/prototype-shopping-list-shared";
+import {
+  DEFAULT_PANTRY_UNIT_KEY,
+  formatQuantityUnit,
+  getPantryUnit,
+  isCanonicalPantryUnit,
+  PANTRY_UNITS,
+} from "@/modules/nutrition/components/prototype-shopping-list-units";
 import type { PantryItemWithFood } from "@/modules/nutrition/queries";
 
 const NOT_IN_PANTRY_KEY = "__not_in_pantry__";
@@ -150,7 +158,8 @@ export function VariantE(props: ShoppingListVariantProps) {
                           : ""
                       }`}
                     >
-                      {line.quantity} {line.unit} {line.displayText}
+                      {formatQuantityUnit(line.quantity, line.unit)}{" "}
+                      {line.displayText}
                     </p>
                     <span
                       className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.65rem] font-medium ${
@@ -239,7 +248,7 @@ export function VariantE(props: ShoppingListVariantProps) {
                       key={l.id}
                       className="text-green-700 dark:text-green-400"
                     >
-                      + {l.quantity} {l.unit} {l.displayText}
+                      + {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                     </li>
                   ))}
                   {diff.changed.map(({ previous, next }) => (
@@ -247,8 +256,9 @@ export function VariantE(props: ShoppingListVariantProps) {
                       key={next.id}
                       className="text-amber-700 dark:text-amber-400"
                     >
-                      ~ {next.displayText}: {previous.quantity} →{" "}
-                      {next.quantity} {next.unit}
+                      ~ {next.displayText}:{" "}
+                      {formatQuantityUnit(previous.quantity, previous.unit)} →{" "}
+                      {formatQuantityUnit(next.quantity, next.unit)}
                     </li>
                   ))}
                   {diff.removed.map((l) => (
@@ -256,7 +266,7 @@ export function VariantE(props: ShoppingListVariantProps) {
                       key={l.id}
                       className="text-muted-foreground line-through"
                     >
-                      − {l.quantity} {l.unit} {l.displayText}
+                      − {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                     </li>
                   ))}
                 </ul>
@@ -320,9 +330,17 @@ function EditLineDialog({
 }) {
   const [displayText, setDisplayText] = useState("");
   const [quantity, setQuantity] = useState("1");
-  const [unit, setUnit] = useState("each");
+  const [unit, setUnit] = useState(DEFAULT_PANTRY_UNIT_KEY);
 
   const stock = line ? findPantryStock(pantryItems, line.foodId) : null;
+
+  // A real pantry line's unit can be anything (free text today — see
+  // prototype-shopping-list-units.ts) so the dropdown keeps it selectable
+  // instead of silently swapping it for a canonical unit on open.
+  const unitOptions =
+    line && !isCanonicalPantryUnit(line.unit)
+      ? [getPantryUnit(line.unit), ...PANTRY_UNITS]
+      : PANTRY_UNITS;
 
   function handleOpenChange(open: boolean) {
     if (open && line) {
@@ -363,19 +381,26 @@ function EditLineDialog({
               onChange={(e) => setQuantity(e.target.value)}
               className="w-20"
             />
-            <Input
+            <Select
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
               className="flex-1"
-              placeholder="unit"
-            />
+            >
+              {unitOptions.map((u) => (
+                <option key={u.key} value={u.key}>
+                  {u.label}
+                  {!isCanonicalPantryUnit(u.key) ? " (from Inventory)" : ""}
+                </option>
+              ))}
+            </Select>
           </div>
 
           {stock ? (
             <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
               <p className="font-medium text-foreground">Linked to Inventory</p>
               <p className="mt-1">
-                {stock.food.name} — {stock.quantity} {stock.unit} on hand in{" "}
+                {stock.food.name} —{" "}
+                {formatQuantityUnit(stock.quantity, stock.unit)} on hand in{" "}
                 {getPantryLocation(stock.location).label.toLowerCase()}
               </p>
             </div>
@@ -414,7 +439,7 @@ function AddLineDialog({
 }) {
   const [displayText, setDisplayText] = useState("");
   const [quantity, setQuantity] = useState("1");
-  const [unit, setUnit] = useState("each");
+  const [unit, setUnit] = useState(DEFAULT_PANTRY_UNIT_KEY);
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -422,7 +447,7 @@ function AddLineDialog({
     onAdd({ displayText, quantity: Number(quantity), unit });
     setDisplayText("");
     setQuantity("1");
-    setUnit("each");
+    setUnit(DEFAULT_PANTRY_UNIT_KEY);
     onOpenChange(false);
   }
 
@@ -447,12 +472,17 @@ function AddLineDialog({
               onChange={(e) => setQuantity(e.target.value)}
               className="w-20"
             />
-            <Input
+            <Select
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
               className="flex-1"
-              placeholder="unit"
-            />
+            >
+              {PANTRY_UNITS.map((u) => (
+                <option key={u.key} value={u.key}>
+                  {u.label}
+                </option>
+              ))}
+            </Select>
           </div>
           <DialogFooter>
             <DialogClose className={buttonVariants({ variant: "ghost" })}>

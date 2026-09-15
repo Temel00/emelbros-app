@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import type { ShoppingListVariantProps } from "@/modules/nutrition/components/prototype-shopping-list-harness";
 import { diffAutoLines } from "@/modules/nutrition/components/prototype-shopping-list-shared";
+import { formatQuantityUnit } from "@/modules/nutrition/components/prototype-shopping-list-units";
 
 export function VariantA(props: ShoppingListVariantProps) {
   const {
@@ -54,9 +55,7 @@ export function VariantA(props: ShoppingListVariantProps) {
 
         {pendingScenario && diff && (
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
-            <p className="font-medium">
-              {scenarioLabel(pendingScenario)}
-            </p>
+            <p className="font-medium">{scenarioLabel(pendingScenario)}</p>
             {pendingLines && pendingLines.length === 0 ? (
               <p className="mt-1 text-muted-foreground">
                 Nothing missing — your pantry covers the plan. Generating
@@ -66,21 +65,22 @@ export function VariantA(props: ShoppingListVariantProps) {
               <ul className="mt-2 flex flex-col gap-1">
                 {diff.added.map((l) => (
                   <li key={l.id} className="text-green-700 dark:text-green-400">
-                    + {l.quantity} {l.unit} {l.displayText}
+                    + {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                   </li>
                 ))}
                 {diff.changed.map(({ previous, next }) => (
-                  <li key={next.id} className="text-amber-700 dark:text-amber-400">
-                    ~ {next.displayText}: {previous.quantity} →{" "}
-                    {next.quantity} {next.unit}
+                  <li
+                    key={next.id}
+                    className="text-amber-700 dark:text-amber-400"
+                  >
+                    ~ {next.displayText}:{" "}
+                    {formatQuantityUnit(previous.quantity, previous.unit)} →{" "}
+                    {formatQuantityUnit(next.quantity, next.unit)}
                   </li>
                 ))}
                 {diff.removed.map((l) => (
-                  <li
-                    key={l.id}
-                    className="text-muted-foreground line-through"
-                  >
-                    − {l.quantity} {l.unit} {l.displayText}
+                  <li key={l.id} className="text-muted-foreground line-through">
+                    − {formatQuantityUnit(l.quantity, l.unit)} {l.displayText}
                   </li>
                 ))}
               </ul>
@@ -119,7 +119,8 @@ export function VariantA(props: ShoppingListVariantProps) {
                   <p
                     className={`truncate text-sm ${line.checkedOff ? "line-through" : ""}`}
                   >
-                    {line.quantity} {line.unit} {line.displayText}
+                    {formatQuantityUnit(line.quantity, line.unit)}{" "}
+                    {line.displayText}
                   </p>
                   {line.restockNote && (
                     <p className="text-xs text-muted-foreground">
@@ -155,7 +156,8 @@ export function VariantA(props: ShoppingListVariantProps) {
                 <p
                   className={`truncate text-sm ${line.checkedOff ? "line-through" : ""}`}
                 >
-                  {line.quantity} {line.unit} {line.displayText}
+                  {formatQuantityUnit(line.quantity, line.unit)}{" "}
+                  {line.displayText}
                 </p>
               </div>
               <Button
@@ -185,15 +187,17 @@ export function VariantA(props: ShoppingListVariantProps) {
 }
 
 function sortChecked<T extends { checkedOff: boolean }>(items: T[]): T[] {
-  return [...items].sort(
-    (a, b) => Number(a.checkedOff) - Number(b.checkedOff),
-  );
+  return [...items].sort((a, b) => Number(a.checkedOff) - Number(b.checkedOff));
 }
 
 function AddManualLineForm({
   onAdd,
 }: {
-  onAdd: (input: { displayText: string; quantity: number; unit: string }) => void;
+  onAdd: (input: {
+    displayText: string;
+    quantity: number;
+    unit: string;
+  }) => void;
 }) {
   const [displayText, setDisplayText] = useState("");
   const [quantity, setQuantity] = useState("1");
