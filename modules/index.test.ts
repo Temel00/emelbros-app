@@ -26,9 +26,11 @@ describe("module registry", () => {
   it("registers the nutrition module", () => {
     const nutrition = modules.find((mod) => mod.slug === "nutrition");
     expect(nutrition).toBeDefined();
-    // Every Phase 1 and Phase 2a table is Family — the kitchen is shared
+    // Every Phase 1 through 2b table is Family — the kitchen is shared
     // (docs/modules/nutrition.md §2) — with the ingredient line carrying
-    // no scope of its own and riding its parent recipe.
+    // no scope of its own and riding its parent recipe. nutrition_log
+    // (Phase 3, #121) is the lone Private table: a member's own eating
+    // history, not the shared kitchen.
     expect(nutrition?.scopes).toEqual([
       { table: "nutrition_food", policy: "fixed", scope: "family" },
       { table: "nutrition_pantry_item", policy: "fixed", scope: "family" },
@@ -44,8 +46,10 @@ describe("module registry", () => {
         policy: "fixed",
         scope: "family",
       },
+      { table: "nutrition_log", policy: "fixed", scope: "private" },
     ]);
-    // The Nutrition widget is about today's log, so it ships with Phase 3.
+    // No widget yet — the Nutrition widget (today's logged calories) is a
+    // later ticket than the log table itself.
     expect(nutrition?.widgets).toEqual([]);
     expect(nutrition?.profileSections).toEqual([]);
   });

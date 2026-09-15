@@ -696,6 +696,75 @@ export type Database = {
           },
         ];
       };
+      nutrition_log: {
+        Row: {
+          id: string;
+          member_id: string;
+          logged_at: string;
+          food_id: string | null;
+          recipe_id: string | null;
+          description: string | null;
+          quantity: number | null;
+          unit: string | null;
+          calories: number | null;
+          protein_g: number | null;
+          carbs_g: number | null;
+          fat_g: number | null;
+          note: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          member_id: string;
+          logged_at?: string;
+          food_id?: string | null;
+          recipe_id?: string | null;
+          description?: string | null;
+          quantity?: number | null;
+          unit?: string | null;
+          calories?: number | null;
+          protein_g?: number | null;
+          carbs_g?: number | null;
+          fat_g?: number | null;
+          note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          member_id?: string;
+          logged_at?: string;
+          food_id?: string | null;
+          recipe_id?: string | null;
+          description?: string | null;
+          quantity?: number | null;
+          unit?: string | null;
+          calories?: number | null;
+          protein_g?: number | null;
+          carbs_g?: number | null;
+          fat_g?: number | null;
+          note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_log_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_food";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "nutrition_log_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_recipe";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

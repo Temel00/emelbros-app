@@ -32,6 +32,22 @@ export async function getFoods(
   return data;
 }
 
+/** The foods behind a set of ids — a recipe's ingredient lines, logging a cooked meal. */
+export async function getFoodsByIds(
+  supabase: SupabaseClient<Database>,
+  foodIds: string[],
+): Promise<FoodRow[]> {
+  if (foodIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("nutrition_food")
+    .select("*")
+    .in("id", foodIds);
+
+  if (error) throw error;
+  return data;
+}
+
 export async function insertFood(
   supabase: SupabaseClient<Database>,
   food: {
@@ -761,4 +777,110 @@ export async function getPantryItemForFoodUnit(
 
   if (error) throw error;
   return data;
+}
+
+// === nutrition_log =====================================================
+// Fixed Private (§2, §10, ADR-0007): RLS filters every one of these to the
+// signed-in caller's own rows, so unlike the tables above there's no
+// member id to pass in — `getLogEntries` reads whatever `auth.uid()` owns.
+
+export type LogEntryRow = Database["public"]["Tables"]["nutrition_log"]["Row"];
+
+/** The current member's own entries within a date range, most recent first. */
+export async function getLogEntries(
+  supabase: SupabaseClient<Database>,
+  startDate: string,
+  endDate: string,
+): Promise<LogEntryRow[]> {
+  const { data, error } = await supabase
+    .from("nutrition_log")
+    .select("*")
+    .gte("logged_at", startDate)
+    .lte("logged_at", endDate)
+    .order("logged_at", { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function insertLogEntry(
+  supabase: SupabaseClient<Database>,
+  entry: {
+    memberId: string;
+    loggedAt: string;
+    foodId: string | null;
+    recipeId: string | null;
+    description: string | null;
+    quantity: number | null;
+    unit: string | null;
+    calories: number | null;
+    proteinG: number | null;
+    carbsG: number | null;
+    fatG: number | null;
+    note: string | null;
+  },
+): Promise<LogEntryRow> {
+  const { data, error } = await supabase
+    .from("nutrition_log")
+    .insert({
+      member_id: entry.memberId,
+      logged_at: entry.loggedAt,
+      food_id: entry.foodId,
+      recipe_id: entry.recipeId,
+      description: entry.description,
+      quantity: entry.quantity,
+      unit: entry.unit,
+      calories: entry.calories,
+      protein_g: entry.proteinG,
+      carbs_g: entry.carbsG,
+      fat_g: entry.fatG,
+      note: entry.note,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLogEntry(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  patch: {
+    loggedAt: string;
+    description: string | null;
+    quantity: number | null;
+    unit: string | null;
+    calories: number | null;
+    proteinG: number | null;
+    carbsG: number | null;
+    fatG: number | null;
+    note: string | null;
+  },
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_log")
+    .update({
+      logged_at: patch.loggedAt,
+      description: patch.description,
+      quantity: patch.quantity,
+      unit: patch.unit,
+      calories: patch.calories,
+      protein_g: patch.proteinG,
+      carbs_g: patch.carbsG,
+      fat_g: patch.fatG,
+      note: patch.note,
+    })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+export async function deleteLogEntry(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.from("nutrition_log").delete().eq("id", id);
+
+  if (error) throw error;
 }
