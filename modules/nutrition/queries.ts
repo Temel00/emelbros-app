@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { computeOverviewTotals } from "@/modules/nutrition/lib/overview-totals";
+import type { OverviewTotals } from "@/modules/nutrition/lib/overview-totals";
 import type { Database } from "@/types/database";
 
 export type FoodRow = Database["public"]["Tables"]["nutrition_food"]["Row"];
@@ -801,6 +803,21 @@ export async function getLogEntries(
 
   if (error) throw error;
   return data;
+}
+
+/**
+ * The current member's daily & weekly totals over a date range (§3.6, §10,
+ * #124) — derived at read time from `getLogEntries`, never stored. Editing
+ * or backfilling an entry in the range changes nothing here but the input,
+ * so the trend is always fresh with no separate recompute step.
+ */
+export async function getOverviewTotals(
+  supabase: SupabaseClient<Database>,
+  startDate: string,
+  endDate: string,
+): Promise<OverviewTotals> {
+  const entries = await getLogEntries(supabase, startDate, endDate);
+  return computeOverviewTotals(entries);
 }
 
 export async function insertLogEntry(
