@@ -208,16 +208,24 @@ describe("isEmptyDiff", () => {
 describe("shoppingListToCsv", () => {
   it("emits a header row plus one row per item", () => {
     const csv = shoppingListToCsv([
-      item({ quantity: 2, unit: "kg", display_text: "Flour", checked_off: false }),
-      item({ quantity: null, unit: null, display_text: "Napkins", checked_off: true }),
+      item({
+        quantity: 2,
+        unit: "kg",
+        display_text: "Flour",
+        checked_off: false,
+      }),
+      item({
+        quantity: null,
+        unit: null,
+        display_text: "Napkins",
+        checked_off: true,
+      }),
     ]);
 
     expect(csv).toBe(
-      [
-        "quantity,unit,item,checked",
-        '2,kg,"Flour",no',
-        ',,"Napkins",yes',
-      ].join("\n"),
+      ["quantity,unit,item,checked", '2,kg,"Flour",no', ',,"Napkins",yes'].join(
+        "\n",
+      ),
     );
   });
 

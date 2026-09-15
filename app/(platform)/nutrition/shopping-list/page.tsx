@@ -45,7 +45,11 @@ export default async function ShoppingListPage() {
           </p>
         </div>
 
-        <ShoppingListView items={items} pantryItems={pantryItems} range={range} />
+        <ShoppingListView
+          items={items}
+          pantryItems={pantryItems}
+          range={range}
+        />
       </main>
     </>
   );

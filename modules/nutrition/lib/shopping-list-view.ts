@@ -58,7 +58,9 @@ export function groupShoppingListItems(
   const notInPantry: ShoppingListItemRow[] = [];
 
   for (const item of items) {
-    const location = item.food_id ? locationByFood.get(item.food_id) : undefined;
+    const location = item.food_id
+      ? locationByFood.get(item.food_id)
+      : undefined;
     if (location) withLocation.push({ location, item });
     else notInPantry.push(item);
   }

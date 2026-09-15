@@ -66,7 +66,8 @@ export function ShoppingListView({
 
   const { grouped, notInPantry } = groupShoppingListItems(items, pantryItems);
 
-  const diff = pendingLines !== null ? diffAutoLines(items, pendingLines) : null;
+  const diff =
+    pendingLines !== null ? diffAutoLines(items, pendingLines) : null;
 
   function toggleCheck(item: ShoppingListItemRow) {
     if (item.checked_off) return;
@@ -129,11 +130,21 @@ export function ShoppingListView({
         >
           <Copy />
         </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={() => setAddOpen(true)}>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => setAddOpen(true)}
+        >
           <Plus data-icon="inline-start" />
           Add
         </Button>
-        <Button type="button" size="sm" onClick={startGenerate} disabled={isPending}>
+        <Button
+          type="button"
+          size="sm"
+          onClick={startGenerate}
+          disabled={isPending}
+        >
           Generate
         </Button>
       </div>
@@ -465,7 +476,8 @@ function EditItemDialog({
               <p className="font-medium text-foreground">Linked to Inventory</p>
               <p className="mt-1">
                 {stock.food.name} — {formatQuantity(stock.quantity, stock.unit)}{" "}
-                on hand in {getPantryLocation(stock.location).label.toLowerCase()}
+                on hand in{" "}
+                {getPantryLocation(stock.location).label.toLowerCase()}
               </p>
             </div>
           ) : (
