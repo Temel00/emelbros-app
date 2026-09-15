@@ -28,6 +28,14 @@ import type { Database } from "@/types/database";
  * `nutrition_shopping_list_item` (#118) is another fixed-Family table, and
  * its `food_id` link survives (unlinks rather than cascades) a deleted
  * food, unlike the pantry line's own link to the same table.
+ *
+ * `nutrition_log` (#121) breaks that pattern: it's fixed-**Private**, the
+ * module's only owner-scoped table. Its block is written to read directly
+ * against the `nutrition_food` block above, so a reader can see the same
+ * bystander turned away here after being freely let in there. It also
+ * proves the snapshot promise in nutrition.md §3.5/§10: editing a food's
+ * macros after the fact must not change a log entry already written
+ * against the old numbers.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
@@ -181,6 +189,30 @@ async function createShoppingListItem(
   return data.id as string;
 }
 
+/** Inserts a log entry via the service-role client, bypassing RLS. */
+async function createLogEntry(
+  owner: Member,
+  overrides: { foodId?: string | null; calories?: number } = {},
+) {
+  const { data, error } = await admin
+    .from("nutrition_log")
+    .insert({
+      member_id: owner.id,
+      food_id: overrides.foodId ?? null,
+      description: overrides.foodId ? null : "Restaurant burger",
+      quantity: overrides.foodId ? 150 : null,
+      unit: overrides.foodId ? "g" : null,
+      calories: overrides.calories ?? 600,
+      protein_g: 30,
+      carbs_g: 40,
+      fat_g: 25,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
 describe("nutrition RLS", () => {
   let cook: Member;
   let bystander: Member;
@@ -190,6 +222,7 @@ describe("nutrition RLS", () => {
   let leftoverRecipeIds: string[] = [];
   let leftoverMealPlanEntryIds: string[] = [];
   let leftoverShoppingListItemIds: string[] = [];
+  let leftoverLogEntryIds: string[] = [];
 
   beforeAll(async () => {
     cook = await createMember("cook");
@@ -197,6 +230,13 @@ describe("nutrition RLS", () => {
   });
 
   afterEach(async () => {
+    // Log entries first: one may still point at a food below, and its link
+    // only unlinks (not cascades) on food deletion.
+    for (const id of leftoverLogEntryIds) {
+      await admin.from("nutrition_log").delete().eq("id", id);
+    }
+    leftoverLogEntryIds = [];
+
     // Shopping-list lines first: one may still point at a food below, and
     // its link only unlinks (not cascades) on food deletion.
     for (const id of leftoverShoppingListItemIds) {
@@ -921,5 +961,210 @@ describe("nutrition RLS", () => {
 
     expect(data?.food_id).toBeNull();
     expect(data?.display_text).not.toBe("");
+  });
+
+  // === nutrition_log ==================================================
+  //
+  // The module's one **fixed-Private** table (#121): a member's own eating
+  // history, `auth.uid() = member_id` on every operation. Contrast this
+  // directly against `nutrition_food` above, a fixed-**Family** table: there,
+  // `bystander` — who wrote nothing — freely reads, updates and deletes
+  // `cook`'s rows, because the kitchen is shared. Here, the same bystander
+  // is turned away from every one of `cook`'s log rows, because a member's
+  // own log is not shared with anyone, family or not.
+
+  it("lets a member log their own entry", async () => {
+    const { data, error } = await cook.client
+      .from("nutrition_log")
+      .insert({
+        member_id: cook.id,
+        description: "Freeform snack",
+        calories: 200,
+      })
+      .select("id")
+      .single();
+
+    expect(error).toBeNull();
+    if (data) leftoverLogEntryIds.push(data.id);
+  });
+
+  it("lets a member read their own log entry", async () => {
+    const logId = await createLogEntry(cook);
+    leftoverLogEntryIds.push(logId);
+
+    const { data, error } = await cook.client
+      .from("nutrition_log")
+      .select("id")
+      .eq("id", logId)
+      .maybeSingle();
+
+    expect(error).toBeNull();
+    expect(data?.id).toBe(logId);
+  });
+
+  it(
+    "hides one member's log entry from another member " +
+      "(fixed Private, unlike the shared fixed-Family food dictionary above)",
+    async () => {
+      const logId = await createLogEntry(cook);
+      leftoverLogEntryIds.push(logId);
+
+      const { data, error } = await bystander.client
+        .from("nutrition_log")
+        .select("id")
+        .eq("id", logId);
+
+      // RLS filters rather than erroring: the row simply isn't there for
+      // bystander, the same shape as the signed-out cases elsewhere in this
+      // file — but here it holds even for a fellow signed-in family member,
+      // which is exactly what distinguishes Private from Family.
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    },
+  );
+
+  it("blocks a member from logging an entry as someone else", async () => {
+    const { data, error } = await bystander.client
+      .from("nutrition_log")
+      .insert({
+        member_id: cook.id,
+        description: "Forged entry",
+        calories: 1,
+      })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("blocks a member from updating another member's log entry", async () => {
+    const logId = await createLogEntry(cook);
+    leftoverLogEntryIds.push(logId);
+
+    const { error, count } = await bystander.client
+      .from("nutrition_log")
+      .update({ calories: 1 }, { count: "exact" })
+      .eq("id", logId);
+
+    // RLS filters the row out of the update's target set rather than
+    // erroring: no rows matched, none changed.
+    expect(error).toBeNull();
+    expect(count).toBe(0);
+
+    const { data } = await admin
+      .from("nutrition_log")
+      .select("calories")
+      .eq("id", logId)
+      .single();
+    expect(data?.calories).toBe(600);
+  });
+
+  it("blocks a member from deleting another member's log entry", async () => {
+    const logId = await createLogEntry(cook);
+    leftoverLogEntryIds.push(logId);
+
+    const { error, count } = await bystander.client
+      .from("nutrition_log")
+      .delete({ count: "exact" })
+      .eq("id", logId);
+
+    expect(error).toBeNull();
+    expect(count).toBe(0);
+
+    const { data } = await admin
+      .from("nutrition_log")
+      .select("id")
+      .eq("id", logId)
+      .maybeSingle();
+    expect(data?.id).toBe(logId);
+  });
+
+  it("hides the log from a signed-out caller", async () => {
+    const logId = await createLogEntry(cook);
+    leftoverLogEntryIds.push(logId);
+
+    const { data, error } = await anonymous
+      .from("nutrition_log")
+      .select("id")
+      .eq("id", logId);
+
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it("blocks a signed-out caller from logging an entry", async () => {
+    const { data, error } = await anonymous
+      .from("nutrition_log")
+      .insert({
+        member_id: cook.id,
+        description: "Uninvited entry",
+        calories: 1,
+      })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("requires a description when a log entry links neither food nor recipe", async () => {
+    const { data, error } = await cook.client
+      .from("nutrition_log")
+      .insert({ member_id: cook.id, calories: 100 })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("unlinks rather than deletes a log entry when its food goes", async () => {
+    const foodId = await createFood(cook);
+    const logId = await createLogEntry(cook, { foodId });
+    leftoverLogEntryIds.push(logId);
+
+    const { error } = await cook.client
+      .from("nutrition_food")
+      .delete()
+      .eq("id", foodId);
+    expect(error).toBeNull();
+
+    const { data } = await admin
+      .from("nutrition_log")
+      .select("id, food_id")
+      .eq("id", logId)
+      .single();
+
+    expect(data?.food_id).toBeNull();
+  });
+
+  // Named per #121's acceptance criteria: a log entry snapshots its macros
+  // at write time, and correcting a food's numbers afterwards must not
+  // rewrite history already logged against the old numbers.
+  it("keeps a logged entry's snapshotted macros unchanged after the food's macros are corrected", async () => {
+    const foodId = await createFood(cook);
+    leftoverFoodIds.push(foodId);
+    const logId = await createLogEntry(cook, { foodId, calories: 380 });
+    leftoverLogEntryIds.push(logId);
+
+    const { error } = await cook.client
+      .from("nutrition_food")
+      .update({ calories_per_unit: 9999 })
+      .eq("id", foodId);
+    expect(error).toBeNull();
+
+    const { data } = await admin
+      .from("nutrition_log")
+      .select("calories, protein_g, carbs_g, fat_g")
+      .eq("id", logId)
+      .single();
+
+    expect(data).toEqual({
+      calories: 380,
+      protein_g: 30,
+      carbs_g: 40,
+      fat_g: 25,
+    });
   });
 });
