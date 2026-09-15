@@ -264,7 +264,11 @@ function LogEntryDialog({
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {m === "cooked" ? "Cooked meal" : m === "food" ? "Food" : "Freeform"}
+              {m === "cooked"
+                ? "Cooked meal"
+                : m === "food"
+                  ? "Food"
+                  : "Freeform"}
             </button>
           ))}
         </div>

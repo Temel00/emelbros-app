@@ -14,9 +14,7 @@ export function NutritionNav({
 }: {
   active: "pantry" | "recipes" | "plan" | "shopping" | "log";
 }) {
-  const linkClass = (
-    key: "pantry" | "recipes" | "plan" | "shopping" | "log",
-  ) =>
+  const linkClass = (key: "pantry" | "recipes" | "plan" | "shopping" | "log") =>
     cn(
       "rounded-lg px-2.5 py-1 text-sm font-medium",
       active === key

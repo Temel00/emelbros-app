@@ -33,7 +33,9 @@ export function logEntryDisplayText(
   recipes: readonly RecipeRow[],
 ): string {
   if (entry.recipe_id !== null) {
-    const recipe = recipes.find((candidate) => candidate.id === entry.recipe_id);
+    const recipe = recipes.find(
+      (candidate) => candidate.id === entry.recipe_id,
+    );
     return recipe?.title ?? "Recipe (no longer available)";
   }
   if (entry.food_id !== null) {
@@ -91,7 +93,10 @@ export type LogMacros = {
  * zero.
  */
 export function scaleLogMacros(
-  entry: Pick<LogEntryRow, "quantity" | "calories" | "protein_g" | "carbs_g" | "fat_g">,
+  entry: Pick<
+    LogEntryRow,
+    "quantity" | "calories" | "protein_g" | "carbs_g" | "fat_g"
+  >,
   newQuantity: number,
 ): LogMacros {
   const baseQuantity = entry.quantity ?? 1;

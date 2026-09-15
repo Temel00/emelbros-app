@@ -147,9 +147,9 @@ describe("logEntryDisplayText", () => {
 
 describe("logEntryDetail", () => {
   it("describes a single planned portion", () => {
-    expect(logEntryDetail(logEntry({ recipe_id: "recipe-1", quantity: 1 }))).toBe(
-      "1× planned portion",
-    );
+    expect(
+      logEntryDetail(logEntry({ recipe_id: "recipe-1", quantity: 1 })),
+    ).toBe("1× planned portion");
   });
 
   it("describes a scaled portion", () => {
