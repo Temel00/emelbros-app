@@ -9,10 +9,11 @@
  * unchanged and still take the old `rows` prop — only the winning
  * variant got this rework.
  *
- * Day and week each now have 3 visual-aid sub-variants (per live feedback:
+ * Day and week each now have visual-aid sub-variants (per live feedback:
  * "3 prototypes... try 3 very different types of visual aids"), picked via
- * `dayStyle`/`weekStyle`. Month is single — it gained a click-to-expand
- * detail card with an "Open day view" action instead of alternate styles.
+ * `dayStyle`/`weekStyle`. Month is single — its detail-card style is locked
+ * in (no `monthStyle` switcher), and it gained a click-to-expand detail
+ * card with an "Open day view" action.
  */
 
 import type { OverviewRange } from "./prototype-overview-shared";
@@ -27,7 +28,6 @@ import { TrendVariantAMonth } from "./prototype-overview-trend-variant-a-month";
 
 export type DayStyle = "1" | "2" | "3";
 export type WeekStyle = "1" | "2" | "3";
-export type MonthStyle = "1" | "2" | "3";
 
 export function TrendVariantA({
   range,
@@ -38,7 +38,6 @@ export function TrendVariantA({
   todayDate,
   dayStyle,
   weekStyle,
-  monthStyle,
   onNavigateDay,
   onNavigateWeek,
   onNavigateMonth,
@@ -54,7 +53,6 @@ export function TrendVariantA({
   todayDate: string;
   dayStyle: DayStyle;
   weekStyle: WeekStyle;
-  monthStyle: MonthStyle;
   onNavigateDay: (delta: number) => void;
   onNavigateWeek: (delta: number) => void;
   onNavigateMonth: (delta: number) => void;
@@ -103,7 +101,6 @@ export function TrendVariantA({
       cursor={monthCursor}
       onNavigate={onNavigateMonth}
       onOpenDayView={onOpenDayView}
-      cardStyle={monthStyle}
     />
   );
 }

@@ -10,6 +10,9 @@
  * day no longer pops a floating badge above the bar — the value renders
  * overlaid directly inside that day's own column, docked just under the
  * liquid's surface.
+ *
+ * Per live feedback, column labels now carry the short date (e.g. "Sep 15")
+ * under the weekday abbreviation, not just the weekday.
  */
 
 import { useState } from "react";
@@ -19,6 +22,7 @@ import {
   MacroLegend,
   formatCalories,
   formatGrams,
+  shortDateLabel,
 } from "./prototype-overview-marks";
 import {
   DEFAULT_GOALS,
@@ -209,9 +213,11 @@ export function TrendVariantAWeek1({
           {weekDays.map((day) => (
             <span
               key={day.date}
-              className="flex-1 text-center text-[11px] text-muted-foreground"
+              className="flex-1 text-center text-[11px] leading-tight text-muted-foreground"
             >
               {weekdayLabel(day.date)}
+              <br />
+              <span className="tabular-nums">{shortDateLabel(day.date)}</span>
             </span>
           ))}
         </div>
@@ -266,9 +272,11 @@ export function TrendVariantAWeek1({
           {weekDays.map((day) => (
             <span
               key={day.date}
-              className="flex-1 text-center text-[11px] text-muted-foreground"
+              className="flex-1 text-center text-[11px] leading-tight text-muted-foreground"
             >
               {weekdayLabel(day.date)}
+              <br />
+              <span className="tabular-nums">{shortDateLabel(day.date)}</span>
             </span>
           ))}
         </div>

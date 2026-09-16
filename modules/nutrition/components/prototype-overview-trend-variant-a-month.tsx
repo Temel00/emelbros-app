@@ -15,10 +15,14 @@
  * with an "Open day view" action that bubbles up to switch the harness to
  * the day-view carousel on that exact date.
  *
- * The detail card's macro readout has 3 selectable styles (`cardStyle`):
- * "1" compact abbreviations (P/C/F, the original), "2" full macro words
- * spelled out, "3" the same full words with a colored dot per macro
- * matching the goal-bar/legend palette.
+ * Per live feedback, the detail card's macro readout is locked in on the
+ * "full words + colored dot matching the goal-bar/legend palette" style —
+ * the other two candidate styles (compact P/C/F abbreviations, full words
+ * with no dot) are removed rather than kept as a switcher option. The
+ * selected-day highlight was also called out as too subtle (a flat
+ * `bg-muted` tint indistinguishable from hover) — it now gets a primary
+ * ring/fill plus a permanently-visible day-of-month number so the selected
+ * column reads unambiguously against its neighbors.
  */
 
 import { useState } from "react";
@@ -39,65 +43,40 @@ import {
   type DailyTotal,
 } from "./prototype-overview-shared";
 
-export type MonthCardStyle = "1" | "2" | "3";
+function dayOfMonth(iso: string): number {
+  return Number(iso.slice(8, 10));
+}
 
-function DayDetailMacros({
-  day,
-  cardStyle,
-}: {
-  day: DailyTotal;
-  cardStyle: MonthCardStyle;
-}) {
-  if (cardStyle === "2") {
-    return (
-      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
-        <span>Protein {formatGrams(day.proteinG)}</span>
-        <span>Carbs {formatGrams(day.carbsG)}</span>
-        <span>Fat {formatGrams(day.fatG)}</span>
-      </div>
-    );
-  }
-
-  if (cardStyle === "3") {
-    return (
-      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
-        <span className="flex items-center gap-1.5 text-foreground">
-          <span
-            className={`size-2 rounded-full ${MACRO_COLORS.protein}`}
-            aria-hidden
-          />
-          Protein{" "}
-          <span className="text-muted-foreground">
-            {formatGrams(day.proteinG)}
-          </span>
-        </span>
-        <span className="flex items-center gap-1.5 text-foreground">
-          <span
-            className={`size-2 rounded-full ${MACRO_COLORS.carbs}`}
-            aria-hidden
-          />
-          Carbs{" "}
-          <span className="text-muted-foreground">
-            {formatGrams(day.carbsG)}
-          </span>
-        </span>
-        <span className="flex items-center gap-1.5 text-foreground">
-          <span
-            className={`size-2 rounded-full ${MACRO_COLORS.fat}`}
-            aria-hidden
-          />
-          Fat{" "}
-          <span className="text-muted-foreground">{formatGrams(day.fatG)}</span>
-        </span>
-      </div>
-    );
-  }
-
+function DayDetailMacros({ day }: { day: DailyTotal }) {
   return (
-    <span className="text-muted-foreground">
-      P {formatGrams(day.proteinG)} · C {formatGrams(day.carbsG)} · F{" "}
-      {formatGrams(day.fatG)}
-    </span>
+    <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
+      <span className="flex items-center gap-1.5 text-foreground">
+        <span
+          className={`size-2 rounded-full ${MACRO_COLORS.protein}`}
+          aria-hidden
+        />
+        Protein{" "}
+        <span className="text-muted-foreground">
+          {formatGrams(day.proteinG)}
+        </span>
+      </span>
+      <span className="flex items-center gap-1.5 text-foreground">
+        <span
+          className={`size-2 rounded-full ${MACRO_COLORS.carbs}`}
+          aria-hidden
+        />
+        Carbs{" "}
+        <span className="text-muted-foreground">{formatGrams(day.carbsG)}</span>
+      </span>
+      <span className="flex items-center gap-1.5 text-foreground">
+        <span
+          className={`size-2 rounded-full ${MACRO_COLORS.fat}`}
+          aria-hidden
+        />
+        Fat{" "}
+        <span className="text-muted-foreground">{formatGrams(day.fatG)}</span>
+      </span>
+    </div>
   );
 }
 
@@ -106,13 +85,11 @@ export function TrendVariantAMonth({
   cursor,
   onNavigate,
   onOpenDayView,
-  cardStyle,
 }: {
   daily: DailyTotal[];
   cursor: string;
   onNavigate: (delta: number) => void;
   onOpenDayView: (date: string) => void;
-  cardStyle: MonthCardStyle;
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -176,23 +153,37 @@ export function TrendVariantAMonth({
           </span>
         </div>
         <div className="flex items-end gap-1">
-          {monthDays.map((day) => (
-            <button
-              key={day.date}
-              type="button"
-              onClick={() => toggle(day.date)}
-              title={`${day.date}: ${formatCalories(day.calories)}`}
-              className={`flex flex-1 flex-col items-center gap-1.5 rounded-sm ${
-                selectedDate === day.date ? "bg-muted" : "hover:bg-muted/50"
-              }`}
-            >
-              <Bar
-                value={day.calories}
-                max={maxCalories}
-                colorClassName="bg-primary"
-              />
-            </button>
-          ))}
+          {monthDays.map((day) => {
+            const selected = selectedDate === day.date;
+            return (
+              <button
+                key={day.date}
+                type="button"
+                onClick={() => toggle(day.date)}
+                title={`${day.date}: ${formatCalories(day.calories)}`}
+                className={`flex flex-1 flex-col items-center gap-1 rounded-md border p-1 pb-0.5 transition-colors ${
+                  selected
+                    ? "border-primary bg-primary/15 ring-1 ring-primary"
+                    : "border-transparent hover:bg-muted/50"
+                }`}
+              >
+                <Bar
+                  value={day.calories}
+                  max={maxCalories}
+                  colorClassName="bg-primary"
+                />
+                <span
+                  className={`text-[9px] tabular-nums ${
+                    selected
+                      ? "font-bold text-primary"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {dayOfMonth(day.date)}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -205,24 +196,38 @@ export function TrendVariantAMonth({
           </span>
         </div>
         <div className="flex items-end gap-1">
-          {monthDays.map((day) => (
-            <button
-              key={day.date}
-              type="button"
-              onClick={() => toggle(day.date)}
-              title={`${day.date}: P ${formatGrams(day.proteinG)} · C ${formatGrams(day.carbsG)} · F ${formatGrams(day.fatG)}`}
-              className={`flex flex-1 flex-col items-center gap-1.5 rounded-sm ${
-                selectedDate === day.date ? "bg-muted" : "hover:bg-muted/50"
-              }`}
-            >
-              <MacroStackedBar
-                proteinG={day.proteinG}
-                carbsG={day.carbsG}
-                fatG={day.fatG}
-                maxG={maxGrams}
-              />
-            </button>
-          ))}
+          {monthDays.map((day) => {
+            const selected = selectedDate === day.date;
+            return (
+              <button
+                key={day.date}
+                type="button"
+                onClick={() => toggle(day.date)}
+                title={`${day.date}: P ${formatGrams(day.proteinG)} · C ${formatGrams(day.carbsG)} · F ${formatGrams(day.fatG)}`}
+                className={`flex flex-1 flex-col items-center gap-1 rounded-md border p-1 pb-0.5 transition-colors ${
+                  selected
+                    ? "border-primary bg-primary/15 ring-1 ring-primary"
+                    : "border-transparent hover:bg-muted/50"
+                }`}
+              >
+                <MacroStackedBar
+                  proteinG={day.proteinG}
+                  carbsG={day.carbsG}
+                  fatG={day.fatG}
+                  maxG={maxGrams}
+                />
+                <span
+                  className={`text-[9px] tabular-nums ${
+                    selected
+                      ? "font-bold text-primary"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {dayOfMonth(day.date)}
+                </span>
+              </button>
+            );
+          })}
         </div>
         <MacroLegend className="mt-3" />
       </div>
@@ -245,19 +250,12 @@ export function TrendVariantAMonth({
             <p className="text-sm text-muted-foreground">
               Not logged — no meals recorded this day.
             </p>
-          ) : cardStyle === "1" ? (
-            <div className="flex items-baseline gap-4 text-sm">
-              <span className="text-lg font-bold tabular-nums">
-                {formatCalories(selectedDay.calories)}
-              </span>
-              <DayDetailMacros day={selectedDay} cardStyle={cardStyle} />
-            </div>
           ) : (
             <div className="space-y-1.5">
               <span className="text-lg font-bold tabular-nums">
                 {formatCalories(selectedDay.calories)}
               </span>
-              <DayDetailMacros day={selectedDay} cardStyle={cardStyle} />
+              <DayDetailMacros day={selectedDay} />
             </div>
           )}
         </div>

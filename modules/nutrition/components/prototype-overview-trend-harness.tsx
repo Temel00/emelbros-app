@@ -36,21 +36,15 @@ const VARIANTS: PrototypeVariant[] = [
 ];
 
 const DAY_STYLES: PrototypeVariant[] = [
-  { key: "1", name: "Donut ring · header pill" },
+  { key: "1", name: "Hover · bar highlight" },
   { key: "2", name: "Goal bars · floating button" },
-  { key: "3", name: "Gauge + mini bars · text chip" },
+  { key: "3", name: "Hover · line indicators" },
 ];
 
 const WEEK_STYLES: PrototypeVariant[] = [
   { key: "1", name: "Capsule · graduated cylinder" },
-  { key: "2", name: "Capsule · candy/playful" },
-  { key: "3", name: "Capsule · segmented meter" },
-];
-
-const MONTH_STYLES: PrototypeVariant[] = [
-  { key: "1", name: "Detail card · compact (P/C/F)" },
-  { key: "2", name: "Detail card · full words" },
-  { key: "3", name: "Detail card · full words + color" },
+  { key: "2", name: "Goal-fill · per-macro overflow" },
+  { key: "3", name: "Goal-fill · segmented overflow" },
 ];
 
 const RANGES: { key: OverviewRange; label: string }[] = [
@@ -82,7 +76,6 @@ export function OverviewTrendHarness() {
   const variant = searchParams.get("variant") ?? "a";
   const dayStyle = (searchParams.get("dayStyle") ?? "1") as "1" | "2" | "3";
   const weekStyle = (searchParams.get("weekStyle") ?? "1") as "1" | "2" | "3";
-  const monthStyle = (searchParams.get("monthStyle") ?? "1") as "1" | "2" | "3";
 
   const [range, setRange] = useState<OverviewRange>("day");
   const overview = useMemo(() => buildMockOverview(), []);
@@ -138,7 +131,6 @@ export function OverviewTrendHarness() {
           todayDate={lastDate}
           dayStyle={dayStyle}
           weekStyle={weekStyle}
-          monthStyle={monthStyle}
           onNavigateDay={(delta) =>
             setDayCursor((c) => clamp(addDays(c, delta), firstDate, lastDate))
           }
@@ -178,14 +170,6 @@ export function OverviewTrendHarness() {
           variants={WEEK_STYLES}
           current={weekStyle}
           paramKey="weekStyle"
-          stackIndex={1}
-        />
-      ) : null}
-      {variant === "a" && range === "month" ? (
-        <PrototypeSwitcher
-          variants={MONTH_STYLES}
-          current={monthStyle}
-          paramKey="monthStyle"
           stackIndex={1}
         />
       ) : null}

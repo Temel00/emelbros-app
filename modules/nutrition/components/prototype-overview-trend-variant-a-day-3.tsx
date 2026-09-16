@@ -1,54 +1,48 @@
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #125 resolves.
  *
- * Day view, visual-aid take 3 of 3 — a horizontal calories-vs-goal gauge up
- * top, and a tiny inline stacked macro bar next to every entry (its
- * proportional protein/carbs/fat split at a glance, no hover needed).
+ * Day view, hover-visual take 2 of 2 — the calories gauge and mini macro
+ * bars are gone. Same full-width calories/macro bars as the other hover
+ * variant, but the hover treatment itself is a leader line rather than a
+ * highlighted region: hovering (or focusing) a food card drops a thin tick
+ * line at that entry's midpoint on each bar, with a small floating label
+ * above showing exactly how much of that bar it accounts for.
  *
- * "Today" quick-jump take 3: a full-width snackbar docked to the bottom edge
- * of the card ("Viewing Tue, Mar 3 · Jump to today"), replacing the rejected
- * inline text link next to the date. The nav row's right side carries a
- * permanent "See in month view" action instead.
+ * "Today" quick-jump take 3 carries over unchanged: a full-width snackbar
+ * docked to the bottom edge of the card.
  */
+
+import { useState } from "react";
 
 import {
   buildMockDayEntries,
   fullDateLabel,
-  DEFAULT_GOALS,
   type DailyTotal,
 } from "./prototype-overview-shared";
 import {
   MACRO_COLORS,
   formatCalories,
   formatGrams,
+  segmentOffsets,
 } from "./prototype-overview-marks";
 
-function MiniMacroBar({
-  proteinG,
-  carbsG,
-  fatG,
+function LeaderLine({
+  centerPct,
+  label,
 }: {
-  proteinG: number;
-  carbsG: number;
-  fatG: number;
+  centerPct: number;
+  label: string;
 }) {
-  const total = proteinG + carbsG + fatG;
-  if (total <= 0) return null;
-  const segments = [
-    { value: proteinG, className: MACRO_COLORS.protein },
-    { value: carbsG, className: MACRO_COLORS.carbs },
-    { value: fatG, className: MACRO_COLORS.fat },
-  ].filter((s) => s.value > 0);
-
   return (
-    <div className="flex h-1.5 w-14 shrink-0 gap-px overflow-hidden rounded-full">
-      {segments.map((seg, i) => (
-        <div
-          key={i}
-          className={seg.className}
-          style={{ width: `${(seg.value / total) * 100}%` }}
-        />
-      ))}
+    <div
+      className="pointer-events-none absolute -top-6 z-10 flex -translate-x-1/2 flex-col items-center"
+      style={{ left: `${centerPct}%` }}
+      aria-hidden
+    >
+      <span className="whitespace-nowrap rounded-sm bg-foreground px-1 py-0.5 text-[10px] font-medium leading-none text-background shadow-sm">
+        {label}
+      </span>
+      <span className="h-2 w-px bg-foreground/70" />
     </div>
   );
 }
@@ -68,17 +62,36 @@ export function TrendVariantADay3({
   onJumpToday: () => void;
   onSeeInMonthView: (date: string) => void;
 }) {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
   const index = daily.findIndex((d) => d.date === cursor);
   const day = daily[index] ?? daily[daily.length - 1];
   const entries = buildMockDayEntries(day);
   const canGoBack = index > 0;
   const canGoForward = index >= 0 && index < daily.length - 1;
 
-  const caloriesGoal = DEFAULT_GOALS.calories!;
-  const calBarMax = Math.max(day.calories ?? 0, caloriesGoal) * 1.1;
-  const calFillPct =
-    calBarMax > 0 ? Math.min(((day.calories ?? 0) / calBarMax) * 100, 100) : 0;
-  const calGoalPct = calBarMax > 0 ? (caloriesGoal / calBarMax) * 100 : 0;
+  const proteinG = day.proteinG ?? 0;
+  const carbsG = day.carbsG ?? 0;
+  const fatG = day.fatG ?? 0;
+  const macroSegs = segmentOffsets([proteinG, carbsG, fatG]);
+
+  const hoveredIndex = entries.findIndex((e) => e.id === hoveredId);
+  const hovered = hoveredIndex >= 0 ? entries[hoveredIndex] : null;
+
+  const calorieOffsets = segmentOffsets(entries.map((e) => e.calories));
+  const proteinOffsets = segmentOffsets(entries.map((e) => e.proteinG));
+  const carbsOffsets = segmentOffsets(entries.map((e) => e.carbsG));
+  const fatOffsets = segmentOffsets(entries.map((e) => e.fatG));
+
+  function centerOf(
+    seg: { startPct: number; widthPct: number },
+    local: { startPct: number; widthPct: number },
+  ) {
+    return (
+      seg.startPct +
+      ((local.startPct + local.widthPct / 2) / 100) * seg.widthPct
+    );
+  }
 
   return (
     <div className="overflow-hidden rounded-xl border border-border">
@@ -121,45 +134,89 @@ export function TrendVariantADay3({
             Not logged — no meals recorded this day.
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <div className="mb-1 flex items-baseline justify-between">
-                <span className="text-2xl font-bold tabular-nums">
-                  {formatCalories(day.calories)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  goal {formatCalories(caloriesGoal)}
-                </span>
-              </div>
-              <div className="relative h-3 w-full rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${calFillPct}%` }}
-                />
-                <div
-                  className="absolute top-0 h-full w-px bg-foreground/50"
-                  style={{ left: `${calGoalPct}%` }}
-                  aria-hidden
-                />
-              </div>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                P {formatGrams(day.proteinG)} · C {formatGrams(day.carbsG)} · F{" "}
-                {formatGrams(day.fatG)}
+              <span className="mb-1.5 block text-2xl font-bold tabular-nums">
+                {formatCalories(day.calories)}
               </span>
+              <div className="relative mt-6 h-3 w-full overflow-hidden rounded-full bg-primary">
+                {hoveredIndex >= 0 ? (
+                  <LeaderLine
+                    centerPct={
+                      calorieOffsets[hoveredIndex].startPct +
+                      calorieOffsets[hoveredIndex].widthPct / 2
+                    }
+                    label={formatCalories(hovered!.calories)}
+                  />
+                ) : null}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-1 flex items-baseline justify-between text-xs text-muted-foreground">
+                <span>Macros</span>
+                <span>
+                  P {formatGrams(day.proteinG)} · C {formatGrams(day.carbsG)} ·
+                  F {formatGrams(day.fatG)}
+                </span>
+              </div>
+              <div className="relative mt-6 flex h-3 w-full gap-[2px] overflow-hidden rounded-full">
+                <div
+                  className={`h-full ${MACRO_COLORS.protein}`}
+                  style={{ width: `${macroSegs[0].widthPct}%` }}
+                />
+                <div
+                  className={`h-full ${MACRO_COLORS.carbs}`}
+                  style={{ width: `${macroSegs[1].widthPct}%` }}
+                />
+                <div
+                  className={`h-full ${MACRO_COLORS.fat}`}
+                  style={{ width: `${macroSegs[2].widthPct}%` }}
+                />
+                {hoveredIndex >= 0 ? (
+                  <>
+                    <LeaderLine
+                      centerPct={centerOf(
+                        macroSegs[0],
+                        proteinOffsets[hoveredIndex],
+                      )}
+                      label={`P ${formatGrams(hovered!.proteinG)}`}
+                    />
+                    <LeaderLine
+                      centerPct={centerOf(
+                        macroSegs[1],
+                        carbsOffsets[hoveredIndex],
+                      )}
+                      label={`C ${formatGrams(hovered!.carbsG)}`}
+                    />
+                    <LeaderLine
+                      centerPct={centerOf(
+                        macroSegs[2],
+                        fatOffsets[hoveredIndex],
+                      )}
+                      label={`F ${formatGrams(hovered!.fatG)}`}
+                    />
+                  </>
+                ) : null}
+              </div>
             </div>
 
             <ul className="space-y-1.5">
               {entries.map((entry) => (
                 <li
                   key={entry.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border p-2.5 text-sm"
+                  tabIndex={0}
+                  onMouseEnter={() => setHoveredId(entry.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  onFocus={() => setHoveredId(entry.id)}
+                  onBlur={() => setHoveredId(null)}
+                  className={`flex items-center justify-between gap-3 rounded-lg border p-2.5 text-sm outline-none transition-colors ${
+                    hoveredId === entry.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border"
+                  }`}
                 >
                   <span className="min-w-0 flex-1 truncate">{entry.title}</span>
-                  <MiniMacroBar
-                    proteinG={entry.proteinG}
-                    carbsG={entry.carbsG}
-                    fatG={entry.fatG}
-                  />
                   <span className="w-16 shrink-0 text-right tabular-nums text-muted-foreground">
                     {formatCalories(entry.calories)}
                   </span>

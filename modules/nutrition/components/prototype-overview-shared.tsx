@@ -40,6 +40,31 @@ export const DEFAULT_GOALS: MacroTotals = {
   fatG: 70,
 };
 
+/**
+ * Macro goal-setting model for the week view's goal-percentage feature: a
+ * fixed % of the calorie goal per macro (protein/carbs 4 kcal/g, fat 9
+ * kcal/g), rather than the flat gram numbers in DEFAULT_GOALS used by the
+ * day/month views — this ticket only asked for the percentage-split
+ * treatment on the week view, so DEFAULT_GOALS' macro grams are left as-is.
+ */
+export const MACRO_GOAL_PERCENTS = {
+  proteinPct: 0.4,
+  carbsPct: 0.3,
+  fatPct: 0.3,
+} as const;
+
+export function macroGramGoalsFromCalories(caloriesGoal: number): {
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+} {
+  return {
+    proteinG: Math.round((caloriesGoal * MACRO_GOAL_PERCENTS.proteinPct) / 4),
+    carbsG: Math.round((caloriesGoal * MACRO_GOAL_PERCENTS.carbsPct) / 4),
+    fatG: Math.round((caloriesGoal * MACRO_GOAL_PERCENTS.fatPct) / 9),
+  };
+}
+
 export type MockPlanEntry = {
   id: string;
   mealSlot: string;

@@ -3,116 +3,123 @@
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #125 resolves.
  *
- * Week view, capsule-gauge family take 3 of 3 — a flat "segmented meter"
- * treatment: the capsule is divided into discrete rounded-square segments
- * (like a level meter/EQ), with the goal marked by a small side notch rather
- * than a full-width line. Clicking a day docks the value as a chip sitting
- * right at the top edge of the filled segments, inside the column itself.
+ * Week view, goal-aware family take 2 of 2 — "segmented overflow": rather
+ * than one column per day (take 1's shape), this segments the chart by
+ * *metric* — a small-multiples stack of four horizontal-bar blocks
+ * (Calories, Protein, Carbs, Fat), each with its own goal (the macros via
+ * `macroGramGoalsFromCalories`'s 40/30/30 split) and its own scale, one
+ * axis per block. Every bar fills solid up to its goal, then a
+ * diagonal-stripe texture of the same hue continues past it for whatever's
+ * over — a texture change, not a hue swap, so "over goal" reads without
+ * relying on color alone. Day labels carry the short date.
  */
-
-import { useState } from "react";
 
 import {
   MACRO_HEX,
-  MacroLegend,
   formatCalories,
   formatGrams,
+  shortDateLabel,
 } from "./prototype-overview-marks";
 import {
   DEFAULT_GOALS,
-  averageOf,
   datesOfWeek,
+  macroGramGoalsFromCalories,
   weekStartOf,
   weekdayLabel,
   type DailyTotal,
 } from "./prototype-overview-shared";
 import { WeekRangeHeader } from "./prototype-overview-week-header";
 
-const CHART_HEIGHT = 144;
-const SEGMENTS = 10;
-const SEGMENT_GAP = 3;
+function stripedFill(color: string): string {
+  return `repeating-linear-gradient(45deg, ${color} 0px, ${color} 4px, color-mix(in srgb, ${color} 40%, white) 4px, color-mix(in srgb, ${color} 40%, white) 8px)`;
+}
 
-function SegmentColumn({
-  day,
-  max,
+function HorizontalGoalRow({
+  label,
+  value,
   goal,
-  selected,
-  onToggle,
-  chip,
-  fillStyle,
+  max,
+  color,
+  format,
 }: {
-  day: DailyTotal;
-  max: number;
+  label: string;
+  value: number | null;
   goal: number;
-  selected: boolean;
-  onToggle: () => void;
-  chip: React.ReactNode;
-  fillStyle: { filledSegments: number; background: string } | null;
+  max: number;
+  color: string;
+  format: (v: number | null) => string;
 }) {
-  const goalSegment = Math.round((goal / max) * SEGMENTS);
-  const segmentHeight =
-    (CHART_HEIGHT - SEGMENT_GAP * (SEGMENTS - 1)) / SEGMENTS;
-  const fillHeightPx = fillStyle
-    ? fillStyle.filledSegments * (segmentHeight + SEGMENT_GAP) - SEGMENT_GAP
-    : 0;
+  const goalPct = Math.min((goal / max) * 100, 100);
+  const basePct = value === null ? 0 : Math.min((value / max) * 100, 100);
+  const overPct =
+    value !== null && value > goal
+      ? Math.min(((value - goal) / max) * 100, 100 - basePct)
+      : 0;
+  const overGoal = value !== null && value > goal;
 
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-label={
-        fillStyle
-          ? `${day.date}: ${formatCalories(day.calories)}`
-          : `${day.date}: not logged`
-      }
-      className="relative flex h-full flex-1 flex-col justify-end"
-    >
-      <div
-        className="relative w-full overflow-hidden rounded-[3px] bg-muted"
-        style={{ height: CHART_HEIGHT }}
-      >
-        {goalSegment > 0 && goalSegment <= SEGMENTS ? (
-          <div
-            className="pointer-events-none absolute -left-1 z-10 h-0.5 w-1.5 rounded-full bg-foreground/60"
-            style={{
-              bottom:
-                goalSegment * (segmentHeight + SEGMENT_GAP) - SEGMENT_GAP / 2,
-            }}
-            aria-hidden
-          />
-        ) : null}
-        {fillStyle ? (
-          <div
-            className="absolute inset-x-0 bottom-0"
-            style={{ height: fillHeightPx, background: fillStyle.background }}
-          />
+    <div className="flex items-center gap-2">
+      <span className="w-16 shrink-0 text-[11px] leading-tight text-muted-foreground">
+        {label}
+      </span>
+      <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-muted/40">
+        <div
+          className="pointer-events-none absolute inset-y-0 z-10 w-px bg-foreground/40"
+          style={{ left: `${goalPct}%` }}
+          aria-hidden
+        />
+        {value === null ? (
+          <div className="absolute inset-y-0 left-1 h-3 w-[calc(100%-8px)] rounded-full border border-dashed border-border" />
         ) : (
-          <div className="absolute inset-x-1 bottom-1.5 h-2 rounded-[3px] border border-dashed border-border" />
+          <>
+            <div
+              className={
+                overPct > 0
+                  ? "absolute inset-y-0 left-0"
+                  : "absolute inset-y-0 left-0 rounded-full"
+              }
+              style={{ width: `${Math.max(basePct, 1.5)}%`, background: color }}
+            />
+            {overPct > 0 ? (
+              <div
+                className="absolute inset-y-0 rounded-r-full"
+                style={{
+                  left: `${basePct}%`,
+                  width: `${overPct}%`,
+                  background: stripedFill(color),
+                }}
+              />
+            ) : null}
+          </>
         )}
-        {/* segment gap lines punched on top of the continuous fill/track */}
-        {Array.from({ length: SEGMENTS - 1 }, (_, i) => (
-          <div
-            key={i}
-            className="pointer-events-none absolute inset-x-0 z-10 bg-card"
-            style={{
-              height: SEGMENT_GAP,
-              bottom: (i + 1) * segmentHeight + i * SEGMENT_GAP,
-            }}
-            aria-hidden
-          />
-        ))}
-        {selected && fillStyle ? (
-          <div
-            className="absolute inset-x-0 z-20 flex justify-center"
-            style={{ bottom: Math.min(fillHeightPx, CHART_HEIGHT - 24) }}
-          >
-            <div className="rounded-md bg-foreground px-1.5 py-0.5 text-center text-[10px] font-medium leading-tight text-background shadow-md">
-              {chip}
-            </div>
-          </div>
-        ) : null}
       </div>
-    </button>
+      <span className="w-24 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+        {format(value)}
+        {overGoal ? (
+          <span className="text-amber-600 dark:text-amber-400"> ↑</span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
+function MetricBlock({
+  title,
+  goalCaption,
+  rows,
+}: {
+  title: string;
+  goalCaption: string;
+  rows: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-border p-4">
+      <div className="mb-3 flex items-baseline justify-between">
+        <h3 className="text-sm font-medium text-foreground">{title}</h3>
+        <span className="text-xs text-muted-foreground">{goalCaption}</span>
+      </div>
+      <div className="space-y-1.5">{rows}</div>
+    </div>
   );
 }
 
@@ -125,8 +132,6 @@ export function TrendVariantAWeek3({
   cursor: string;
   onNavigate: (delta: number) => void;
 }) {
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-
   const byDate = new Map(daily.map((d) => [d.date, d]));
   const weekDates = datesOfWeek(cursor);
   const weekDays: DailyTotal[] = weekDates.map(
@@ -148,23 +153,26 @@ export function TrendVariantAWeek3({
   const canGoForward = cursor < maxWeekStart;
 
   const caloriesGoal = DEFAULT_GOALS.calories!;
-  const macroGoalTotal =
-    DEFAULT_GOALS.proteinG! + DEFAULT_GOALS.carbsG! + DEFAULT_GOALS.fatG!;
+  const macroGoals = macroGramGoalsFromCalories(caloriesGoal);
   const maxCalories = Math.max(
-    caloriesGoal * 1.15,
+    caloriesGoal * 1.5,
     ...weekDays.map((d) => d.calories ?? 0),
   );
-  const maxGrams = Math.max(
-    macroGoalTotal * 1.15,
-    ...weekDays.map((d) => (d.proteinG ?? 0) + (d.carbsG ?? 0) + (d.fatG ?? 0)),
+  const maxProtein = Math.max(
+    macroGoals.proteinG * 1.6,
+    ...weekDays.map((d) => d.proteinG ?? 0),
   );
-  const avgCalories = averageOf(weekDays, "calories");
-  const avgProtein = averageOf(weekDays, "proteinG");
-  const avgCarbs = averageOf(weekDays, "carbsG");
-  const avgFat = averageOf(weekDays, "fatG");
+  const maxCarbs = Math.max(
+    macroGoals.carbsG * 1.6,
+    ...weekDays.map((d) => d.carbsG ?? 0),
+  );
+  const maxFat = Math.max(
+    macroGoals.fatG * 1.6,
+    ...weekDays.map((d) => d.fatG ?? 0),
+  );
 
-  function toggle(date: string) {
-    setSelectedDay((cur) => (cur === date ? null : date));
+  function dayLabel(day: DailyTotal) {
+    return `${weekdayLabel(day.date)} ${shortDateLabel(day.date)}`;
   }
 
   return (
@@ -177,111 +185,69 @@ export function TrendVariantAWeek3({
         canGoForward={canGoForward}
       />
 
-      <div className="rounded-xl border border-border p-4">
-        <div className="mb-3 flex items-baseline justify-between">
-          <h3 className="text-sm font-medium text-foreground">Calories</h3>
-          <span className="text-xs text-muted-foreground">
-            Avg/day: {formatCalories(avgCalories)} · Goal:{" "}
-            {formatCalories(caloriesGoal)}
-          </span>
-        </div>
-        <div className="flex gap-2" style={{ height: CHART_HEIGHT }}>
-          {weekDays.map((day) => {
-            const overGoal = (day.calories ?? 0) > caloriesGoal;
-            return (
-              <SegmentColumn
-                key={day.date}
-                day={day}
-                max={maxCalories}
-                goal={caloriesGoal}
-                selected={selectedDay === day.date}
-                onToggle={() => toggle(day.date)}
-                chip={formatCalories(day.calories)}
-                fillStyle={
-                  day.calories === null
-                    ? null
-                    : {
-                        filledSegments: Math.max(
-                          Math.round((day.calories / maxCalories) * SEGMENTS),
-                          1,
-                        ),
-                        background: overGoal ? "#f59e0b" : "var(--primary)",
-                      }
-                }
-              />
-            );
-          })}
-        </div>
-        <div className="mt-1.5 flex gap-2">
-          {weekDays.map((day) => (
-            <span
-              key={day.date}
-              className="flex-1 text-center text-[11px] text-muted-foreground"
-            >
-              {weekdayLabel(day.date)}
-            </span>
-          ))}
-        </div>
-      </div>
+      <MetricBlock
+        title="Calories"
+        goalCaption={`Goal: ${formatCalories(caloriesGoal)}`}
+        rows={weekDays.map((day) => (
+          <HorizontalGoalRow
+            key={day.date}
+            label={dayLabel(day)}
+            value={day.calories}
+            goal={caloriesGoal}
+            max={maxCalories}
+            color="var(--primary)"
+            format={formatCalories}
+          />
+        ))}
+      />
 
-      <div className="rounded-xl border border-border p-4">
-        <div className="mb-3 flex items-baseline justify-between">
-          <h3 className="text-sm font-medium text-foreground">Macros</h3>
-          <span className="text-xs text-muted-foreground">
-            Avg/day: P {formatGrams(avgProtein)} · C {formatGrams(avgCarbs)} · F{" "}
-            {formatGrams(avgFat)}
-          </span>
-        </div>
-        <div className="flex gap-2" style={{ height: CHART_HEIGHT }}>
-          {weekDays.map((day) => {
-            const proteinG = day.proteinG ?? 0;
-            const carbsG = day.carbsG ?? 0;
-            const fatG = day.fatG ?? 0;
-            const totalG = proteinG + carbsG + fatG;
-            const proteinPct = totalG > 0 ? (proteinG / totalG) * 100 : 0;
-            const carbsPct = totalG > 0 ? (carbsG / totalG) * 100 : 0;
-            return (
-              <SegmentColumn
-                key={day.date}
-                day={day}
-                max={maxGrams}
-                goal={macroGoalTotal}
-                selected={selectedDay === day.date}
-                onToggle={() => toggle(day.date)}
-                chip={
-                  <>
-                    P {formatGrams(day.proteinG)}
-                    <br />C {formatGrams(day.carbsG)}
-                    <br />F {formatGrams(day.fatG)}
-                  </>
-                }
-                fillStyle={
-                  day.calories === null
-                    ? null
-                    : {
-                        filledSegments: Math.max(
-                          Math.round((totalG / maxGrams) * SEGMENTS),
-                          1,
-                        ),
-                        background: `linear-gradient(to top, ${MACRO_HEX.protein} 0% ${proteinPct}%, ${MACRO_HEX.carbs} ${proteinPct}% ${proteinPct + carbsPct}%, ${MACRO_HEX.fat} ${proteinPct + carbsPct}% 100%)`,
-                      }
-                }
-              />
-            );
-          })}
-        </div>
-        <div className="mt-1.5 flex gap-2">
-          {weekDays.map((day) => (
-            <span
-              key={day.date}
-              className="flex-1 text-center text-[11px] text-muted-foreground"
-            >
-              {weekdayLabel(day.date)}
-            </span>
-          ))}
-        </div>
-        <MacroLegend className="mt-3" />
-      </div>
+      <MetricBlock
+        title="Protein"
+        goalCaption={`Goal: ${formatGrams(macroGoals.proteinG)} (40% of calorie goal)`}
+        rows={weekDays.map((day) => (
+          <HorizontalGoalRow
+            key={day.date}
+            label={dayLabel(day)}
+            value={day.proteinG}
+            goal={macroGoals.proteinG}
+            max={maxProtein}
+            color={MACRO_HEX.protein}
+            format={formatGrams}
+          />
+        ))}
+      />
+
+      <MetricBlock
+        title="Carbs"
+        goalCaption={`Goal: ${formatGrams(macroGoals.carbsG)} (30% of calorie goal)`}
+        rows={weekDays.map((day) => (
+          <HorizontalGoalRow
+            key={day.date}
+            label={dayLabel(day)}
+            value={day.carbsG}
+            goal={macroGoals.carbsG}
+            max={maxCarbs}
+            color={MACRO_HEX.carbs}
+            format={formatGrams}
+          />
+        ))}
+      />
+
+      <MetricBlock
+        title="Fat"
+        goalCaption={`Goal: ${formatGrams(macroGoals.fatG)} (30% of calorie goal)`}
+        rows={weekDays.map((day) => (
+          <HorizontalGoalRow
+            key={day.date}
+            label={dayLabel(day)}
+            value={day.fatG}
+            goal={macroGoals.fatG}
+            max={maxFat}
+            color={MACRO_HEX.fat}
+            format={formatGrams}
+          />
+        ))}
+      />
     </div>
   );
 }

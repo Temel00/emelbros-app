@@ -3,11 +3,15 @@
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #125 resolves.
  *
- * Week view, capsule-gauge family take 2 of 3 — a playful "candy capsule"
- * treatment: a glossy highlight streak down the fill, a bouncy pop on
- * select, and a slightly rotated sticker label. Clicking a day sticks the
- * value directly onto that day's own capsule (overlapping the fill, not
- * floating in a tooltip above it).
+ * Week view, goal-aware family take 1 of 2 — "per-macro overflow": each
+ * macro gets its own goal (a 40/30/30 protein/fat/carb split of the calorie
+ * goal, via `macroGramGoalsFromCalories`), rendered as its own mini bar
+ * rather than folded into one combined macro stack. Every bar (calories and
+ * each macro) fills solid up to its own goal, then — if it's exceeded —
+ * keeps going in a diagonal-stripe texture of the *same* hue, so "over
+ * goal" is a texture change, not a hue swap (a color-blind-safe secondary
+ * encoding, not a new series). Column labels carry the short date under the
+ * weekday abbreviation.
  */
 
 import { useState } from "react";
@@ -17,11 +21,13 @@ import {
   MacroLegend,
   formatCalories,
   formatGrams,
+  shortDateLabel,
 } from "./prototype-overview-marks";
 import {
   DEFAULT_GOALS,
   averageOf,
   datesOfWeek,
+  macroGramGoalsFromCalories,
   weekStartOf,
   weekdayLabel,
   type DailyTotal,
@@ -30,79 +36,190 @@ import { WeekRangeHeader } from "./prototype-overview-week-header";
 
 const CHART_HEIGHT = 144;
 
-function CandyColumn({
+function stripedFill(color: string): string {
+  return `repeating-linear-gradient(45deg, ${color} 0px, ${color} 4px, color-mix(in srgb, ${color} 40%, white) 4px, color-mix(in srgb, ${color} 40%, white) 8px)`;
+}
+
+function GoalFillBar({
+  value,
+  goal,
+  max,
+  color,
+}: {
+  value: number | null;
+  goal: number;
+  max: number;
+  color: string;
+}) {
+  if (value === null) {
+    return (
+      <div className="absolute inset-x-1 bottom-1.5 h-2 rounded-[3px] border border-dashed border-border" />
+    );
+  }
+  const baseVal = Math.min(value, goal);
+  const overVal = Math.max(value - goal, 0);
+  const baseH = Math.max(Math.round((baseVal / max) * CHART_HEIGHT), 2);
+  const overH = Math.round((overVal / max) * CHART_HEIGHT);
+
+  return (
+    <div
+      className="absolute inset-x-0 bottom-0 flex flex-col-reverse"
+      style={{ height: baseH + overH }}
+    >
+      <div
+        className={overH > 0 ? "w-full" : "w-full rounded-t-[3px]"}
+        style={{ height: baseH, background: color }}
+      />
+      {overH > 0 ? (
+        <div
+          className="w-full rounded-t-[3px]"
+          style={{ height: overH, background: stripedFill(color) }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function CaloriesColumn({
   day,
   max,
   goal,
   selected,
   onToggle,
-  sticker,
-  fillStyle,
 }: {
   day: DailyTotal;
   max: number;
   goal: number;
   selected: boolean;
   onToggle: () => void;
-  sticker: React.ReactNode;
-  fillStyle: { heightPx: number; background: string } | null;
 }) {
   const goalPct = Math.min((goal / max) * 100, 100);
+  const overGoal = (day.calories ?? 0) > goal;
 
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-label={
-        fillStyle
-          ? `${day.date}: ${formatCalories(day.calories)}`
-          : `${day.date}: not logged`
+        day.calories === null
+          ? `${day.date}: not logged`
+          : `${day.date}: ${formatCalories(day.calories)}, goal ${formatCalories(goal)}`
       }
       className="relative flex h-full flex-1 flex-col justify-end"
     >
       <div
-        className="relative w-full overflow-visible rounded-full bg-muted"
+        className="relative w-full overflow-hidden rounded-[6px] border border-border/60 bg-muted/40"
         style={{ height: CHART_HEIGHT }}
       >
         <div
-          className="pointer-events-none absolute inset-x-[-3px] z-10 h-[2px] rounded-full bg-foreground/30"
+          className="pointer-events-none absolute inset-x-0 z-10 h-px bg-foreground/40"
           style={{ bottom: `${goalPct}%` }}
           aria-hidden
         />
-        {fillStyle ? (
-          <div
-            className={`absolute inset-x-0 bottom-0 rounded-full shadow-sm transition-transform duration-150 ${
-              selected ? "scale-x-110" : ""
-            }`}
-            style={{
-              height: Math.max(fillStyle.heightPx, 12),
-              background: fillStyle.background,
-            }}
-          >
-            <div
-              className="absolute inset-y-1 left-1 w-1.5 rounded-full bg-white/40"
-              aria-hidden
-            />
-          </div>
-        ) : (
-          <div className="absolute inset-x-0 bottom-0 h-3 rounded-full border-2 border-dashed border-border" />
-        )}
-        {selected && fillStyle ? (
-          <div
-            className="absolute inset-x-0 z-20 flex justify-center"
-            style={{
-              bottom: Math.max(
-                Math.min(fillStyle.heightPx, CHART_HEIGHT - 28),
-                20,
-              ),
-            }}
-          >
-            <div className="-rotate-2 rounded-xl border-2 border-background bg-card px-2 py-1 text-center text-[10px] font-bold leading-tight text-foreground shadow-md">
-              {sticker}
+        <GoalFillBar
+          value={day.calories}
+          goal={goal}
+          max={max}
+          color="var(--primary)"
+        />
+        {selected && day.calories !== null ? (
+          <div className="absolute inset-x-0 top-1 z-20 flex justify-center px-1">
+            <div className="rounded-sm bg-background/90 px-1.5 py-0.5 text-center text-[10px] font-medium leading-tight text-foreground shadow-sm backdrop-blur-sm">
+              {formatCalories(day.calories)}
+              {overGoal ? (
+                <span className="text-amber-600 dark:text-amber-400">
+                  {" "}
+                  (+{formatCalories(day.calories! - goal)})
+                </span>
+              ) : null}
             </div>
           </div>
         ) : null}
       </div>
+    </button>
+  );
+}
+
+function MacroMiniBar({
+  value,
+  goal,
+  max,
+  hex,
+}: {
+  value: number | null;
+  goal: number;
+  max: number;
+  hex: string;
+}) {
+  const goalPct = Math.min((goal / max) * 100, 100);
+  return (
+    <div
+      className="relative flex-1 overflow-hidden rounded-[4px] border border-border/60 bg-muted/40"
+      style={{ height: CHART_HEIGHT }}
+    >
+      <div
+        className="pointer-events-none absolute inset-x-0 z-10 h-px bg-foreground/40"
+        style={{ bottom: `${goalPct}%` }}
+        aria-hidden
+      />
+      <GoalFillBar value={value} goal={goal} max={max} color={hex} />
+    </div>
+  );
+}
+
+function MacroTripleColumn({
+  day,
+  goals,
+  maxes,
+  selected,
+  onToggle,
+}: {
+  day: DailyTotal;
+  goals: { proteinG: number; carbsG: number; fatG: number };
+  maxes: { protein: number; carbs: number; fat: number };
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={
+        day.calories === null
+          ? `${day.date}: not logged`
+          : `${day.date}: P ${formatGrams(day.proteinG)} · C ${formatGrams(day.carbsG)} · F ${formatGrams(day.fatG)}`
+      }
+      className="relative flex h-full flex-1 flex-col justify-end"
+    >
+      <div className="flex gap-[3px]" style={{ height: CHART_HEIGHT }}>
+        <MacroMiniBar
+          value={day.proteinG}
+          goal={goals.proteinG}
+          max={maxes.protein}
+          hex={MACRO_HEX.protein}
+        />
+        <MacroMiniBar
+          value={day.carbsG}
+          goal={goals.carbsG}
+          max={maxes.carbs}
+          hex={MACRO_HEX.carbs}
+        />
+        <MacroMiniBar
+          value={day.fatG}
+          goal={goals.fatG}
+          max={maxes.fat}
+          hex={MACRO_HEX.fat}
+        />
+      </div>
+      {selected && day.calories !== null ? (
+        <div className="pointer-events-none absolute inset-x-0 top-1 z-20 flex justify-center px-0.5">
+          <div className="rounded-sm bg-background/90 px-1.5 py-0.5 text-center text-[9px] font-medium leading-tight text-foreground shadow-sm backdrop-blur-sm">
+            P {formatGrams(day.proteinG)}
+            <br />C {formatGrams(day.carbsG)}
+            <br />F {formatGrams(day.fatG)}
+          </div>
+        </div>
+      ) : null}
     </button>
   );
 }
@@ -139,15 +256,22 @@ export function TrendVariantAWeek2({
   const canGoForward = cursor < maxWeekStart;
 
   const caloriesGoal = DEFAULT_GOALS.calories!;
-  const macroGoalTotal =
-    DEFAULT_GOALS.proteinG! + DEFAULT_GOALS.carbsG! + DEFAULT_GOALS.fatG!;
+  const macroGoals = macroGramGoalsFromCalories(caloriesGoal);
   const maxCalories = Math.max(
-    caloriesGoal * 1.15,
+    caloriesGoal * 1.5,
     ...weekDays.map((d) => d.calories ?? 0),
   );
-  const maxGrams = Math.max(
-    macroGoalTotal * 1.15,
-    ...weekDays.map((d) => (d.proteinG ?? 0) + (d.carbsG ?? 0) + (d.fatG ?? 0)),
+  const maxProtein = Math.max(
+    macroGoals.proteinG * 1.6,
+    ...weekDays.map((d) => d.proteinG ?? 0),
+  );
+  const maxCarbs = Math.max(
+    macroGoals.carbsG * 1.6,
+    ...weekDays.map((d) => d.carbsG ?? 0),
+  );
+  const maxFat = Math.max(
+    macroGoals.fatG * 1.6,
+    ...weekDays.map((d) => d.fatG ?? 0),
   );
   const avgCalories = averageOf(weekDays, "calories");
   const avgProtein = averageOf(weekDays, "proteinG");
@@ -177,38 +301,26 @@ export function TrendVariantAWeek2({
           </span>
         </div>
         <div className="flex gap-2" style={{ height: CHART_HEIGHT }}>
-          {weekDays.map((day) => {
-            const overGoal = (day.calories ?? 0) > caloriesGoal;
-            return (
-              <CandyColumn
-                key={day.date}
-                day={day}
-                max={maxCalories}
-                goal={caloriesGoal}
-                selected={selectedDay === day.date}
-                onToggle={() => toggle(day.date)}
-                sticker={formatCalories(day.calories)}
-                fillStyle={
-                  day.calories === null
-                    ? null
-                    : {
-                        heightPx: Math.round(
-                          (day.calories / maxCalories) * CHART_HEIGHT,
-                        ),
-                        background: overGoal ? "#f59e0b" : "var(--primary)",
-                      }
-                }
-              />
-            );
-          })}
+          {weekDays.map((day) => (
+            <CaloriesColumn
+              key={day.date}
+              day={day}
+              max={maxCalories}
+              goal={caloriesGoal}
+              selected={selectedDay === day.date}
+              onToggle={() => toggle(day.date)}
+            />
+          ))}
         </div>
         <div className="mt-1.5 flex gap-2">
           {weekDays.map((day) => (
             <span
               key={day.date}
-              className="flex-1 text-center text-[11px] text-muted-foreground"
+              className="flex-1 text-center text-[11px] leading-tight text-muted-foreground"
             >
               {weekdayLabel(day.date)}
+              <br />
+              <span className="tabular-nums">{shortDateLabel(day.date)}</span>
             </span>
           ))}
         </div>
@@ -222,50 +334,32 @@ export function TrendVariantAWeek2({
             {formatGrams(avgFat)}
           </span>
         </div>
+        <p className="mb-2 text-[11px] text-muted-foreground">
+          Goals (40/30/30 split of {formatCalories(caloriesGoal)}): P{" "}
+          {formatGrams(macroGoals.proteinG)} · C{" "}
+          {formatGrams(macroGoals.carbsG)} · F {formatGrams(macroGoals.fatG)}
+        </p>
         <div className="flex gap-2" style={{ height: CHART_HEIGHT }}>
-          {weekDays.map((day) => {
-            const proteinG = day.proteinG ?? 0;
-            const carbsG = day.carbsG ?? 0;
-            const fatG = day.fatG ?? 0;
-            const totalG = proteinG + carbsG + fatG;
-            const proteinPct = totalG > 0 ? (proteinG / totalG) * 100 : 0;
-            const carbsPct = totalG > 0 ? (carbsG / totalG) * 100 : 0;
-            return (
-              <CandyColumn
-                key={day.date}
-                day={day}
-                max={maxGrams}
-                goal={macroGoalTotal}
-                selected={selectedDay === day.date}
-                onToggle={() => toggle(day.date)}
-                sticker={
-                  <>
-                    P {formatGrams(day.proteinG)}
-                    <br />C {formatGrams(day.carbsG)}
-                    <br />F {formatGrams(day.fatG)}
-                  </>
-                }
-                fillStyle={
-                  day.calories === null
-                    ? null
-                    : {
-                        heightPx: Math.round(
-                          (totalG / maxGrams) * CHART_HEIGHT,
-                        ),
-                        background: `linear-gradient(to top, ${MACRO_HEX.protein} 0% ${proteinPct}%, ${MACRO_HEX.carbs} ${proteinPct}% ${proteinPct + carbsPct}%, ${MACRO_HEX.fat} ${proteinPct + carbsPct}% 100%)`,
-                      }
-                }
-              />
-            );
-          })}
+          {weekDays.map((day) => (
+            <MacroTripleColumn
+              key={day.date}
+              day={day}
+              goals={macroGoals}
+              maxes={{ protein: maxProtein, carbs: maxCarbs, fat: maxFat }}
+              selected={selectedDay === day.date}
+              onToggle={() => toggle(day.date)}
+            />
+          ))}
         </div>
         <div className="mt-1.5 flex gap-2">
           {weekDays.map((day) => (
             <span
               key={day.date}
-              className="flex-1 text-center text-[11px] text-muted-foreground"
+              className="flex-1 text-center text-[11px] leading-tight text-muted-foreground"
             >
               {weekdayLabel(day.date)}
+              <br />
+              <span className="tabular-nums">{shortDateLabel(day.date)}</span>
             </span>
           ))}
         </div>

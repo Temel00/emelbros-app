@@ -146,6 +146,26 @@ export function formatGrams(value: number | null): string {
   return value === null ? "—" : `${value}g`;
 }
 
+/**
+ * Cumulative start/width percentages for a list of values stacked in order
+ * (e.g. each food entry's slice of a shared totals bar) — shared by the day
+ * view's hover-on-food-card variants so both can position a highlight/line
+ * over the same entry's contribution without recomputing the offsets twice.
+ */
+export function segmentOffsets(
+  values: number[],
+): { startPct: number; widthPct: number }[] {
+  const total = values.reduce((a, b) => a + b, 0);
+  if (total <= 0) return values.map(() => ({ startPct: 0, widthPct: 0 }));
+  let cursor = 0;
+  return values.map((value) => {
+    const widthPct = (value / total) * 100;
+    const startPct = cursor;
+    cursor += widthPct;
+    return { startPct, widthPct };
+  });
+}
+
 export function shortDateLabel(iso: string): string {
   return new Date(`${iso}T00:00:00.000Z`).toLocaleDateString(undefined, {
     month: "short",
