@@ -4,8 +4,11 @@
  * Day view, visual-aid take 1 of 3 — a donut ring for the day's macro split
  * (gram-proportional, same palette as the stacked bars elsewhere) sitting
  * above an always-visible per-entry list; nothing is hidden behind hover
- * anymore. "Today" quick-jump is a pill in the card's top-right corner,
- * shown only when the cursor isn't on today.
+ * anymore. "Today" quick-jump take 2: a full-width banner above the nav row
+ * ("Viewing a past day · Jump to today →"), shown only when the cursor isn't
+ * on today — replaces the rejected corner pill. The card's top-right corner
+ * is now a permanent "See in month view" action, mirroring month view's
+ * "Open day view" but reversed.
  */
 
 import {
@@ -26,12 +29,14 @@ export function TrendVariantADay1({
   todayDate,
   onNavigate,
   onJumpToday,
+  onSeeInMonthView,
 }: {
   daily: DailyTotal[];
   cursor: string;
   todayDate: string;
   onNavigate: (delta: number) => void;
   onJumpToday: () => void;
+  onSeeInMonthView: (date: string) => void;
 }) {
   const index = daily.findIndex((d) => d.date === cursor);
   const day = daily[index] ?? daily[daily.length - 1];
@@ -48,17 +53,26 @@ export function TrendVariantADay1({
 
   return (
     <div className="relative rounded-xl border border-border p-4">
+      <button
+        type="button"
+        onClick={() => onSeeInMonthView(day.date)}
+        className="absolute right-4 top-4 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20"
+      >
+        See in month view →
+      </button>
+
       {cursor !== todayDate ? (
         <button
           type="button"
           onClick={onJumpToday}
-          className="absolute right-4 top-4 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20"
+          className="mb-3 flex w-full items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground hover:bg-muted/70"
         >
-          Today
+          <span>Viewing a past day</span>
+          <span className="font-medium text-primary">Jump to today →</span>
         </button>
       ) : null}
 
-      <div className="mb-4 flex items-center justify-between pr-14">
+      <div className="mb-4 flex items-center justify-between pr-40">
         <button
           type="button"
           onClick={() => onNavigate(-1)}

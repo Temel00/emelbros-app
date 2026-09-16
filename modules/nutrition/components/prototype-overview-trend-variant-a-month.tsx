@@ -14,12 +14,18 @@
  * Clicking any bar expands a detail card below both charts for that date,
  * with an "Open day view" action that bubbles up to switch the harness to
  * the day-view carousel on that exact date.
+ *
+ * The detail card's macro readout has 3 selectable styles (`cardStyle`):
+ * "1" compact abbreviations (P/C/F, the original), "2" full macro words
+ * spelled out, "3" the same full words with a colored dot per macro
+ * matching the goal-bar/legend palette.
  */
 
 import { useState } from "react";
 
 import {
   Bar,
+  MACRO_COLORS,
   MacroLegend,
   MacroStackedBar,
   formatCalories,
@@ -33,16 +39,80 @@ import {
   type DailyTotal,
 } from "./prototype-overview-shared";
 
+export type MonthCardStyle = "1" | "2" | "3";
+
+function DayDetailMacros({
+  day,
+  cardStyle,
+}: {
+  day: DailyTotal;
+  cardStyle: MonthCardStyle;
+}) {
+  if (cardStyle === "2") {
+    return (
+      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
+        <span>Protein {formatGrams(day.proteinG)}</span>
+        <span>Carbs {formatGrams(day.carbsG)}</span>
+        <span>Fat {formatGrams(day.fatG)}</span>
+      </div>
+    );
+  }
+
+  if (cardStyle === "3") {
+    return (
+      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
+        <span className="flex items-center gap-1.5 text-foreground">
+          <span
+            className={`size-2 rounded-full ${MACRO_COLORS.protein}`}
+            aria-hidden
+          />
+          Protein{" "}
+          <span className="text-muted-foreground">
+            {formatGrams(day.proteinG)}
+          </span>
+        </span>
+        <span className="flex items-center gap-1.5 text-foreground">
+          <span
+            className={`size-2 rounded-full ${MACRO_COLORS.carbs}`}
+            aria-hidden
+          />
+          Carbs{" "}
+          <span className="text-muted-foreground">
+            {formatGrams(day.carbsG)}
+          </span>
+        </span>
+        <span className="flex items-center gap-1.5 text-foreground">
+          <span
+            className={`size-2 rounded-full ${MACRO_COLORS.fat}`}
+            aria-hidden
+          />
+          Fat{" "}
+          <span className="text-muted-foreground">{formatGrams(day.fatG)}</span>
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <span className="text-muted-foreground">
+      P {formatGrams(day.proteinG)} · C {formatGrams(day.carbsG)} · F{" "}
+      {formatGrams(day.fatG)}
+    </span>
+  );
+}
+
 export function TrendVariantAMonth({
   daily,
   cursor,
   onNavigate,
   onOpenDayView,
+  cardStyle,
 }: {
   daily: DailyTotal[];
   cursor: string;
   onNavigate: (delta: number) => void;
   onOpenDayView: (date: string) => void;
+  cardStyle: MonthCardStyle;
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -175,16 +245,19 @@ export function TrendVariantAMonth({
             <p className="text-sm text-muted-foreground">
               Not logged — no meals recorded this day.
             </p>
-          ) : (
+          ) : cardStyle === "1" ? (
             <div className="flex items-baseline gap-4 text-sm">
               <span className="text-lg font-bold tabular-nums">
                 {formatCalories(selectedDay.calories)}
               </span>
-              <span className="text-muted-foreground">
-                P {formatGrams(selectedDay.proteinG)} · C{" "}
-                {formatGrams(selectedDay.carbsG)} · F{" "}
-                {formatGrams(selectedDay.fatG)}
+              <DayDetailMacros day={selectedDay} cardStyle={cardStyle} />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <span className="text-lg font-bold tabular-nums">
+                {formatCalories(selectedDay.calories)}
               </span>
+              <DayDetailMacros day={selectedDay} cardStyle={cardStyle} />
             </div>
           )}
         </div>

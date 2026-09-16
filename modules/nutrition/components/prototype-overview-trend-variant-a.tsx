@@ -27,6 +27,7 @@ import { TrendVariantAMonth } from "./prototype-overview-trend-variant-a-month";
 
 export type DayStyle = "1" | "2" | "3";
 export type WeekStyle = "1" | "2" | "3";
+export type MonthStyle = "1" | "2" | "3";
 
 export function TrendVariantA({
   range,
@@ -37,11 +38,13 @@ export function TrendVariantA({
   todayDate,
   dayStyle,
   weekStyle,
+  monthStyle,
   onNavigateDay,
   onNavigateWeek,
   onNavigateMonth,
   onJumpToday,
   onOpenDayView,
+  onSeeInMonthView,
 }: {
   range: OverviewRange;
   daily: DailyTotal[];
@@ -51,11 +54,13 @@ export function TrendVariantA({
   todayDate: string;
   dayStyle: DayStyle;
   weekStyle: WeekStyle;
+  monthStyle: MonthStyle;
   onNavigateDay: (delta: number) => void;
   onNavigateWeek: (delta: number) => void;
   onNavigateMonth: (delta: number) => void;
   onJumpToday: () => void;
   onOpenDayView: (date: string) => void;
+  onSeeInMonthView: (date: string) => void;
 }) {
   if (range === "day") {
     const DayComponent =
@@ -71,6 +76,7 @@ export function TrendVariantA({
         todayDate={todayDate}
         onNavigate={onNavigateDay}
         onJumpToday={onJumpToday}
+        onSeeInMonthView={onSeeInMonthView}
       />
     );
   }
@@ -97,6 +103,7 @@ export function TrendVariantA({
       cursor={monthCursor}
       onNavigate={onNavigateMonth}
       onOpenDayView={onOpenDayView}
+      cardStyle={monthStyle}
     />
   );
 }

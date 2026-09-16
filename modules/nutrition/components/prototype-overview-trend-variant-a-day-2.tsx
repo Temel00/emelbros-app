@@ -3,9 +3,15 @@
  *
  * Day view, visual-aid take 2 of 3 — calories + each macro gets its own
  * horizontal goal-progress bar (fill vs. DEFAULT_GOALS, with a distinct
- * treatment once the fill passes the goal tick) instead of a donut.
- * "Today" quick-jump is a floating circular button pinned to the card's
- * bottom-right corner.
+ * treatment once the fill passes the goal tick) instead of a donut. This is
+ * the confirmed winning header graphic.
+ *
+ * "Today" quick-jump take 2: a double-chevron icon button docked right next
+ * to the forward-nav arrow (a "skip to today" affordance in the same control
+ * cluster as prev/next), replacing the rejected floating corner circle. The
+ * per-entry macro readout now uses the option-1 colored-dot legend, recolored
+ * to match the goal bars above, instead of plain "P/C/F" letters. The card's
+ * top-right corner is a permanent "See in month view" action.
  */
 
 import {
@@ -69,12 +75,14 @@ export function TrendVariantADay2({
   todayDate,
   onNavigate,
   onJumpToday,
+  onSeeInMonthView,
 }: {
   daily: DailyTotal[];
   cursor: string;
   todayDate: string;
   onNavigate: (delta: number) => void;
   onJumpToday: () => void;
+  onSeeInMonthView: (date: string) => void;
 }) {
   const index = daily.findIndex((d) => d.date === cursor);
   const day = daily[index] ?? daily[daily.length - 1];
@@ -84,7 +92,15 @@ export function TrendVariantADay2({
 
   return (
     <div className="relative rounded-xl border border-border p-4">
-      <div className="mb-4 flex items-center justify-between">
+      <button
+        type="button"
+        onClick={() => onSeeInMonthView(day.date)}
+        className="absolute right-4 top-4 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20"
+      >
+        See in month view →
+      </button>
+
+      <div className="mb-4 flex items-center justify-between pr-36">
         <button
           type="button"
           onClick={() => onNavigate(-1)}
@@ -97,15 +113,28 @@ export function TrendVariantADay2({
         <h3 className="text-sm font-medium text-foreground">
           {fullDateLabel(day.date)}
         </h3>
-        <button
-          type="button"
-          onClick={() => onNavigate(1)}
-          disabled={!canGoForward}
-          aria-label="Next day"
-          className="rounded-full p-1.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
-        >
-          →
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={() => onNavigate(1)}
+            disabled={!canGoForward}
+            aria-label="Next day"
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
+          >
+            →
+          </button>
+          {cursor !== todayDate ? (
+            <button
+              type="button"
+              onClick={onJumpToday}
+              aria-label="Skip to today"
+              title="Skip to today"
+              className="rounded-full p-1.5 text-primary hover:bg-primary/10"
+            >
+              ⇥
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {day.calories === null ? (
@@ -158,26 +187,33 @@ export function TrendVariantADay2({
                   </span>
                 </div>
                 <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-                  <span>P {formatGrams(entry.proteinG)}</span>
-                  <span>C {formatGrams(entry.carbsG)}</span>
-                  <span>F {formatGrams(entry.fatG)}</span>
+                  <span className="flex items-center gap-1">
+                    <span
+                      className={`size-1.5 rounded-full ${MACRO_COLORS.protein}`}
+                      aria-hidden
+                    />
+                    {formatGrams(entry.proteinG)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span
+                      className={`size-1.5 rounded-full ${MACRO_COLORS.carbs}`}
+                      aria-hidden
+                    />
+                    {formatGrams(entry.carbsG)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span
+                      className={`size-1.5 rounded-full ${MACRO_COLORS.fat}`}
+                      aria-hidden
+                    />
+                    {formatGrams(entry.fatG)}
+                  </span>
                 </div>
               </li>
             ))}
           </ul>
         </div>
       )}
-
-      {cursor !== todayDate ? (
-        <button
-          type="button"
-          onClick={onJumpToday}
-          aria-label="Jump to today"
-          className="absolute bottom-3 right-3 flex size-11 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground shadow-lg hover:opacity-90"
-        >
-          Today
-        </button>
-      ) : null}
     </div>
   );
 }

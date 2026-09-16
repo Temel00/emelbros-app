@@ -3,11 +3,11 @@
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #125 resolves.
  *
- * Week view, goal-guideline take 3 of 3 — each day is a vertical capsule/pill
- * gauge track (rounded-full column) with a tick mark at the DEFAULT_GOALS
- * height; the fill is itself a pill that turns amber once it passes the
- * tick. No card-below-chart: clicking a day embeds a small badge directly on
- * top of that day's fill with the exact value.
+ * Week view, capsule-gauge family take 3 of 3 — a flat "segmented meter"
+ * treatment: the capsule is divided into discrete rounded-square segments
+ * (like a level meter/EQ), with the goal marked by a small side notch rather
+ * than a full-width line. Clicking a day docks the value as a chip sitting
+ * right at the top edge of the filled segments, inside the column itself.
  */
 
 import { useState } from "react";
@@ -29,14 +29,16 @@ import {
 import { WeekRangeHeader } from "./prototype-overview-week-header";
 
 const CHART_HEIGHT = 144;
+const SEGMENTS = 10;
+const SEGMENT_GAP = 3;
 
-function PillColumn({
+function SegmentColumn({
   day,
   max,
   goal,
   selected,
   onToggle,
-  badge,
+  chip,
   fillStyle,
 }: {
   day: DailyTotal;
@@ -44,10 +46,15 @@ function PillColumn({
   goal: number;
   selected: boolean;
   onToggle: () => void;
-  badge: React.ReactNode;
-  fillStyle: { heightPx: number; overGoal: boolean; background: string } | null;
+  chip: React.ReactNode;
+  fillStyle: { filledSegments: number; background: string } | null;
 }) {
-  const goalPct = Math.min((goal / max) * 100, 100);
+  const goalSegment = Math.round((goal / max) * SEGMENTS);
+  const segmentHeight =
+    (CHART_HEIGHT - SEGMENT_GAP * (SEGMENTS - 1)) / SEGMENTS;
+  const fillHeightPx = fillStyle
+    ? fillStyle.filledSegments * (segmentHeight + SEGMENT_GAP) - SEGMENT_GAP
+    : 0;
 
   return (
     <button
@@ -61,32 +68,46 @@ function PillColumn({
       className="relative flex h-full flex-1 flex-col justify-end"
     >
       <div
-        className="relative w-full overflow-visible rounded-full bg-muted"
+        className="relative w-full overflow-hidden rounded-[3px] bg-muted"
         style={{ height: CHART_HEIGHT }}
       >
-        <div
-          className="pointer-events-none absolute inset-x-[-3px] z-10 h-[2px] bg-foreground/40"
-          style={{ bottom: `${goalPct}%` }}
-          aria-hidden
-        />
+        {goalSegment > 0 && goalSegment <= SEGMENTS ? (
+          <div
+            className="pointer-events-none absolute -left-1 z-10 h-0.5 w-1.5 rounded-full bg-foreground/60"
+            style={{
+              bottom:
+                goalSegment * (segmentHeight + SEGMENT_GAP) - SEGMENT_GAP / 2,
+            }}
+            aria-hidden
+          />
+        ) : null}
         {fillStyle ? (
           <div
-            className="absolute inset-x-0 bottom-0 rounded-full"
-            style={{
-              height: Math.max(fillStyle.heightPx, 10),
-              background: fillStyle.background,
-            }}
+            className="absolute inset-x-0 bottom-0"
+            style={{ height: fillHeightPx, background: fillStyle.background }}
           />
         ) : (
-          <div className="absolute inset-x-0 bottom-0 h-2.5 rounded-full border border-dashed border-border" />
+          <div className="absolute inset-x-1 bottom-1.5 h-2 rounded-[3px] border border-dashed border-border" />
         )}
+        {/* segment gap lines punched on top of the continuous fill/track */}
+        {Array.from({ length: SEGMENTS - 1 }, (_, i) => (
+          <div
+            key={i}
+            className="pointer-events-none absolute inset-x-0 z-10 bg-card"
+            style={{
+              height: SEGMENT_GAP,
+              bottom: (i + 1) * segmentHeight + i * SEGMENT_GAP,
+            }}
+            aria-hidden
+          />
+        ))}
         {selected && fillStyle ? (
           <div
             className="absolute inset-x-0 z-20 flex justify-center"
-            style={{ bottom: Math.max(fillStyle.heightPx, 10) - 4 }}
+            style={{ bottom: Math.min(fillHeightPx, CHART_HEIGHT - 24) }}
           >
-            <div className="rounded-full border border-border bg-popover px-2 py-0.5 text-[10px] font-medium text-popover-foreground shadow-md">
-              {badge}
+            <div className="rounded-md bg-foreground px-1.5 py-0.5 text-center text-[10px] font-medium leading-tight text-background shadow-md">
+              {chip}
             </div>
           </div>
         ) : null}
@@ -168,22 +189,22 @@ export function TrendVariantAWeek3({
           {weekDays.map((day) => {
             const overGoal = (day.calories ?? 0) > caloriesGoal;
             return (
-              <PillColumn
+              <SegmentColumn
                 key={day.date}
                 day={day}
                 max={maxCalories}
                 goal={caloriesGoal}
                 selected={selectedDay === day.date}
                 onToggle={() => toggle(day.date)}
-                badge={formatCalories(day.calories)}
+                chip={formatCalories(day.calories)}
                 fillStyle={
                   day.calories === null
                     ? null
                     : {
-                        heightPx: Math.round(
-                          (day.calories / maxCalories) * CHART_HEIGHT,
+                        filledSegments: Math.max(
+                          Math.round((day.calories / maxCalories) * SEGMENTS),
+                          1,
                         ),
-                        overGoal,
                         background: overGoal ? "#f59e0b" : "var(--primary)",
                       }
                 }
@@ -217,31 +238,31 @@ export function TrendVariantAWeek3({
             const carbsG = day.carbsG ?? 0;
             const fatG = day.fatG ?? 0;
             const totalG = proteinG + carbsG + fatG;
-            const overGoal = totalG > macroGoalTotal;
             const proteinPct = totalG > 0 ? (proteinG / totalG) * 100 : 0;
             const carbsPct = totalG > 0 ? (carbsG / totalG) * 100 : 0;
             return (
-              <PillColumn
+              <SegmentColumn
                 key={day.date}
                 day={day}
                 max={maxGrams}
                 goal={macroGoalTotal}
                 selected={selectedDay === day.date}
                 onToggle={() => toggle(day.date)}
-                badge={
+                chip={
                   <>
-                    P {formatGrams(day.proteinG)} · C {formatGrams(day.carbsG)}{" "}
-                    · F {formatGrams(day.fatG)}
+                    P {formatGrams(day.proteinG)}
+                    <br />C {formatGrams(day.carbsG)}
+                    <br />F {formatGrams(day.fatG)}
                   </>
                 }
                 fillStyle={
                   day.calories === null
                     ? null
                     : {
-                        heightPx: Math.round(
-                          (totalG / maxGrams) * CHART_HEIGHT,
+                        filledSegments: Math.max(
+                          Math.round((totalG / maxGrams) * SEGMENTS),
+                          1,
                         ),
-                        overGoal,
                         background: `linear-gradient(to top, ${MACRO_HEX.protein} 0% ${proteinPct}%, ${MACRO_HEX.carbs} ${proteinPct}% ${proteinPct + carbsPct}%, ${MACRO_HEX.fat} ${proteinPct + carbsPct}% 100%)`,
                       }
                 }
