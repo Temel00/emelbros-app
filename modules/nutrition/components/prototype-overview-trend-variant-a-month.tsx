@@ -92,7 +92,7 @@ function GoalRowBar({
               const baseW = Math.max((baseVal / max) * 100, 2);
               const overW = (overVal / max) * 100;
               return (
-                <div className="absolute inset-y-0 left-0 flex">
+                <div className="absolute inset-0 flex">
                   <div
                     className={overW > 0 ? "" : "rounded-r-[2px]"}
                     style={{ width: `${baseW}%`, background: hex }}
