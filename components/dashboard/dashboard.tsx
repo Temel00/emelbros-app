@@ -12,6 +12,9 @@ import { resolveIcon } from "@/lib/icon";
 import { moveItem } from "@/lib/reorder";
 import type { ModuleManifest } from "@/platform/module-manifest";
 import { pinItem, reorderPins, unpinItem } from "@/platform/pins";
+// PROTOTYPE ONLY (wayfinder #125) — remove this import and the splice-in
+// below once the nutrition overview widget prototype is captured.
+import { usePrototypeOverviewWidgetItems } from "@/modules/nutrition/components/prototype-overview-widget-harness";
 
 // The launcher only needs a module's identity, not its scopes/widgets —
 // Pick keeps this in sync with ModuleManifest (ADR-0001) as it grows.
@@ -119,6 +122,12 @@ export function Dashboard({
   const [widgetOrder, setWidgetOrder] = useState(widgetPins);
   const [, startTransition] = useTransition();
 
+  // PROTOTYPE ONLY (wayfinder #125): mock overview widget card(s) spliced
+  // into the real grid so they're judged alongside My Darts/Habits/My
+  // Lists. Remove this line and the two usages below to revert.
+  const { items: prototypeWidgetItems, switcher: prototypeWidgetSwitcher } =
+    usePrototypeOverviewWidgetItems();
+
   // `tiles`/`widgetPins` only get a new reference when the server re-fetches
   // pins after a mutation revalidates the page — adopt them then, computed
   // during render rather than a post-commit effect (React's "adjusting state
@@ -217,13 +226,15 @@ export function Dashboard({
         title="At a glance"
         layout="stack"
         editing={editing}
-        items={widgetOrder.map(toWidgetItem)}
+        items={[...prototypeWidgetItems, ...widgetOrder.map(toWidgetItem)]}
         candidates={availableWidgets.map(toWidgetCandidate)}
         emptyMessage="No widgets pinned yet — use Edit to add one."
         onMove={handleWidgetMove}
         onUnpin={handleWidgetUnpin}
         onPin={handleWidgetPin}
       />
+
+      {prototypeWidgetSwitcher}
     </main>
   );
 }
