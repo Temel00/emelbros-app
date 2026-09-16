@@ -28,6 +28,18 @@ export type MonthlyTotal = { monthStart: string } & MacroTotals; // "YYYY-MM-01"
 
 export type OverviewRange = "day" | "week" | "month";
 
+/**
+ * Default per-day macro/calorie goals for the week view's guideline feature.
+ * No real goal-setting exists yet (out of scope for #125) — these are fixed
+ * placeholder numbers so the guideline visual has something to draw.
+ */
+export const DEFAULT_GOALS: MacroTotals = {
+  calories: 2200,
+  proteinG: 160,
+  carbsG: 220,
+  fatG: 70,
+};
+
 export type MockPlanEntry = {
   id: string;
   mealSlot: string;
@@ -50,6 +62,67 @@ export function weekStartOf(date: Date): string {
 
 export function monthStartOf(dateIso: string): string {
   return `${dateIso.slice(0, 7)}-01`;
+}
+
+export function fullDateLabel(iso: string): string {
+  return new Date(`${iso}T00:00:00.000Z`).toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export function weekdayLabel(iso: string): string {
+  return new Date(`${iso}T00:00:00.000Z`).toLocaleDateString(undefined, {
+    weekday: "short",
+    timeZone: "UTC",
+  });
+}
+
+export function monthLabel(monthStart: string): string {
+  return new Date(`${monthStart}T00:00:00.000Z`).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export function weekRangeLabel(weekStart: string): string {
+  const start = new Date(`${weekStart}T00:00:00.000Z`);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
+export function datesOfWeek(weekStart: string): string[] {
+  const start = new Date(`${weekStart}T00:00:00.000Z`);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start);
+    d.setUTCDate(d.getUTCDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
+}
+
+/** Monday-first grid of a month's dates, padded with nulls to align weekdays. */
+export function monthGridDays(monthStart: string): (string | null)[] {
+  const start = new Date(`${monthStart}T00:00:00.000Z`);
+  const year = start.getUTCFullYear();
+  const month = start.getUTCMonth();
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const firstWeekday = start.getUTCDay();
+  const leadingBlanks = firstWeekday === 0 ? 6 : firstWeekday - 1;
+  const cells: (string | null)[] = Array(leadingBlanks).fill(null);
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    cells.push(new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10));
+  }
+  return cells;
 }
 
 /** Deterministic pseudo-random so the same day always renders the same bar. */

@@ -20,10 +20,13 @@ export function PrototypeSwitcher({
   variants,
   current,
   paramKey = "variant",
+  stackIndex = 0,
 }: {
   variants: PrototypeVariant[];
   current: string;
   paramKey?: string;
+  /** When >0, offsets the bar upward so multiple switchers can share a page without overlapping. */
+  stackIndex?: number;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -70,7 +73,10 @@ export function PrototypeSwitcher({
   }
 
   return (
-    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full bg-neutral-900 px-2 py-1.5 font-mono text-xs text-white shadow-lg ring-1 ring-white/20">
+    <div
+      style={{ bottom: 16 + stackIndex * 52 }}
+      className="fixed left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full bg-neutral-900 px-2 py-1.5 font-mono text-xs text-white shadow-lg ring-1 ring-white/20"
+    >
       <button
         type="button"
         onClick={() => navigate(-1)}

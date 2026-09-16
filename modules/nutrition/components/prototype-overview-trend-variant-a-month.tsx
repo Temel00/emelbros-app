@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #125 resolves.
  *
@@ -8,7 +10,13 @@
  * Rollup stat is the month's per-logged-day average, not a total. Per-day
  * labels are dropped at this density (up to 31 narrow bars) in favor of a
  * hover title on each bar.
+ *
+ * Clicking any bar expands a detail card below both charts for that date,
+ * with an "Open day view" action that bubbles up to switch the harness to
+ * the day-view carousel on that exact date.
  */
+
+import { useState } from "react";
 
 import {
   Bar,
@@ -19,27 +27,25 @@ import {
 } from "./prototype-overview-marks";
 import {
   averageOf,
+  fullDateLabel,
+  monthLabel,
   monthStartOf,
   type DailyTotal,
 } from "./prototype-overview-shared";
-
-function monthLabel(monthStart: string): string {
-  return new Date(`${monthStart}T00:00:00.000Z`).toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
 
 export function TrendVariantAMonth({
   daily,
   cursor,
   onNavigate,
+  onOpenDayView,
 }: {
   daily: DailyTotal[];
   cursor: string;
   onNavigate: (delta: number) => void;
+  onOpenDayView: (date: string) => void;
 }) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
   const monthDays = daily.filter((d) => monthStartOf(d.date) === cursor);
   const minMonthStart = monthStartOf(daily[0].date);
   const maxMonthStart = monthStartOf(daily[daily.length - 1].date);
@@ -57,6 +63,14 @@ export function TrendVariantAMonth({
   const avgProtein = averageOf(monthDays, "proteinG");
   const avgCarbs = averageOf(monthDays, "carbsG");
   const avgFat = averageOf(monthDays, "fatG");
+
+  const selectedDay = selectedDate
+    ? (monthDays.find((d) => d.date === selectedDate) ?? null)
+    : null;
+
+  function toggle(date: string) {
+    setSelectedDate((cur) => (cur === date ? null : date));
+  }
 
   return (
     <div className="space-y-6">
@@ -93,17 +107,21 @@ export function TrendVariantAMonth({
         </div>
         <div className="flex items-end gap-1">
           {monthDays.map((day) => (
-            <div
+            <button
               key={day.date}
+              type="button"
+              onClick={() => toggle(day.date)}
               title={`${day.date}: ${formatCalories(day.calories)}`}
-              className="flex flex-1 flex-col items-center gap-1.5"
+              className={`flex flex-1 flex-col items-center gap-1.5 rounded-sm ${
+                selectedDate === day.date ? "bg-muted" : "hover:bg-muted/50"
+              }`}
             >
               <Bar
                 value={day.calories}
                 max={maxCalories}
                 colorClassName="bg-primary"
               />
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -118,10 +136,14 @@ export function TrendVariantAMonth({
         </div>
         <div className="flex items-end gap-1">
           {monthDays.map((day) => (
-            <div
+            <button
               key={day.date}
+              type="button"
+              onClick={() => toggle(day.date)}
               title={`${day.date}: P ${formatGrams(day.proteinG)} · C ${formatGrams(day.carbsG)} · F ${formatGrams(day.fatG)}`}
-              className="flex flex-1 flex-col items-center gap-1.5"
+              className={`flex flex-1 flex-col items-center gap-1.5 rounded-sm ${
+                selectedDate === day.date ? "bg-muted" : "hover:bg-muted/50"
+              }`}
             >
               <MacroStackedBar
                 proteinG={day.proteinG}
@@ -129,11 +151,44 @@ export function TrendVariantAMonth({
                 fatG={day.fatG}
                 maxG={maxGrams}
               />
-            </div>
+            </button>
           ))}
         </div>
         <MacroLegend className="mt-3" />
       </div>
+
+      {selectedDay ? (
+        <div className="rounded-xl border border-border p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-medium text-foreground">
+              {fullDateLabel(selectedDay.date)}
+            </h3>
+            <button
+              type="button"
+              onClick={() => onOpenDayView(selectedDay.date)}
+              className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20"
+            >
+              Open day view →
+            </button>
+          </div>
+          {selectedDay.calories === null ? (
+            <p className="text-sm text-muted-foreground">
+              Not logged — no meals recorded this day.
+            </p>
+          ) : (
+            <div className="flex items-baseline gap-4 text-sm">
+              <span className="text-lg font-bold tabular-nums">
+                {formatCalories(selectedDay.calories)}
+              </span>
+              <span className="text-muted-foreground">
+                P {formatGrams(selectedDay.proteinG)} · C{" "}
+                {formatGrams(selectedDay.carbsG)} · F{" "}
+                {formatGrams(selectedDay.fatG)}
+              </span>
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

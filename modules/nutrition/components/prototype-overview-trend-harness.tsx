@@ -35,6 +35,18 @@ const VARIANTS: PrototypeVariant[] = [
   { key: "c", name: "Table-first" },
 ];
 
+const DAY_STYLES: PrototypeVariant[] = [
+  { key: "1", name: "Donut ring · header pill" },
+  { key: "2", name: "Goal bars · floating button" },
+  { key: "3", name: "Gauge + mini bars · text chip" },
+];
+
+const WEEK_STYLES: PrototypeVariant[] = [
+  { key: "1", name: "Dashed guideline + overflow" },
+  { key: "2", name: "Ghost target + bubble" },
+  { key: "3", name: "Capsule gauge + badge" },
+];
+
 const RANGES: { key: OverviewRange; label: string }[] = [
   { key: "day", label: "Day" },
   { key: "week", label: "Week" },
@@ -62,6 +74,8 @@ function clamp(value: string, min: string, max: string): string {
 export function OverviewTrendHarness() {
   const searchParams = useSearchParams();
   const variant = searchParams.get("variant") ?? "a";
+  const dayStyle = (searchParams.get("dayStyle") ?? "1") as "1" | "2" | "3";
+  const weekStyle = (searchParams.get("weekStyle") ?? "1") as "1" | "2" | "3";
 
   const [range, setRange] = useState<OverviewRange>("day");
   const overview = useMemo(() => buildMockOverview(), []);
@@ -114,6 +128,9 @@ export function OverviewTrendHarness() {
           dayCursor={dayCursor}
           weekCursor={weekCursor}
           monthCursor={monthCursor}
+          todayDate={lastDate}
+          dayStyle={dayStyle}
+          weekStyle={weekStyle}
           onNavigateDay={(delta) =>
             setDayCursor((c) => clamp(addDays(c, delta), firstDate, lastDate))
           }
@@ -127,10 +144,31 @@ export function OverviewTrendHarness() {
               clamp(addMonths(c, delta), minMonthStart, maxMonthStart),
             )
           }
+          onJumpToday={() => setDayCursor(lastDate)}
+          onOpenDayView={(date) => {
+            setDayCursor(date);
+            setRange("day");
+          }}
         />
       )}
 
       <PrototypeSwitcher variants={VARIANTS} current={variant} />
+      {variant === "a" && range === "day" ? (
+        <PrototypeSwitcher
+          variants={DAY_STYLES}
+          current={dayStyle}
+          paramKey="dayStyle"
+          stackIndex={1}
+        />
+      ) : null}
+      {variant === "a" && range === "week" ? (
+        <PrototypeSwitcher
+          variants={WEEK_STYLES}
+          current={weekStyle}
+          paramKey="weekStyle"
+          stackIndex={1}
+        />
+      ) : null}
     </div>
   );
 }

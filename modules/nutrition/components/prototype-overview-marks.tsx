@@ -19,6 +19,13 @@ export const MACRO_COLORS = {
   fat: "bg-violet-500",
 } as const;
 
+/** Hex equivalents of MACRO_COLORS, for inline styles (gradients, SVG) that can't take a Tailwind class. */
+export const MACRO_HEX = {
+  protein: "#3b82f6",
+  carbs: "#d97706",
+  fat: "#8b5cf6",
+} as const;
+
 export const MACRO_TEXT_COLORS = {
   protein: "text-blue-600 dark:text-blue-400",
   carbs: "text-amber-700 dark:text-amber-500",
