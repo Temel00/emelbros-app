@@ -1,3 +1,4 @@
+import { NutritionWidget } from "@/modules/nutrition/components/nutrition-widget";
 import type { ModuleManifest } from "@/platform/module-manifest";
 
 /**
@@ -32,9 +33,14 @@ export const nutritionManifest = {
     },
     { table: "nutrition_log", policy: "fixed", scope: "private" },
   ],
-  // No widget yet — the Nutrition widget is about today's logged calories
-  // (§6), which is a later ticket than the log table itself.
-  widgets: [],
+  widgets: [
+    {
+      id: "nutrition",
+      name: "Nutrition",
+      description: "Today's logged calories and what's still planned to cook.",
+      component: NutritionWidget,
+    },
+  ],
   // None planned: a member's nutrition history is Private (§2), so there's
   // nothing to surface on a shared profile page (§5).
   profileSections: [],

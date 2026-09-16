@@ -12,9 +12,11 @@ import { cn } from "@/lib/utils";
 export function NutritionNav({
   active,
 }: {
-  active: "pantry" | "recipes" | "plan" | "shopping" | "log";
+  active: "pantry" | "recipes" | "plan" | "shopping" | "log" | "overview";
 }) {
-  const linkClass = (key: "pantry" | "recipes" | "plan" | "shopping" | "log") =>
+  const linkClass = (
+    key: "pantry" | "recipes" | "plan" | "shopping" | "log" | "overview",
+  ) =>
     cn(
       "rounded-lg px-2.5 py-1 text-sm font-medium",
       active === key
@@ -38,6 +40,9 @@ export function NutritionNav({
       </Link>
       <Link href="/nutrition/log" className={linkClass("log")}>
         Log
+      </Link>
+      <Link href="/nutrition/overview" className={linkClass("overview")}>
+        Overview
       </Link>
     </nav>
   );

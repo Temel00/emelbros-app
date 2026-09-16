@@ -18,7 +18,11 @@ function entry(overrides: Partial<LogEntryForTotals>): LogEntryForTotals {
 
 describe("computeOverviewTotals", () => {
   it("returns no buckets for an empty range", () => {
-    expect(computeOverviewTotals([])).toEqual({ daily: [], weekly: [] });
+    expect(computeOverviewTotals([])).toEqual({
+      daily: [],
+      weekly: [],
+      monthly: [],
+    });
   });
 
   it("sums several entries logged on the same day into one daily bucket", () => {
@@ -117,5 +121,85 @@ describe("computeOverviewTotals", () => {
     ]);
 
     expect(result.daily[0].proteinG).toBe(20);
+  });
+
+  it("rolls several days in the same month up into one monthly bucket", () => {
+    const result = computeOverviewTotals([
+      entry({
+        logged_at: "2026-09-01T08:00:00Z",
+        calories: 300,
+        protein_g: 20,
+        carbs_g: 30,
+        fat_g: 10,
+      }),
+      entry({
+        logged_at: "2026-09-10T08:00:00Z",
+        calories: 500,
+        protein_g: 25,
+        carbs_g: 40,
+        fat_g: 15,
+      }),
+    ]);
+
+    expect(result.monthly).toEqual([
+      {
+        monthStart: "2026-09-01",
+        calories: 800,
+        proteinG: 45,
+        carbsG: 70,
+        fatG: 25,
+      },
+    ]);
+  });
+
+  it("splits entries into separate monthly buckets when the range spans a month boundary", () => {
+    const result = computeOverviewTotals([
+      entry({ logged_at: "2026-08-31T09:00:00Z", calories: 400 }),
+      entry({ logged_at: "2026-09-01T09:00:00Z", calories: 600 }),
+      entry({ logged_at: "2026-09-20T09:00:00Z", calories: 700 }),
+    ]);
+
+    expect(result.monthly).toEqual([
+      expect.objectContaining({ monthStart: "2026-08-01", calories: 400 }),
+      expect.objectContaining({ monthStart: "2026-09-01", calories: 1300 }),
+    ]);
+  });
+
+  it("leaves a macro null in the monthly bucket when no day that month carried it", () => {
+    const result = computeOverviewTotals([
+      entry({
+        logged_at: "2026-09-01T08:00:00Z",
+        calories: 300,
+        protein_g: null,
+        carbs_g: 30,
+        fat_g: null,
+      }),
+      entry({
+        logged_at: "2026-09-10T08:00:00Z",
+        calories: null,
+        protein_g: null,
+        carbs_g: 20,
+        fat_g: null,
+      }),
+    ]);
+
+    expect(result.monthly).toEqual([
+      {
+        monthStart: "2026-09-01",
+        calories: 300,
+        proteinG: null,
+        carbsG: 50,
+        fatG: null,
+      },
+    ]);
+  });
+
+  it("counts a macro present on at least one day that month, even if other days omitted it", () => {
+    const result = computeOverviewTotals([
+      entry({ logged_at: "2026-09-01T08:00:00Z", protein_g: 20 }),
+      entry({ logged_at: "2026-09-10T08:00:00Z", protein_g: null }),
+    ]);
+
+    expect(result.monthly[0].proteinG).toBe(20);
   });
 });

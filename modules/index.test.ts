@@ -48,9 +48,8 @@ describe("module registry", () => {
       },
       { table: "nutrition_log", policy: "fixed", scope: "private" },
     ]);
-    // No widget yet — the Nutrition widget (today's logged calories) is a
-    // later ticket than the log table itself.
-    expect(nutrition?.widgets).toEqual([]);
+    expect(nutrition?.widgets).toHaveLength(1);
+    expect(nutrition?.widgets[0]?.id).toBe("nutrition");
     expect(nutrition?.profileSections).toEqual([]);
   });
 });

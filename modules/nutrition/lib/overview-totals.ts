@@ -37,9 +37,15 @@ export type WeeklyTotal = {
   weekStart: string;
 } & MacroTotals;
 
+export type MonthlyTotal = {
+  /** ISO date of the first of the month, "YYYY-MM-01". */
+  monthStart: string;
+} & MacroTotals;
+
 export type OverviewTotals = {
   daily: DailyTotal[];
   weekly: WeeklyTotal[];
+  monthly: MonthlyTotal[];
 };
 
 const ZERO_TOTALS: MacroTotals = {
@@ -81,6 +87,39 @@ function weekStartOf(date: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** The first of the month containing `date` (a "YYYY-MM-DD" string). */
+function monthStartOf(date: string): string {
+  return `${date.slice(0, 7)}-01`;
+}
+
+/**
+ * Rolls up already-computed daily buckets into monthly ones, rather than
+ * re-scanning the raw entries — the daily bucket is the source of truth for
+ * a day's totals (including its null-until-first-entry semantics), so the
+ * month is just a sum of those.
+ */
+function rollUpMonthly(daily: readonly DailyTotal[]): MonthlyTotal[] {
+  const byMonth = new Map<string, MacroTotals>();
+
+  for (const day of daily) {
+    const month = monthStartOf(day.date);
+    byMonth.set(month, addEntryLike(byMonth.get(month) ?? ZERO_TOTALS, day));
+  }
+
+  return [...byMonth.entries()]
+    .map(([monthStart, totals]) => ({ monthStart, ...totals }))
+    .sort((a, b) => a.monthStart.localeCompare(b.monthStart));
+}
+
+function addEntryLike(totals: MacroTotals, entry: MacroTotals): MacroTotals {
+  return {
+    calories: addNullable(totals.calories, entry.calories),
+    proteinG: addNullable(totals.proteinG, entry.proteinG),
+    carbsG: addNullable(totals.carbsG, entry.carbsG),
+    fatG: addNullable(totals.fatG, entry.fatG),
+  };
+}
+
 /**
  * Buckets `entries` (already scoped to one member and a date range by the
  * caller's query — this function does no filtering of its own) into daily
@@ -109,5 +148,5 @@ export function computeOverviewTotals(
     .map(([weekStart, totals]) => ({ weekStart, ...totals }))
     .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
 
-  return { daily, weekly };
+  return { daily, weekly, monthly: rollUpMonthly(daily) };
 }

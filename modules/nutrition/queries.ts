@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { nextIsoDate } from "@/modules/nutrition/lib/log-entry-title";
 import { computeOverviewTotals } from "@/modules/nutrition/lib/overview-totals";
 import type { OverviewTotals } from "@/modules/nutrition/lib/overview-totals";
 import type { Database } from "@/types/database";
@@ -915,4 +916,33 @@ export async function deleteLogEntry(
   const { error } = await supabase.from("nutrition_log").delete().eq("id", id);
 
   if (error) throw error;
+}
+
+export type LogEntryWithSource = LogEntryRow & {
+  food: { name: string } | null;
+  recipe: { title: string } | null;
+};
+
+/**
+ * One day's log entries with just enough of their food/recipe to resolve a
+ * display title — the overview day view's read (§3.6, wayfinder #126).
+ * Mirrors `getMealPlanEntries`'s join pattern, scoped to a single UTC
+ * calendar day via a half-open range rather than `getLogEntries`' date
+ * range, since `logged_at` is a full timestamp and a bare end-date bound
+ * would cut off entries logged later that day. Oldest first, matching the
+ * order meals were actually eaten.
+ */
+export async function getLogEntriesForDate(
+  supabase: SupabaseClient<Database>,
+  date: string,
+): Promise<LogEntryWithSource[]> {
+  const { data, error } = await supabase
+    .from("nutrition_log")
+    .select("*, food:nutrition_food(name), recipe:nutrition_recipe(title)")
+    .gte("logged_at", `${date}T00:00:00.000Z`)
+    .lt("logged_at", `${nextIsoDate(date)}T00:00:00.000Z`)
+    .order("logged_at", { ascending: true });
+
+  if (error) throw error;
+  return data as unknown as LogEntryWithSource[];
 }
