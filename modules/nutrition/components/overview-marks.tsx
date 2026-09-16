@@ -169,13 +169,12 @@ export function GoalFillBar({
   const scaleMax = goal / GOAL_FRACTION;
   const overGoal = value > goal;
   const solidPct = Math.min(value, goal) / scaleMax;
-  const stripedPct = overGoal ? Math.min(value - goal, scaleMax - goal) / scaleMax : 0;
+  const stripedPct = overGoal
+    ? Math.min(value - goal, scaleMax - goal) / scaleMax
+    : 0;
 
   return (
-    <div
-      className="flex w-full flex-col-reverse"
-      style={{ height: heightPx }}
-    >
+    <div className="flex w-full flex-col-reverse" style={{ height: heightPx }}>
       {overGoal && (
         <div
           className="w-full rounded-t-[4px]"

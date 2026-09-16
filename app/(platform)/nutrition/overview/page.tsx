@@ -53,7 +53,9 @@ export default async function OverviewPage({
 
   const [totals, dayEntries, selectedEntries] = await Promise.all([
     getOverviewTotals(supabase, range.start, range.end),
-    view === "day" ? getLogEntriesForDate(supabase, anchorIso) : Promise.resolve(null),
+    view === "day"
+      ? getLogEntriesForDate(supabase, anchorIso)
+      : Promise.resolve(null),
     view === "month" && selected
       ? getLogEntriesForDate(supabase, selected)
       : Promise.resolve(null),
@@ -120,7 +122,10 @@ export default async function OverviewPage({
               size="icon-sm"
               variant="outline"
               render={
-                <Link href={hrefFor({ anchor: prevAnchor })} aria-label="Previous">
+                <Link
+                  href={hrefFor({ anchor: prevAnchor })}
+                  aria-label="Previous"
+                >
                   <ChevronLeft />
                 </Link>
               }
@@ -145,7 +150,9 @@ export default async function OverviewPage({
             <Link
               href={hrefFor({ view: "day" })}
               className={`rounded-md px-2.5 py-1 text-sm font-medium ${
-                view === "day" ? "bg-background shadow-sm" : "text-muted-foreground"
+                view === "day"
+                  ? "bg-background shadow-sm"
+                  : "text-muted-foreground"
               }`}
             >
               Day
@@ -153,7 +160,9 @@ export default async function OverviewPage({
             <Link
               href={hrefFor({ view: "week" })}
               className={`rounded-md px-2.5 py-1 text-sm font-medium ${
-                view === "week" ? "bg-background shadow-sm" : "text-muted-foreground"
+                view === "week"
+                  ? "bg-background shadow-sm"
+                  : "text-muted-foreground"
               }`}
             >
               Week
@@ -161,7 +170,9 @@ export default async function OverviewPage({
             <Link
               href={hrefFor({ view: "month" })}
               className={`rounded-md px-2.5 py-1 text-sm font-medium ${
-                view === "month" ? "bg-background shadow-sm" : "text-muted-foreground"
+                view === "month"
+                  ? "bg-background shadow-sm"
+                  : "text-muted-foreground"
               }`}
             >
               Month
@@ -176,7 +187,10 @@ export default async function OverviewPage({
           />
         )}
         {view === "week" && (
-          <OverviewWeekView days={getWeekDays(anchorDate)} daily={totals.daily} />
+          <OverviewWeekView
+            days={getWeekDays(anchorDate)}
+            daily={totals.daily}
+          />
         )}
         {view === "month" && (
           <OverviewMonthView
@@ -184,7 +198,9 @@ export default async function OverviewPage({
             daily={totals.daily}
             selected={selected ?? null}
             selectedTotals={
-              selected ? totals.daily.find((d) => d.date === selected) : undefined
+              selected
+                ? totals.daily.find((d) => d.date === selected)
+                : undefined
             }
             selectedEntries={selectedEntries}
             hrefFor={hrefFor}

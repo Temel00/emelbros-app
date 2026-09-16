@@ -23,9 +23,24 @@ const ROWS = [
     goal: DEFAULT_GOALS.calories,
     color: "var(--color-primary)",
   },
-  { key: "proteinG" as const, label: "Protein", goal: MACRO_GOALS.proteinG, color: MACRO_HEX.protein },
-  { key: "carbsG" as const, label: "Carbs", goal: MACRO_GOALS.carbsG, color: MACRO_HEX.carbs },
-  { key: "fatG" as const, label: "Fat", goal: MACRO_GOALS.fatG, color: MACRO_HEX.fat },
+  {
+    key: "proteinG" as const,
+    label: "Protein",
+    goal: MACRO_GOALS.proteinG,
+    color: MACRO_HEX.protein,
+  },
+  {
+    key: "carbsG" as const,
+    label: "Carbs",
+    goal: MACRO_GOALS.carbsG,
+    color: MACRO_HEX.carbs,
+  },
+  {
+    key: "fatG" as const,
+    label: "Fat",
+    goal: MACRO_GOALS.fatG,
+    color: MACRO_HEX.fat,
+  },
 ];
 
 /** Keeps a grid row's cells direct siblings of the outer grid (mirrors `MealPlanWeekView`'s `GridRow`). */

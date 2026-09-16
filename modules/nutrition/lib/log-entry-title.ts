@@ -21,6 +21,9 @@ export function nextIsoDate(date: string): string {
  */
 export function logEntryTitle(entry: LogEntryWithSource): string {
   return (
-    entry.food?.name ?? entry.recipe?.title ?? entry.description ?? "Untitled entry"
+    entry.food?.name ??
+    entry.recipe?.title ??
+    entry.description ??
+    "Untitled entry"
   );
 }

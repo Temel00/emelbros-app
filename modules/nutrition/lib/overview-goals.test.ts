@@ -31,10 +31,7 @@ describe("averageOf", () => {
   it("returns null when no day in the range was logged", () => {
     expect(averageOf([], "calories")).toBeNull();
     expect(
-      averageOf(
-        [day({ calories: null }), day({ calories: null })],
-        "calories",
-      ),
+      averageOf([day({ calories: null }), day({ calories: null })], "calories"),
     ).toBeNull();
   });
 

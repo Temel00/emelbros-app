@@ -16,9 +16,24 @@ import type { LogEntryWithSource } from "@/modules/nutrition/queries";
 const MACRO_GOALS = macroGramGoalsFromCalories(DEFAULT_GOALS.calories);
 
 const MACRO_ROWS = [
-  { key: "proteinG" as const, label: "Protein", goal: MACRO_GOALS.proteinG, color: MACRO_HEX.protein },
-  { key: "carbsG" as const, label: "Carbs", goal: MACRO_GOALS.carbsG, color: MACRO_HEX.carbs },
-  { key: "fatG" as const, label: "Fat", goal: MACRO_GOALS.fatG, color: MACRO_HEX.fat },
+  {
+    key: "proteinG" as const,
+    label: "Protein",
+    goal: MACRO_GOALS.proteinG,
+    color: MACRO_HEX.protein,
+  },
+  {
+    key: "carbsG" as const,
+    label: "Carbs",
+    goal: MACRO_GOALS.carbsG,
+    color: MACRO_HEX.carbs,
+  },
+  {
+    key: "fatG" as const,
+    label: "Fat",
+    goal: MACRO_GOALS.fatG,
+    color: MACRO_HEX.fat,
+  },
 ];
 
 /**
@@ -67,9 +82,7 @@ export function OverviewDayView({
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-muted-foreground">Logged</h2>
         {entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nothing logged yet.
-          </p>
+          <p className="text-sm text-muted-foreground">Nothing logged yet.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
             {entries.map((entry) => (

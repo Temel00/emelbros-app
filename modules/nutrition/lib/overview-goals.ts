@@ -1,4 +1,7 @@
-import type { DailyTotal, MacroTotals } from "@/modules/nutrition/lib/overview-totals";
+import type {
+  DailyTotal,
+  MacroTotals,
+} from "@/modules/nutrition/lib/overview-totals";
 
 /**
  * Fixed placeholder per-day macro/calorie goals for the overview's
