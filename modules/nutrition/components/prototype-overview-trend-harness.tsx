@@ -35,18 +35,6 @@ const VARIANTS: PrototypeVariant[] = [
   { key: "c", name: "Table-first" },
 ];
 
-const DAY_STYLES: PrototypeVariant[] = [
-  { key: "1", name: "Hover · bar highlight" },
-  { key: "2", name: "Goal bars · floating button" },
-  { key: "3", name: "Hover · line indicators" },
-];
-
-const WEEK_STYLES: PrototypeVariant[] = [
-  { key: "1", name: "Capsule · graduated cylinder" },
-  { key: "2", name: "Goal-fill · per-macro overflow" },
-  { key: "3", name: "Goal-fill · segmented overflow" },
-];
-
 const RANGES: { key: OverviewRange; label: string }[] = [
   { key: "day", label: "Day" },
   { key: "week", label: "Week" },
@@ -74,8 +62,6 @@ function clamp(value: string, min: string, max: string): string {
 export function OverviewTrendHarness() {
   const searchParams = useSearchParams();
   const variant = searchParams.get("variant") ?? "a";
-  const dayStyle = (searchParams.get("dayStyle") ?? "1") as "1" | "2" | "3";
-  const weekStyle = (searchParams.get("weekStyle") ?? "1") as "1" | "2" | "3";
 
   const [range, setRange] = useState<OverviewRange>("day");
   const overview = useMemo(() => buildMockOverview(), []);
@@ -129,8 +115,6 @@ export function OverviewTrendHarness() {
           weekCursor={weekCursor}
           monthCursor={monthCursor}
           todayDate={lastDate}
-          dayStyle={dayStyle}
-          weekStyle={weekStyle}
           onNavigateDay={(delta) =>
             setDayCursor((c) => clamp(addDays(c, delta), firstDate, lastDate))
           }
@@ -157,22 +141,6 @@ export function OverviewTrendHarness() {
       )}
 
       <PrototypeSwitcher variants={VARIANTS} current={variant} />
-      {variant === "a" && range === "day" ? (
-        <PrototypeSwitcher
-          variants={DAY_STYLES}
-          current={dayStyle}
-          paramKey="dayStyle"
-          stackIndex={1}
-        />
-      ) : null}
-      {variant === "a" && range === "week" ? (
-        <PrototypeSwitcher
-          variants={WEEK_STYLES}
-          current={weekStyle}
-          paramKey="weekStyle"
-          stackIndex={1}
-        />
-      ) : null}
     </div>
   );
 }

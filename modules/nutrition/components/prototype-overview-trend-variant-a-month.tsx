@@ -152,38 +152,40 @@ export function TrendVariantAMonth({
             Avg/day: {formatCalories(avgCalories)}
           </span>
         </div>
-        <div className="flex items-end gap-1">
-          {monthDays.map((day) => {
-            const selected = selectedDate === day.date;
-            return (
-              <button
-                key={day.date}
-                type="button"
-                onClick={() => toggle(day.date)}
-                title={`${day.date}: ${formatCalories(day.calories)}`}
-                className={`flex flex-1 flex-col items-center gap-1 rounded-md border p-1 pb-0.5 transition-colors ${
-                  selected
-                    ? "border-primary bg-primary/15 ring-1 ring-primary"
-                    : "border-transparent hover:bg-muted/50"
-                }`}
-              >
-                <Bar
-                  value={day.calories}
-                  max={maxCalories}
-                  colorClassName="bg-primary"
-                />
-                <span
-                  className={`text-[9px] tabular-nums ${
+        <div className="overflow-x-auto">
+          <div className="flex items-end gap-1">
+            {monthDays.map((day) => {
+              const selected = selectedDate === day.date;
+              return (
+                <button
+                  key={day.date}
+                  type="button"
+                  onClick={() => toggle(day.date)}
+                  title={`${day.date}: ${formatCalories(day.calories)}`}
+                  className={`flex w-6 shrink-0 flex-col items-center gap-1 rounded-md border p-1 pb-0.5 transition-colors ${
                     selected
-                      ? "font-bold text-primary"
-                      : "text-muted-foreground"
+                      ? "border-primary bg-primary/15 ring-1 ring-primary"
+                      : "border-transparent hover:bg-muted/50"
                   }`}
                 >
-                  {dayOfMonth(day.date)}
-                </span>
-              </button>
-            );
-          })}
+                  <Bar
+                    value={day.calories}
+                    max={maxCalories}
+                    colorClassName="bg-primary"
+                  />
+                  <span
+                    className={`text-[9px] tabular-nums ${
+                      selected
+                        ? "font-bold text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {dayOfMonth(day.date)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -195,39 +197,41 @@ export function TrendVariantAMonth({
             {formatGrams(avgFat)}
           </span>
         </div>
-        <div className="flex items-end gap-1">
-          {monthDays.map((day) => {
-            const selected = selectedDate === day.date;
-            return (
-              <button
-                key={day.date}
-                type="button"
-                onClick={() => toggle(day.date)}
-                title={`${day.date}: P ${formatGrams(day.proteinG)} · C ${formatGrams(day.carbsG)} · F ${formatGrams(day.fatG)}`}
-                className={`flex flex-1 flex-col items-center gap-1 rounded-md border p-1 pb-0.5 transition-colors ${
-                  selected
-                    ? "border-primary bg-primary/15 ring-1 ring-primary"
-                    : "border-transparent hover:bg-muted/50"
-                }`}
-              >
-                <MacroStackedBar
-                  proteinG={day.proteinG}
-                  carbsG={day.carbsG}
-                  fatG={day.fatG}
-                  maxG={maxGrams}
-                />
-                <span
-                  className={`text-[9px] tabular-nums ${
+        <div className="overflow-x-auto">
+          <div className="flex items-end gap-1">
+            {monthDays.map((day) => {
+              const selected = selectedDate === day.date;
+              return (
+                <button
+                  key={day.date}
+                  type="button"
+                  onClick={() => toggle(day.date)}
+                  title={`${day.date}: P ${formatGrams(day.proteinG)} · C ${formatGrams(day.carbsG)} · F ${formatGrams(day.fatG)}`}
+                  className={`flex w-6 shrink-0 flex-col items-center gap-1 rounded-md border p-1 pb-0.5 transition-colors ${
                     selected
-                      ? "font-bold text-primary"
-                      : "text-muted-foreground"
+                      ? "border-primary bg-primary/15 ring-1 ring-primary"
+                      : "border-transparent hover:bg-muted/50"
                   }`}
                 >
-                  {dayOfMonth(day.date)}
-                </span>
-              </button>
-            );
-          })}
+                  <MacroStackedBar
+                    proteinG={day.proteinG}
+                    carbsG={day.carbsG}
+                    fatG={day.fatG}
+                    maxG={maxGrams}
+                  />
+                  <span
+                    className={`text-[9px] tabular-nums ${
+                      selected
+                        ? "font-bold text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {dayOfMonth(day.date)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
         <MacroLegend className="mt-3" />
       </div>

@@ -1,18 +1,27 @@
+"use client";
+
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #125 resolves.
  *
- * Day view, visual-aid take 2 of 3 — calories + each macro gets its own
- * horizontal goal-progress bar (fill vs. DEFAULT_GOALS, with a distinct
- * treatment once the fill passes the goal tick) instead of a donut. This is
- * the confirmed winning header graphic.
+ * Day view — LOCKED IN as the sole day-view layout per live feedback.
+ * Calories + each macro gets its own horizontal goal-progress bar (fill vs.
+ * DEFAULT_GOALS, with a distinct treatment once the fill passes the goal
+ * tick) instead of a donut.
  *
- * "Today" quick-jump take 2: a double-chevron icon button docked right next
- * to the forward-nav arrow (a "skip to today" affordance in the same control
- * cluster as prev/next), replacing the rejected floating corner circle. The
- * per-entry macro readout now uses the option-1 colored-dot legend, recolored
- * to match the goal bars above, instead of plain "P/C/F" letters. The card's
- * top-right corner is a permanent "See in month view" action.
+ * Hovering (or focusing) a food card now brackets the exact sub-region of
+ * each goal bar's fill that entry contributes (offset within that bar's own
+ * value, via `segmentOffsets`), while the rest of that bar's fill recedes
+ * behind a muted-track wash so the highlighted slice reads clearly. The
+ * bracket and wash are always mounted and only animate opacity/position, so
+ * moving between entries slides smoothly instead of snapping.
+ *
+ * "Today" quick-jump: a double-chevron icon button docked right next to the
+ * forward-nav arrow. The per-entry macro readout uses a colored-dot legend
+ * recolored to match the goal bars above. The card's top-right corner is a
+ * permanent "See in month view" action.
  */
+
+import { useState } from "react";
 
 import {
   buildMockDayEntries,
@@ -24,6 +33,7 @@ import {
   MACRO_COLORS,
   formatCalories,
   formatGrams,
+  segmentOffsets,
 } from "./prototype-overview-marks";
 
 function GoalBar({
@@ -32,18 +42,37 @@ function GoalBar({
   goal,
   fillClassName,
   format,
+  entryValues,
+  hoveredIndex,
 }: {
   label: string;
   value: number | null;
   goal: number;
   fillClassName: string;
   format: (v: number | null) => string;
+  entryValues: number[];
+  hoveredIndex: number;
 }) {
   const v = value ?? 0;
   const barMax = Math.max(v, goal) * 1.1;
   const fillPct = barMax > 0 ? Math.min((v / barMax) * 100, 100) : 0;
   const goalPct = barMax > 0 ? (goal / barMax) * 100 : 0;
   const overGoal = v > goal;
+
+  const offsets = segmentOffsets(entryValues);
+  const local =
+    hoveredIndex >= 0
+      ? (offsets[hoveredIndex] ?? { startPct: 0, widthPct: 0 })
+      : { startPct: 0, widthPct: 0 };
+  const highlightStartPct = (local.startPct / 100) * fillPct;
+  const highlightWidthPct = (local.widthPct / 100) * fillPct;
+  const active = hoveredIndex >= 0 && highlightWidthPct > 0;
+
+  const dimBeforeWidth = active ? highlightStartPct : 0;
+  const dimAfterStart = active
+    ? highlightStartPct + highlightWidthPct
+    : fillPct;
+  const dimAfterWidth = active ? Math.max(fillPct - dimAfterStart, 0) : 0;
 
   return (
     <div>
@@ -58,6 +87,25 @@ function GoalBar({
         <div
           className={`h-full rounded-full ${fillClassName} ${overGoal ? "ring-2 ring-offset-1 ring-offset-card" : ""}`}
           style={{ width: `${fillPct}%` }}
+        />
+        <div
+          className="pointer-events-none absolute inset-y-0 left-0 z-10 rounded-full bg-muted/75 transition-all duration-200 ease-out"
+          style={{ width: `${dimBeforeWidth}%` }}
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-y-0 z-10 rounded-full bg-muted/75 transition-all duration-200 ease-out"
+          style={{ left: `${dimAfterStart}%`, width: `${dimAfterWidth}%` }}
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -inset-y-[3px] z-20 rounded-[2px] border-x-2 border-foreground bg-foreground/10 transition-all duration-200 ease-out"
+          style={{
+            left: `${highlightStartPct}%`,
+            width: `${highlightWidthPct}%`,
+            opacity: active ? 1 : 0,
+          }}
+          aria-hidden
         />
         <div
           className="absolute top-0 h-full w-px bg-foreground/50"
@@ -84,11 +132,14 @@ export function TrendVariantADay2({
   onJumpToday: () => void;
   onSeeInMonthView: (date: string) => void;
 }) {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
   const index = daily.findIndex((d) => d.date === cursor);
   const day = daily[index] ?? daily[daily.length - 1];
   const entries = buildMockDayEntries(day);
   const canGoBack = index > 0;
   const canGoForward = index >= 0 && index < daily.length - 1;
+  const hoveredIndex = entries.findIndex((e) => e.id === hoveredId);
 
   return (
     <div className="relative rounded-xl border border-border p-4">
@@ -150,6 +201,8 @@ export function TrendVariantADay2({
               goal={DEFAULT_GOALS.calories!}
               fillClassName="bg-primary"
               format={formatCalories}
+              entryValues={entries.map((e) => e.calories)}
+              hoveredIndex={hoveredIndex}
             />
             <GoalBar
               label="Protein"
@@ -157,6 +210,8 @@ export function TrendVariantADay2({
               goal={DEFAULT_GOALS.proteinG!}
               fillClassName={MACRO_COLORS.protein}
               format={formatGrams}
+              entryValues={entries.map((e) => e.proteinG)}
+              hoveredIndex={hoveredIndex}
             />
             <GoalBar
               label="Carbs"
@@ -164,6 +219,8 @@ export function TrendVariantADay2({
               goal={DEFAULT_GOALS.carbsG!}
               fillClassName={MACRO_COLORS.carbs}
               format={formatGrams}
+              entryValues={entries.map((e) => e.carbsG)}
+              hoveredIndex={hoveredIndex}
             />
             <GoalBar
               label="Fat"
@@ -171,6 +228,8 @@ export function TrendVariantADay2({
               goal={DEFAULT_GOALS.fatG!}
               fillClassName={MACRO_COLORS.fat}
               format={formatGrams}
+              entryValues={entries.map((e) => e.fatG)}
+              hoveredIndex={hoveredIndex}
             />
           </div>
 
@@ -178,7 +237,16 @@ export function TrendVariantADay2({
             {entries.map((entry) => (
               <li
                 key={entry.id}
-                className="rounded-lg border border-border p-2.5 text-sm"
+                tabIndex={0}
+                onMouseEnter={() => setHoveredId(entry.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                onFocus={() => setHoveredId(entry.id)}
+                onBlur={() => setHoveredId(null)}
+                className={`rounded-lg border p-2.5 text-sm outline-none transition-colors ${
+                  hoveredId === entry.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border"
+                }`}
               >
                 <div className="flex items-center justify-between">
                   <span>{entry.title}</span>
