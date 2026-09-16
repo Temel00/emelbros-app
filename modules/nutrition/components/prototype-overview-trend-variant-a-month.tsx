@@ -15,67 +15,137 @@
  * with an "Open day view" action that bubbles up to switch the harness to
  * the day-view carousel on that exact date.
  *
- * Per live feedback, the detail card's macro readout is locked in on the
- * "full words + colored dot matching the goal-bar/legend palette" style —
- * the other two candidate styles (compact P/C/F abbreviations, full words
- * with no dot) are removed rather than kept as a switcher option. The
- * selected-day highlight was also called out as too subtle (a flat
+ * Per live feedback, the detail card's macro readout is locked in on **3
+ * stacked horizontal goal-guideline bars** (one row per macro) rather than
+ * the earlier "full words + colored dot" readout — each row fills toward
+ * its own goal (the same 40/30/30-of-calories split week view uses) and
+ * keeps going in the striped over-goal texture past it, so an over-goal
+ * macro reads at a glance instead of requiring a mental gram comparison.
+ * The selected-day highlight was also called out as too subtle (a flat
  * `bg-muted` tint indistinguishable from hover) — it now gets a primary
  * ring/fill plus a permanently-visible day-of-month number so the selected
  * column reads unambiguously against its neighbors.
+ *
+ * `selectedDate` is now a controlled prop (was local state) so the harness
+ * can land this view with a specific day already highlighted — e.g. day
+ * view's "See in month view" action, or switching range tabs while a date
+ * is in focus elsewhere.
  */
 
-import { useState } from "react";
-
 import {
-  Bar,
-  MACRO_COLORS,
+  MACRO_HEX,
   MacroLegend,
   MacroStackedBar,
+  Bar,
   formatCalories,
   formatGrams,
+  stripedFill,
 } from "./prototype-overview-marks";
 import {
+  DEFAULT_GOALS,
   averageOf,
   fullDateLabel,
+  macroGramGoalsFromCalories,
   monthLabel,
   monthStartOf,
   type DailyTotal,
 } from "./prototype-overview-shared";
 
+const GOAL_FRACTION = 1 / 1.6;
+
 function dayOfMonth(iso: string): number {
   return Number(iso.slice(8, 10));
 }
 
-function DayDetailMacros({ day }: { day: DailyTotal }) {
+function GoalRowBar({
+  label,
+  value,
+  goal,
+  hex,
+}: {
+  label: string;
+  value: number | null;
+  goal: number;
+  hex: string;
+}) {
+  const max = goal / GOAL_FRACTION;
+  const goalPct = Math.min((goal / max) * 100, 100);
+
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
-      <span className="flex items-center gap-1.5 text-foreground">
-        <span
-          className={`size-2 rounded-full ${MACRO_COLORS.protein}`}
-          aria-hidden
-        />
-        Protein{" "}
-        <span className="text-muted-foreground">
-          {formatGrams(day.proteinG)}
-        </span>
+    <div className="flex items-center gap-2">
+      <span className="w-14 shrink-0 text-xs text-muted-foreground">
+        {label}
       </span>
-      <span className="flex items-center gap-1.5 text-foreground">
-        <span
-          className={`size-2 rounded-full ${MACRO_COLORS.carbs}`}
-          aria-hidden
-        />
-        Carbs{" "}
-        <span className="text-muted-foreground">{formatGrams(day.carbsG)}</span>
+      <div className="relative h-3 flex-1 overflow-hidden rounded-[3px] border border-border/60 bg-muted/40">
+        {value === null ? (
+          <div className="absolute inset-2 rounded-[2px] border border-dashed border-border" />
+        ) : (
+          <>
+            <div
+              className="pointer-events-none absolute inset-y-0 z-10 w-px bg-foreground/40"
+              style={{ left: `${goalPct}%` }}
+              aria-hidden
+            />
+            {(() => {
+              const baseVal = Math.min(value, goal);
+              const overVal = Math.max(value - goal, 0);
+              const baseW = Math.max((baseVal / max) * 100, 2);
+              const overW = (overVal / max) * 100;
+              return (
+                <div className="absolute inset-y-0 left-0 flex">
+                  <div
+                    className={overW > 0 ? "" : "rounded-r-[2px]"}
+                    style={{ width: `${baseW}%`, background: hex }}
+                  />
+                  {overW > 0 ? (
+                    <div
+                      className="rounded-r-[2px]"
+                      style={{
+                        width: `${overW}%`,
+                        background: stripedFill(hex),
+                      }}
+                    />
+                  ) : null}
+                </div>
+              );
+            })()}
+          </>
+        )}
+      </div>
+      <span className="w-10 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+        {formatGrams(value)}
       </span>
-      <span className="flex items-center gap-1.5 text-foreground">
-        <span
-          className={`size-2 rounded-full ${MACRO_COLORS.fat}`}
-          aria-hidden
-        />
-        Fat{" "}
-        <span className="text-muted-foreground">{formatGrams(day.fatG)}</span>
-      </span>
+    </div>
+  );
+}
+
+function DayDetailMacros({
+  day,
+  goals,
+}: {
+  day: DailyTotal;
+  goals: { proteinG: number; carbsG: number; fatG: number };
+}) {
+  return (
+    <div className="space-y-1.5">
+      <GoalRowBar
+        label="Protein"
+        value={day.proteinG}
+        goal={goals.proteinG}
+        hex={MACRO_HEX.protein}
+      />
+      <GoalRowBar
+        label="Carbs"
+        value={day.carbsG}
+        goal={goals.carbsG}
+        hex={MACRO_HEX.carbs}
+      />
+      <GoalRowBar
+        label="Fat"
+        value={day.fatG}
+        goal={goals.fatG}
+        hex={MACRO_HEX.fat}
+      />
     </div>
   );
 }
@@ -85,13 +155,17 @@ export function TrendVariantAMonth({
   cursor,
   onNavigate,
   onOpenDayView,
+  selectedDate,
+  onSelectedDateChange,
 }: {
   daily: DailyTotal[];
   cursor: string;
   onNavigate: (delta: number) => void;
   onOpenDayView: (date: string) => void;
+  selectedDate: string | null;
+  onSelectedDateChange: (date: string | null) => void;
 }) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const macroGoals = macroGramGoalsFromCalories(DEFAULT_GOALS.calories!);
 
   const monthDays = daily.filter((d) => monthStartOf(d.date) === cursor);
   const minMonthStart = monthStartOf(daily[0].date);
@@ -116,7 +190,7 @@ export function TrendVariantAMonth({
     : null;
 
   function toggle(date: string) {
-    setSelectedDate((cur) => (cur === date ? null : date));
+    onSelectedDateChange(selectedDate === date ? null : date);
   }
 
   return (
@@ -259,7 +333,7 @@ export function TrendVariantAMonth({
               <span className="text-lg font-bold tabular-nums">
                 {formatCalories(selectedDay.calories)}
               </span>
-              <DayDetailMacros day={selectedDay} />
+              <DayDetailMacros day={selectedDay} goals={macroGoals} />
             </div>
           )}
         </div>

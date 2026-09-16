@@ -36,6 +36,8 @@ export function TrendVariantA({
   onJumpToday,
   onOpenDayView,
   onSeeInMonthView,
+  monthSelectedDate,
+  onMonthSelectedDateChange,
 }: {
   range: OverviewRange;
   daily: DailyTotal[];
@@ -49,6 +51,8 @@ export function TrendVariantA({
   onJumpToday: () => void;
   onOpenDayView: (date: string) => void;
   onSeeInMonthView: (date: string) => void;
+  monthSelectedDate: string | null;
+  onMonthSelectedDateChange: (date: string | null) => void;
 }) {
   if (range === "day") {
     return (
@@ -69,6 +73,7 @@ export function TrendVariantA({
         daily={daily}
         cursor={weekCursor}
         onNavigate={onNavigateWeek}
+        onOpenDayView={onOpenDayView}
       />
     );
   }
@@ -79,6 +84,8 @@ export function TrendVariantA({
       cursor={monthCursor}
       onNavigate={onNavigateMonth}
       onOpenDayView={onOpenDayView}
+      selectedDate={monthSelectedDate}
+      onSelectedDateChange={onMonthSelectedDateChange}
     />
   );
 }

@@ -12,6 +12,17 @@
  * goal" is a texture change, not a hue swap (a color-blind-safe secondary
  * encoding, not a new series). Column labels carry the short date under the
  * weekday abbreviation.
+ *
+ * Per live feedback, each macro's goal guideline now sits at the same
+ * horizontal height across protein/carbs/fat: `max` is a fixed multiple of
+ * that macro's own goal (`GOAL_FRACTION`) rather than stretched to fit
+ * whatever the week's actual data peaks at, so a high-carb day no longer
+ * pushes the carbs guideline down relative to protein/fat's. A day far
+ * enough over goal to exceed that fixed headroom just clips at the
+ * container's top edge instead of moving the line.
+ *
+ * Double-clicking a day column (either chart) now jumps to the day view for
+ * that date, mirroring month view's "Open day view" action.
  */
 
 import { useState } from "react";
@@ -22,6 +33,7 @@ import {
   formatCalories,
   formatGrams,
   shortDateLabel,
+  stripedFill,
 } from "./prototype-overview-marks";
 import {
   DEFAULT_GOALS,
@@ -35,10 +47,7 @@ import {
 import { WeekRangeHeader } from "./prototype-overview-week-header";
 
 const CHART_HEIGHT = 144;
-
-function stripedFill(color: string): string {
-  return `repeating-linear-gradient(45deg, ${color} 0px, ${color} 4px, color-mix(in srgb, ${color} 40%, white) 4px, color-mix(in srgb, ${color} 40%, white) 8px)`;
-}
+const GOAL_FRACTION = 1 / 1.6;
 
 function GoalFillBar({
   value,
@@ -86,12 +95,14 @@ function CaloriesColumn({
   goal,
   selected,
   onToggle,
+  onOpenDayView,
 }: {
   day: DailyTotal;
   max: number;
   goal: number;
   selected: boolean;
   onToggle: () => void;
+  onOpenDayView: () => void;
 }) {
   const goalPct = Math.min((goal / max) * 100, 100);
   const overGoal = (day.calories ?? 0) > goal;
@@ -100,6 +111,7 @@ function CaloriesColumn({
     <button
       type="button"
       onClick={onToggle}
+      onDoubleClick={onOpenDayView}
       aria-label={
         day.calories === null
           ? `${day.date}: not logged`
@@ -173,17 +185,20 @@ function MacroTripleColumn({
   maxes,
   selected,
   onToggle,
+  onOpenDayView,
 }: {
   day: DailyTotal;
   goals: { proteinG: number; carbsG: number; fatG: number };
   maxes: { protein: number; carbs: number; fat: number };
   selected: boolean;
   onToggle: () => void;
+  onOpenDayView: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onToggle}
+      onDoubleClick={onOpenDayView}
       aria-label={
         day.calories === null
           ? `${day.date}: not logged`
@@ -228,10 +243,12 @@ export function TrendVariantAWeek2({
   daily,
   cursor,
   onNavigate,
+  onOpenDayView,
 }: {
   daily: DailyTotal[];
   cursor: string;
   onNavigate: (delta: number) => void;
+  onOpenDayView: (date: string) => void;
 }) {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
@@ -261,18 +278,9 @@ export function TrendVariantAWeek2({
     caloriesGoal * 1.5,
     ...weekDays.map((d) => d.calories ?? 0),
   );
-  const maxProtein = Math.max(
-    macroGoals.proteinG * 1.6,
-    ...weekDays.map((d) => d.proteinG ?? 0),
-  );
-  const maxCarbs = Math.max(
-    macroGoals.carbsG * 1.6,
-    ...weekDays.map((d) => d.carbsG ?? 0),
-  );
-  const maxFat = Math.max(
-    macroGoals.fatG * 1.6,
-    ...weekDays.map((d) => d.fatG ?? 0),
-  );
+  const maxProtein = macroGoals.proteinG / GOAL_FRACTION;
+  const maxCarbs = macroGoals.carbsG / GOAL_FRACTION;
+  const maxFat = macroGoals.fatG / GOAL_FRACTION;
   const avgCalories = averageOf(weekDays, "calories");
   const avgProtein = averageOf(weekDays, "proteinG");
   const avgCarbs = averageOf(weekDays, "carbsG");
@@ -309,6 +317,7 @@ export function TrendVariantAWeek2({
               goal={caloriesGoal}
               selected={selectedDay === day.date}
               onToggle={() => toggle(day.date)}
+              onOpenDayView={() => onOpenDayView(day.date)}
             />
           ))}
         </div>
@@ -348,6 +357,7 @@ export function TrendVariantAWeek2({
               maxes={{ protein: maxProtein, carbs: maxCarbs, fat: maxFat }}
               selected={selectedDay === day.date}
               onToggle={() => toggle(day.date)}
+              onOpenDayView={() => onOpenDayView(day.date)}
             />
           ))}
         </div>

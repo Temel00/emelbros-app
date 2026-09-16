@@ -32,6 +32,11 @@ export const MACRO_TEXT_COLORS = {
   fat: "text-violet-600 dark:text-violet-400",
 } as const;
 
+/** Diagonal-stripe "over goal" texture — same hue, CVD-safe secondary encoding (not a new series). Shared by any goal-guideline bar (week, month). */
+export function stripedFill(color: string): string {
+  return `repeating-linear-gradient(45deg, ${color} 0px, ${color} 4px, color-mix(in srgb, ${color} 40%, white) 4px, color-mix(in srgb, ${color} 40%, white) 8px)`;
+}
+
 function NotLoggedBar() {
   return (
     <div

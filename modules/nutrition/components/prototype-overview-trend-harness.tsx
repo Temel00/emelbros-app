@@ -76,6 +76,45 @@ export function OverviewTrendHarness() {
   const [dayCursor, setDayCursor] = useState(lastDate);
   const [weekCursor, setWeekCursor] = useState(maxWeekStart);
   const [monthCursor, setMonthCursor] = useState(maxMonthStart);
+  const [monthSelectedDate, setMonthSelectedDate] = useState<string | null>(
+    null,
+  );
+
+  /**
+   * Cross-view date linking, per live feedback: switching range tabs should
+   * carry the date you're looking at forward, not reset to a stale
+   * independent cursor — leaving day/week 14th lands week/month on the 14th;
+   * leaving month on a selected day carries that day, otherwise its cursor's
+   * first-of-month.
+   */
+  function switchRange(next: OverviewRange) {
+    if (next !== range) {
+      const referenceDate =
+        range === "day"
+          ? dayCursor
+          : range === "week"
+            ? weekCursor
+            : (monthSelectedDate ?? monthCursor);
+
+      if (next === "day") {
+        setDayCursor(clamp(referenceDate, firstDate, lastDate));
+      } else if (next === "week") {
+        setWeekCursor(
+          clamp(
+            weekStartOf(new Date(`${referenceDate}T00:00:00.000Z`)),
+            minWeekStart,
+            maxWeekStart,
+          ),
+        );
+      } else {
+        setMonthCursor(
+          clamp(monthStartOf(referenceDate), minMonthStart, maxMonthStart),
+        );
+        setMonthSelectedDate(referenceDate);
+      }
+    }
+    setRange(next);
+  }
 
   const rows =
     range === "day"
@@ -91,7 +130,7 @@ export function OverviewTrendHarness() {
           <button
             key={r.key}
             type="button"
-            onClick={() => setRange(r.key)}
+            onClick={() => switchRange(r.key)}
             className={`rounded-md px-3 py-1 text-sm ${
               range === r.key
                 ? "bg-primary text-primary-foreground"
@@ -135,8 +174,11 @@ export function OverviewTrendHarness() {
           }}
           onSeeInMonthView={(date) => {
             setMonthCursor(monthStartOf(date));
+            setMonthSelectedDate(date);
             setRange("month");
           }}
+          monthSelectedDate={monthSelectedDate}
+          onMonthSelectedDateChange={setMonthSelectedDate}
         />
       )}
 
