@@ -3,9 +3,14 @@
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #125 resolves.
  *
- * Owns range (day/week/month) and data-scenario (established/week-one/
- * day-one) state, reads `?variant=` for layout, and renders the chosen
- * trend-view variant plus the floating switcher.
+ * Owns range (day/week/month) state, reads `?variant=` for layout, and
+ * renders the chosen trend-view variant plus the floating switcher.
+ *
+ * Variant A no longer picks a range-sized slice of rows to display all at
+ * once — per live feedback it carousels through independent cursors (a
+ * single day / week-start / month-start), one per range, each bounded by
+ * the mock history's date span. Variant B/C are unchanged and keep the old
+ * "pick a pre-computed row array for this range" model.
  */
 
 import { useMemo, useState } from "react";
@@ -15,10 +20,10 @@ import {
   type PrototypeVariant,
 } from "@/components/prototype/prototype-switcher";
 import {
-  SCENARIOS,
   buildMockOverview,
+  monthStartOf,
+  weekStartOf,
   type OverviewRange,
-  type OverviewScenario,
 } from "./prototype-overview-shared";
 import { TrendVariantA } from "./prototype-overview-trend-variant-a";
 import { TrendVariantB } from "./prototype-overview-trend-variant-b";
@@ -36,14 +41,42 @@ const RANGES: { key: OverviewRange; label: string }[] = [
   { key: "month", label: "Month" },
 ];
 
+function addDays(iso: string, delta: number): string {
+  const d = new Date(`${iso}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+function addMonths(monthStart: string, delta: number): string {
+  const d = new Date(`${monthStart}T00:00:00.000Z`);
+  d.setUTCMonth(d.getUTCMonth() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+function clamp(value: string, min: string, max: string): string {
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
 export function OverviewTrendHarness() {
   const searchParams = useSearchParams();
   const variant = searchParams.get("variant") ?? "a";
 
   const [range, setRange] = useState<OverviewRange>("day");
-  const [scenario, setScenario] = useState<OverviewScenario>("established");
+  const overview = useMemo(() => buildMockOverview(), []);
 
-  const overview = useMemo(() => buildMockOverview(scenario), [scenario]);
+  const firstDate = overview.daily[0].date;
+  const lastDate = overview.daily[overview.daily.length - 1].date;
+  const minWeekStart = weekStartOf(new Date(`${firstDate}T00:00:00.000Z`));
+  const maxWeekStart = weekStartOf(new Date(`${lastDate}T00:00:00.000Z`));
+  const minMonthStart = monthStartOf(firstDate);
+  const maxMonthStart = monthStartOf(lastDate);
+
+  const [dayCursor, setDayCursor] = useState(lastDate);
+  const [weekCursor, setWeekCursor] = useState(maxWeekStart);
+  const [monthCursor, setMonthCursor] = useState(maxMonthStart);
+
   const rows =
     range === "day"
       ? overview.daily
@@ -53,40 +86,21 @@ export function OverviewTrendHarness() {
 
   return (
     <div className="space-y-4 pb-24">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-lg border border-border p-1">
-          {RANGES.map((r) => (
-            <button
-              key={r.key}
-              type="button"
-              onClick={() => setRange(r.key)}
-              className={`rounded-md px-3 py-1 text-sm ${
-                range === r.key
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex gap-1 rounded-lg border border-border p-1">
-          {SCENARIOS.map((s) => (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => setScenario(s.key)}
-              className={`rounded-md px-3 py-1 text-xs ${
-                scenario === s.key
-                  ? "bg-secondary text-secondary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex gap-1 rounded-lg border border-border p-1">
+        {RANGES.map((r) => (
+          <button
+            key={r.key}
+            type="button"
+            onClick={() => setRange(r.key)}
+            className={`rounded-md px-3 py-1 text-sm ${
+              range === r.key
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            {r.label}
+          </button>
+        ))}
       </div>
 
       {variant === "b" ? (
@@ -94,7 +108,26 @@ export function OverviewTrendHarness() {
       ) : variant === "c" ? (
         <TrendVariantC rows={rows} />
       ) : (
-        <TrendVariantA rows={rows} />
+        <TrendVariantA
+          range={range}
+          daily={overview.daily}
+          dayCursor={dayCursor}
+          weekCursor={weekCursor}
+          monthCursor={monthCursor}
+          onNavigateDay={(delta) =>
+            setDayCursor((c) => clamp(addDays(c, delta), firstDate, lastDate))
+          }
+          onNavigateWeek={(delta) =>
+            setWeekCursor((c) =>
+              clamp(addDays(c, delta * 7), minWeekStart, maxWeekStart),
+            )
+          }
+          onNavigateMonth={(delta) =>
+            setMonthCursor((c) =>
+              clamp(addMonths(c, delta), minMonthStart, maxMonthStart),
+            )
+          }
+        />
       )}
 
       <PrototypeSwitcher variants={VARIANTS} current={variant} />

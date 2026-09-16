@@ -37,9 +37,11 @@ export default async function NutritionOverviewPrototypePage() {
             macros stacked below (one axis each, per the dataviz skill), a
             small-multiples grid with one mini chart per measure, and a
             table-first layout with a headline-stat summary card. Switch range
-            (Day / Week / Month) and data scenario (established history vs. week
-            one vs. day one) independently of layout to see how each handles
-            thin data. Flip between layouts with the bar at the bottom.
+            (Day / Week / Month) — in the winning &quot;Calories + macro
+            stack&quot; layout each range now carousels its own cursor (a single
+            day, week, or month) through the mock history, so thin/ unlogged
+            days show up by navigating into them. Flip between layouts with the
+            bar at the bottom.
           </p>
         </div>
 

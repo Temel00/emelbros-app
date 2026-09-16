@@ -7,11 +7,12 @@
  * (modules/nutrition/lib/overview-totals.ts) exactly for `daily`/`weekly` —
  * ascending order, macros `null` (not 0) until the first contributing day.
  *
- * OPEN QUESTION (flagged for the live conversation): the real
- * `computeOverviewTotals` has no `monthly` bucket. `monthlyTotals` below is
- * a client-side rollup of the daily data, invented for this prototype only,
- * to test whether that's an acceptable shape or whether month needs its own
- * bucket added to the real function.
+ * RESOLVED DURING THE LIVE CONVERSATION: the real `computeOverviewTotals`
+ * has no `monthly` bucket. Decision — give it one (a first-class `monthly`
+ * array, same null-until-first-entry semantics as daily/weekly), but
+ * implement it exactly as `rollUpMonthly` below does: grouped from the
+ * already-computed `daily` rows, not a second scan over `nutrition_log`.
+ * Own bucket for the API shape; rollup for the implementation.
  */
 
 export type MacroTotals = {
@@ -39,7 +40,7 @@ function toISODate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function weekStartOf(date: Date): string {
+export function weekStartOf(date: Date): string {
   const d = new Date(date);
   const day = d.getUTCDay(); // 0 = Sunday
   const diffToMonday = day === 0 ? -6 : 1 - day;
@@ -47,12 +48,12 @@ function weekStartOf(date: Date): string {
   return toISODate(d);
 }
 
-function monthStartOf(dateIso: string): string {
+export function monthStartOf(dateIso: string): string {
   return `${dateIso.slice(0, 7)}-01`;
 }
 
 /** Deterministic pseudo-random so the same day always renders the same bar. */
-function seededValue(seed: number, min: number, max: number): number {
+export function seededValue(seed: number, min: number, max: number): number {
   const x = Math.sin(seed) * 10000;
   const frac = x - Math.floor(x);
   return Math.round(min + frac * (max - min));
@@ -61,7 +62,9 @@ function seededValue(seed: number, min: number, max: number): number {
 /**
  * `daysBack` days of history ending today, with roughly 1 in 6 days left
  * fully unlogged (macros null) so the "gap" case is always present, not just
- * at the thin-history edges.
+ * at the thin-history edges. The oldest 5 days are always unlogged too —
+ * carousel back far enough (day view) or into the first week (week view) and
+ * you hit "before I started tracking" without a separate scenario toggle.
  */
 function buildDailyTotals(daysBack: number, todayIso: string): DailyTotal[] {
   const today = new Date(`${todayIso}T00:00:00.000Z`);
@@ -73,7 +76,8 @@ function buildDailyTotals(daysBack: number, todayIso: string): DailyTotal[] {
     const date = toISODate(d);
     const seed = d.getUTCDate() + d.getUTCMonth() * 31;
 
-    const logged = seededValue(seed, 0, 100) >= 16; // ~84% of days logged
+    const beforeTrackingBegan = i >= daysBack - 5;
+    const logged = !beforeTrackingBegan && seededValue(seed, 0, 100) >= 16; // ~84% of days logged
     days.push(
       logged
         ? {
@@ -88,6 +92,67 @@ function buildDailyTotals(daysBack: number, todayIso: string): DailyTotal[] {
   }
 
   return days;
+}
+
+const ENTRY_TITLES = [
+  "Greek yoghurt & berries",
+  "Grilled chicken bowl",
+  "Protein shake",
+  "Salmon + rice",
+  "Oatmeal & peanut butter",
+  "Turkey sandwich",
+  "Veggie stir fry",
+  "Eggs & toast",
+];
+
+export type DayEntry = {
+  id: string;
+  title: string;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+};
+
+/**
+ * Per-food breakdown for a single day, split from that day's totals so the
+ * numbers stay consistent with the bar/table views. Rough proportional
+ * split, not a real recipe-nutrition join — good enough to react to "can I
+ * see which food contributed which macros."
+ */
+export function buildMockDayEntries(day: DailyTotal): DayEntry[] {
+  if (day.calories === null) return [];
+
+  const seed = new Date(`${day.date}T00:00:00.000Z`).getUTCDate();
+  const count = seededValue(seed * 5.1, 2, 4);
+  const weights = Array.from({ length: count }, (_, i) =>
+    seededValue(seed * (i + 2) * 1.3, 10, 40),
+  );
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+  return weights.map((w, i) => {
+    const frac = w / totalWeight;
+    return {
+      id: `${day.date}-${i}`,
+      title: ENTRY_TITLES[(seed + i) % ENTRY_TITLES.length],
+      calories: Math.round(day.calories! * frac),
+      proteinG: Math.round((day.proteinG ?? 0) * frac),
+      carbsG: Math.round((day.carbsG ?? 0) * frac),
+      fatG: Math.round((day.fatG ?? 0) * frac),
+    };
+  });
+}
+
+/** Average over days that were actually logged — null days don't count as 0. */
+export function averageOf(
+  days: DailyTotal[],
+  field: "calories" | "proteinG" | "carbsG" | "fatG",
+): number | null {
+  const logged = days
+    .map((d) => d[field])
+    .filter((v): v is number => v !== null);
+  if (logged.length === 0) return null;
+  return Math.round(logged.reduce((a, b) => a + b, 0) / logged.length);
 }
 
 function rollUpWeekly(daily: DailyTotal[]): WeeklyTotal[] {
@@ -142,8 +207,6 @@ function sumBucket<K extends string, V extends string>(
   return { ...key, calories, proteinG, carbsG, fatG };
 }
 
-export type OverviewScenario = "established" | "week-one" | "day-one";
-
 export type MockOverview = {
   daily: DailyTotal[];
   weekly: WeeklyTotal[];
@@ -151,25 +214,18 @@ export type MockOverview = {
 };
 
 /**
- * Three data scenarios to react to alongside the three layout variants —
- * per UI.md's requirement to make the thin/early states explicit rather
- * than assuming the chart form handles them gracefully.
+ * ~14 weeks of continuous history ending today (enough to carousel back
+ * through several months), replacing the old established/week-one/day-one
+ * scenario toggle per live feedback — the "before I started tracking" and
+ * scattered-gap thin states are now just part of one history you carousel
+ * into, instead of a separate switch.
  */
 export function buildMockOverview(
-  scenario: OverviewScenario,
   todayIso = toISODate(new Date()),
 ): MockOverview {
-  const daysBack =
-    scenario === "established" ? 42 : scenario === "week-one" ? 4 : 1;
-  const daily = buildDailyTotals(daysBack, todayIso);
+  const daily = buildDailyTotals(98, todayIso);
   return { daily, weekly: rollUpWeekly(daily), monthly: rollUpMonthly(daily) };
 }
-
-export const SCENARIOS: { key: OverviewScenario; label: string }[] = [
-  { key: "established", label: "6 weeks of history" },
-  { key: "week-one", label: "Week one (4 days logged)" },
-  { key: "day-one", label: "Day one (1 entry)" },
-];
 
 const MOCK_PLAN: MockPlanEntry[] = [
   {
