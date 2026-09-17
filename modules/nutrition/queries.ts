@@ -820,6 +820,21 @@ export async function getOverviewTotals(
   return computeOverviewTotals(entries);
 }
 
+/** A single owned entry by id, or null if it doesn't exist (RLS: or isn't the caller's). */
+export async function getLogEntry(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<LogEntryRow | null> {
+  const { data, error } = await supabase
+    .from("nutrition_log")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function insertLogEntry(
   supabase: SupabaseClient<Database>,
   entry: {

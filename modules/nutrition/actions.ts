@@ -30,6 +30,7 @@ import {
   deleteRecipeIngredient,
   deleteShoppingListItem,
   getFoodsByIds,
+  getLogEntry,
   getMealPlanEntriesForGeneration,
   getMealPlanEntryForCooking,
   getPantryItemForFoodUnit,
@@ -1038,4 +1039,42 @@ export async function deleteLogEntryAction(id: string): Promise<void> {
 
   await deleteLogEntry(supabase, id);
   revalidatePath("/nutrition/log");
+}
+
+/**
+ * "Log again": an exact duplicate of an existing entry's snapshot, only the
+ * id and timestamp changed. Never recomputes macros from the linked food or
+ * recipe — that would break the snapshot guarantee above for the one path
+ * (repeat) most likely to be used on stale-by-then links. Judgment call:
+ * this is a new action rather than re-invoking the type-specific logging
+ * actions above, since the real schema keeps no `plan_entry_id` to replay a
+ * cooked-meal entry through `logCookedMealEntryAction`.
+ */
+export async function repeatLogEntryAction(
+  id: string,
+  loggedAt: string,
+): Promise<LogEntryRow> {
+  await requireMember();
+  const supabase = await createClient();
+
+  const source = await getLogEntry(supabase, id);
+  if (!source) throw new Error("Entry not found");
+
+  const logEntry = await insertLogEntry(supabase, {
+    memberId: source.member_id,
+    loggedAt,
+    foodId: source.food_id,
+    recipeId: source.recipe_id,
+    description: source.description,
+    quantity: source.quantity,
+    unit: source.unit,
+    calories: source.calories,
+    proteinG: source.protein_g,
+    carbsG: source.carbs_g,
+    fatG: source.fat_g,
+    note: source.note,
+  });
+
+  revalidatePath("/nutrition/log");
+  return logEntry;
 }
