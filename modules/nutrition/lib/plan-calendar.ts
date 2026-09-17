@@ -98,6 +98,12 @@ export function addWeeks(d: Date, delta: number): Date {
   return next;
 }
 
+export function addDays(d: Date, delta: number): Date {
+  const next = new Date(d);
+  next.setDate(d.getDate() + delta);
+  return next;
+}
+
 /** The inclusive date range a week view needs fetched. */
 export function weekRange(from = new Date()): { start: string; end: string } {
   const days = getWeekDays(from);
