@@ -21,11 +21,15 @@ export function FoodLinkPicker({
   initialQuery = "",
   onPick,
   onCancel,
+  emptyHint = "Type to search, or close this to leave the line freeform.",
 }: {
   foods: FoodRow[];
   initialQuery?: string;
   onPick: (food: FoodRow) => void;
-  onCancel: () => void;
+  /** Omit to hide the cancel affordance — callers with no "other mode" to return to. */
+  onCancel?: () => void;
+  /** Shown only when the dictionary is empty; wording depends on what "linking" means to the caller. */
+  emptyHint?: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [adding, setAdding] = useState(false);
@@ -205,15 +209,17 @@ export function FoodLinkPicker({
           aria-label="Search foods"
           className="min-w-0 flex-1"
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Cancel linking"
-          onClick={onCancel}
-        >
-          <X className="size-4" />
-        </Button>
+        {onCancel && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Cancel linking"
+            onClick={onCancel}
+          >
+            <X className="size-4" />
+          </Button>
+        )}
       </div>
       <ul className="flex max-h-48 flex-col overflow-y-auto">
         {matches.map((food) => (
@@ -245,7 +251,7 @@ export function FoodLinkPicker({
         )}
         {matches.length === 0 && query.trim() === "" && (
           <li className="px-2 py-1.5 text-xs text-muted-foreground">
-            Type to search, or close this to leave the line freeform.
+            {emptyHint}
           </li>
         )}
       </ul>

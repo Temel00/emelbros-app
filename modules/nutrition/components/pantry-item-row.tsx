@@ -4,14 +4,14 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   deletePantryItemAction,
   updatePantryItemAction,
 } from "@/modules/nutrition/actions";
 import { pantryLocations } from "@/modules/nutrition/lib/locations";
 import type { PantryItemWithFood } from "@/modules/nutrition/queries";
-
-const FIELD = "h-8 rounded-lg border border-border bg-background px-2 text-sm";
 
 /** `2 kg` / `1.5 each` — trailing zeros trimmed, since quantities are numeric. */
 function formatQuantity(quantity: number, unit: string) {
@@ -110,7 +110,7 @@ export function PantryItemRow({ item }: { item: PantryItemWithFood }) {
             save();
           }}
         >
-          <input
+          <Input
             type="number"
             inputMode="decimal"
             step="any"
@@ -118,21 +118,21 @@ export function PantryItemRow({ item }: { item: PantryItemWithFood }) {
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             required
-            className={`${FIELD} w-24`}
+            className="w-24"
             aria-label={`Quantity of ${item.food.name}`}
           />
-          <input
+          <Input
             type="text"
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
             required
-            className={`${FIELD} w-20`}
+            className="w-20"
             aria-label={`Unit for ${item.food.name}`}
           />
-          <select
+          <Select
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            className={FIELD}
+            className="w-auto"
             aria-label={`Location of ${item.food.name}`}
           >
             {pantryLocations().map((loc) => (
@@ -144,12 +144,12 @@ export function PantryItemRow({ item }: { item: PantryItemWithFood }) {
             {!pantryLocations().some((loc) => loc.key === location) && (
               <option value={location}>{location}</option>
             )}
-          </select>
-          <input
+          </Select>
+          <Input
             type="date"
             value={expiresOn}
             onChange={(e) => setExpiresOn(e.target.value)}
-            className={FIELD}
+            className="w-auto"
             aria-label={`Expiry date for ${item.food.name}`}
           />
           <Button type="submit" size="sm" disabled={isPending}>

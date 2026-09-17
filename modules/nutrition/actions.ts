@@ -174,29 +174,6 @@ export async function addPantryItemAction(
   revalidatePath("/nutrition");
 }
 
-/**
- * The inline "add new food" path (§3.1, §3.3): creates the dictionary entry
- * and the pantry line that wanted it in one submission, so a member is
- * never blocked on the dictionary being complete first.
- */
-export async function addFoodAndPantryItemAction(input: {
-  food: CreateFoodInput;
-  quantity: number;
-  location: string;
-  expiresOn?: string | null;
-}) {
-  const food = await createFoodAction(input.food);
-
-  await addPantryItemAction({
-    foodId: food.id,
-    quantity: input.quantity,
-    // A brand-new food's pantry line is counted in that food's own unit.
-    unit: food.unit,
-    location: input.location,
-    expiresOn: input.expiresOn ?? null,
-  });
-}
-
 export async function updatePantryItemAction(
   itemId: string,
   input: PantryItemInput,
