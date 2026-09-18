@@ -155,7 +155,7 @@ export function RecipeIngredientsEditor({
   );
 }
 
-function IngredientRow({
+export function IngredientRow({
   line,
   foods,
   canMoveUp,

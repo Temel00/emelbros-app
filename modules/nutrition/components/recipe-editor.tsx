@@ -9,6 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CookMode } from "@/modules/nutrition/components/cook-mode";
 import { RecipeIngredientsEditor } from "@/modules/nutrition/components/recipe-ingredients-editor";
+import {
+  VariantAEditor,
+  VariantBEditor,
+  VariantCEditor,
+} from "@/modules/nutrition/components/recipe-ingredients-editor.prototype";
 import { isBlank, isServingsCount } from "@/modules/nutrition/lib/validation";
 import {
   setRecipeArchivedAction,
@@ -34,9 +39,11 @@ const TEXTAREA =
 export function RecipeEditor({
   recipe,
   foods,
+  prototypeVariant,
 }: {
   recipe: RecipeWithIngredients;
   foods: FoodRow[];
+  prototypeVariant?: string;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -217,11 +224,31 @@ export function RecipeEditor({
             </p>
           )}
 
-          <RecipeIngredientsEditor
-            recipeId={recipe.id}
-            ingredients={recipe.ingredients}
-            foods={foods}
-          />
+          {prototypeVariant === "A" ? (
+            <VariantAEditor
+              recipeId={recipe.id}
+              ingredients={recipe.ingredients}
+              foods={foods}
+            />
+          ) : prototypeVariant === "B" ? (
+            <VariantBEditor
+              recipeId={recipe.id}
+              ingredients={recipe.ingredients}
+              foods={foods}
+            />
+          ) : prototypeVariant === "C" ? (
+            <VariantCEditor
+              recipeId={recipe.id}
+              ingredients={recipe.ingredients}
+              foods={foods}
+            />
+          ) : (
+            <RecipeIngredientsEditor
+              recipeId={recipe.id}
+              ingredients={recipe.ingredients}
+              foods={foods}
+            />
+          )}
         </div>
       )}
     </div>
