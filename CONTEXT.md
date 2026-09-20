@@ -40,6 +40,7 @@ Every locked platform decision has an ADR in [`docs/adr/`](docs/adr/); module sp
 | Testing & CI conventions | [#13](https://github.com/Temel00/emelbros-app/issues/13) |
 | Agent buildout-loop conventions | [`docs/agents/agent-loop.md`](docs/agents/agent-loop.md) |
 | Visual identity | [#18](https://github.com/Temel00/emelbros-app/issues/18) |
+| Managed pantry-field vocabularies (units, locations) | ADR [0017](docs/adr/0017-managed-pantry-field-vocabularies-separate-tables-delete-resets-to-default.md) |
 | Module specs (darts, lists, habits) | `docs/modules/` |
 
 ## Language
@@ -78,6 +79,13 @@ _Avoid_: enabled, installed, activated (all imply an access gate that doesn't ex
 
 ### Nutrition
 
+**Pantry location**:
+Where a pantry item is kept (`fridge`, `freezer`, …), drawn from the single global, DB-backed managed **location list** (`nutrition_pantry_location`) that members edit. A pantry item references a location by its stable `key`; deleting a location resets its items to the protected default location. See ADR [0017](docs/adr/0017-managed-pantry-field-vocabularies-separate-tables-delete-resets-to-default.md).
+_Avoid_: place, spot, storage area
+
+**Managed field**:
+A pantry field whose allowed values live in a DB-backed vocabulary table members edit (units, locations), rather than a code-side registry or freeform text. Constrained (chosen from the list), keyed by an immutable slug, and removable by archive or by delete-with-reset-to-default.
+_Avoid_: custom field, setting, enum
 **Unit**:
 A label for how a quantity is measured (`g`, `ml`, `each`), drawn from the household's single managed **unit list**. Units are constrained (chosen from the list, not typed freeform) and carry no conversion semantics on their own.
 _Avoid_: measure, uom, unit-of-measure
