@@ -36,6 +36,7 @@ Every locked platform decision has an ADR in [`docs/adr/`](docs/adr/); module sp
 | Modular monolith (one app, module folders) | ADR [0013](docs/adr/0013-single-nextjs-app-modular-monolith.md) |
 | UI stack (Tailwind + shadcn/ui) | ADR [0014](docs/adr/0014-ui-stack-tailwind-shadcn.md) |
 | PWA & mobile | ADR [0015](docs/adr/0015-pwa-responsive-manifest.md) |
+| Nutrition units (managed, dimension-typed; conversion deferred) | ADR [0016](docs/adr/0016-managed-units-typed-by-dimension-conversion-deferred.md) |
 | Testing & CI conventions | [#13](https://github.com/Temel00/emelbros-app/issues/13) |
 | Agent buildout-loop conventions | [`docs/agents/agent-loop.md`](docs/agents/agent-loop.md) |
 | Visual identity | [#18](https://github.com/Temel00/emelbros-app/issues/18) |
@@ -85,3 +86,14 @@ _Avoid_: place, spot, storage area
 **Managed field**:
 A pantry field whose allowed values live in a DB-backed vocabulary table members edit (units, locations), rather than a code-side registry or freeform text. Constrained (chosen from the list), keyed by an immutable slug, and removable by archive or by delete-with-reset-to-default.
 _Avoid_: custom field, setting, enum
+**Unit**:
+A label for how a quantity is measured (`g`, `ml`, `each`), drawn from the household's single managed **unit list**. Units are constrained (chosen from the list, not typed freeform) and carry no conversion semantics on their own.
+_Avoid_: measure, uom, unit-of-measure
+
+**Dimension**:
+The family a Unit belongs to — `weight`, `volume`, or `count` — recorded on each Unit. Weights convert among weights and volumes among volumes; counts don't convert; crossing dimensions needs per-ingredient density. The v1 app records the Dimension but ships no conversion engine.
+_Avoid_: unit type, category, class
+
+**Base unit**:
+The Unit a Food's nutrition facts are stated per (its `calories_per_unit` etc.). A quantity's macros are computed only when its Unit equals the Food's base unit; a mismatch is flagged, never silently converted.
+_Avoid_: canonical unit, reference unit
