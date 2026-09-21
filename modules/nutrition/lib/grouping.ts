@@ -34,7 +34,9 @@ export function groupByLocation<T extends { location: string }>(
 
   const byLocationKey = new Map(locations.map((loc) => [loc.key, loc]));
   const knownKeys = locations.map((loc) => loc.key);
-  const unknownKeys = [...byKey.keys()].filter((key) => !byLocationKey.has(key));
+  const unknownKeys = [...byKey.keys()].filter(
+    (key) => !byLocationKey.has(key),
+  );
 
   return [...knownKeys, ...unknownKeys]
     .filter((key) => byKey.has(key))
