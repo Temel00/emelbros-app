@@ -10,8 +10,11 @@ import {
   deletePantryItemAction,
   updatePantryItemAction,
 } from "@/modules/nutrition/actions";
-import { pantryLocations } from "@/modules/nutrition/lib/locations";
-import type { PantryItemWithFood } from "@/modules/nutrition/queries";
+import type {
+  PantryItemWithFood,
+  PantryLocationRow,
+  UnitRow,
+} from "@/modules/nutrition/queries";
 
 /** `2 kg` / `1.5 each` — trailing zeros trimmed, since quantities are numeric. */
 function formatQuantity(quantity: number, unit: string) {
@@ -23,7 +26,15 @@ function formatQuantity(quantity: number, unit: string) {
  * or delete any line — the kitchen is unowned (§2, §10) — so there is no
  * owner check here and no owner-only affordance.
  */
-export function PantryItemRow({ item }: { item: PantryItemWithFood }) {
+export function PantryItemRow({
+  item,
+  units,
+  locations,
+}: {
+  item: PantryItemWithFood;
+  units: UnitRow[];
+  locations: PantryLocationRow[];
+}) {
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +43,10 @@ export function PantryItemRow({ item }: { item: PantryItemWithFood }) {
   const [unit, setUnit] = useState(item.unit);
   const [location, setLocation] = useState(item.location);
   const [expiresOn, setExpiresOn] = useState(item.expires_on ?? "");
+
+  // Render the managed label for the stored unit key, falling back to the key
+  // itself if that unit has since been archived (a stored value never blanks).
+  const unitLabel = units.find((u) => u.key === item.unit)?.label ?? item.unit;
 
   function save() {
     setError(null);
@@ -73,7 +88,7 @@ export function PantryItemRow({ item }: { item: PantryItemWithFood }) {
             )}
           </p>
           <p className="text-xs text-muted-foreground">
-            {formatQuantity(item.quantity, item.unit)}
+            {formatQuantity(item.quantity, unitLabel)}
             {item.expires_on && ` · expires ${item.expires_on}`}
           </p>
         </div>
@@ -121,27 +136,35 @@ export function PantryItemRow({ item }: { item: PantryItemWithFood }) {
             className="w-24"
             aria-label={`Quantity of ${item.food.name}`}
           />
-          <Input
-            type="text"
+          <Select
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            required
-            className="w-20"
+            className="w-24"
             aria-label={`Unit for ${item.food.name}`}
-          />
+          >
+            {units.map((u) => (
+              <option key={u.key} value={u.key}>
+                {u.label}
+              </option>
+            ))}
+            {/* A stored unit no longer active still round-trips (§10). */}
+            {!units.some((u) => u.key === unit) && (
+              <option value={unit}>{unit}</option>
+            )}
+          </Select>
           <Select
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             className="w-auto"
             aria-label={`Location of ${item.food.name}`}
           >
-            {pantryLocations().map((loc) => (
+            {locations.map((loc) => (
               <option key={loc.key} value={loc.key}>
                 {loc.label}
               </option>
             ))}
-            {/* A stored key no longer in the registry still round-trips (§10). */}
-            {!pantryLocations().some((loc) => loc.key === location) && (
+            {/* A stored key no longer active still round-trips (§10). */}
+            {!locations.some((loc) => loc.key === location) && (
               <option value={location}>{location}</option>
             )}
           </Select>

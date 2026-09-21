@@ -4,7 +4,12 @@ import { createClient } from "@/platform/supabase/server";
 
 import { NutritionNav } from "@/modules/nutrition/components/nutrition-nav";
 import { PantryHome } from "@/modules/nutrition/components/pantry-home";
-import { getFoods, getPantryItems } from "@/modules/nutrition/queries";
+import {
+  getFoods,
+  getPantryItems,
+  getPantryLocations,
+  getUnits,
+} from "@/modules/nutrition/queries";
 
 export default async function NutritionPage() {
   const member = await getCurrentMember();
@@ -13,9 +18,11 @@ export default async function NutritionPage() {
   if (!member) return null;
 
   const supabase = await createClient();
-  const [items, foods] = await Promise.all([
+  const [items, foods, units, locations] = await Promise.all([
     getPantryItems(supabase),
     getFoods(supabase),
+    getUnits(supabase),
+    getPantryLocations(supabase),
   ]);
 
   return (
@@ -32,7 +39,12 @@ export default async function NutritionPage() {
           </p>
         </div>
 
-        <PantryHome items={items} foods={foods} />
+        <PantryHome
+          items={items}
+          foods={foods}
+          units={units}
+          locations={locations}
+        />
       </main>
     </>
   );

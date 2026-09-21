@@ -5,8 +5,10 @@ import { useState, useTransition, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { createFoodAction } from "@/modules/nutrition/actions";
-import type { FoodRow } from "@/modules/nutrition/queries";
+import { DEFAULT_UNIT_KEY } from "@/modules/nutrition/lib/defaults";
+import type { FoodRow, UnitRow } from "@/modules/nutrition/queries";
 
 /**
  * The food-first search step of linking an ingredient line
@@ -18,12 +20,21 @@ import type { FoodRow } from "@/modules/nutrition/queries";
  */
 export function FoodLinkPicker({
   foods,
+  units,
   initialQuery = "",
   onPick,
   onCancel,
   emptyHint = "Type to search, or close this to leave the line freeform.",
 }: {
   foods: FoodRow[];
+  /**
+   * Managed units (ADR-0016) for the "add new food" base-unit field. When
+   * provided the field is a constrained select — the pantry add form passes
+   * these (#158). Callers that haven't migrated to managed units yet
+   * (log, recipe ingredients — their own tickets) omit it and keep the
+   * freeform input; the FK still rejects an unmanaged key at submit.
+   */
+  units?: UnitRow[];
   initialQuery?: string;
   onPick: (food: FoodRow) => void;
   /** Omit to hide the cancel affordance — callers with no "other mode" to return to. */
@@ -38,7 +49,7 @@ export function FoodLinkPicker({
 
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
-  const [unit, setUnit] = useState("g");
+  const [unit, setUnit] = useState(DEFAULT_UNIT_KEY);
   const [calories, setCalories] = useState("");
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
@@ -105,14 +116,29 @@ export function FoodLinkPicker({
             aria-label="Brand"
             className="w-32"
           />
-          <Input
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-            required
-            placeholder="Unit"
-            aria-label="Unit for the new food"
-            className="w-20"
-          />
+          {units ? (
+            <Select
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              aria-label="Unit for the new food"
+              className="w-24"
+            >
+              {units.map((u) => (
+                <option key={u.key} value={u.key}>
+                  {u.label}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <Input
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              required
+              placeholder="Unit"
+              aria-label="Unit for the new food"
+              className="w-20"
+            />
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Input
