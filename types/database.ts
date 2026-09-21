@@ -475,7 +475,15 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_food_unit_fkey";
+            columns: ["unit"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_unit";
+            referencedColumns: ["key"];
+          },
+        ];
       };
       nutrition_pantry_item: {
         Row: {
@@ -519,7 +527,48 @@ export type Database = {
             referencedRelation: "nutrition_food";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "nutrition_pantry_item_unit_fkey";
+            columns: ["unit"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_unit";
+            referencedColumns: ["key"];
+          },
+          {
+            foreignKeyName: "nutrition_pantry_item_location_fkey";
+            columns: ["location"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_pantry_location";
+            referencedColumns: ["key"];
+          },
         ];
+      };
+      nutrition_pantry_location: {
+        Row: {
+          key: string;
+          label: string;
+          icon: string;
+          sort_order: number;
+          active: boolean;
+          protected: boolean;
+        };
+        Insert: {
+          key: string;
+          label: string;
+          icon: string;
+          sort_order: number;
+          active?: boolean;
+          protected?: boolean;
+        };
+        Update: {
+          key?: string;
+          label?: string;
+          icon?: string;
+          sort_order?: number;
+          active?: boolean;
+          protected?: boolean;
+        };
+        Relationships: [];
       };
       nutrition_recipe: {
         Row: {
@@ -599,6 +648,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "nutrition_food";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "nutrition_recipe_ingredient_unit_fkey";
+            columns: ["unit"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_unit";
+            referencedColumns: ["key"];
           },
         ];
       };
@@ -694,6 +750,13 @@ export type Database = {
             referencedRelation: "nutrition_food";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "nutrition_shopping_list_item_unit_fkey";
+            columns: ["unit"];
+            isOneToOne: false;
+            referencedRelation: "nutrition_unit";
+            referencedColumns: ["key"];
+          },
         ];
       };
       nutrition_log: {
@@ -764,6 +827,33 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      nutrition_unit: {
+        Row: {
+          key: string;
+          label: string;
+          dimension: string;
+          sort_order: number;
+          active: boolean;
+          protected: boolean;
+        };
+        Insert: {
+          key: string;
+          label: string;
+          dimension: string;
+          sort_order: number;
+          active?: boolean;
+          protected?: boolean;
+        };
+        Update: {
+          key?: string;
+          label?: string;
+          dimension?: string;
+          sort_order?: number;
+          active?: boolean;
+          protected?: boolean;
+        };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
