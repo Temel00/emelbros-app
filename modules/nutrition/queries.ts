@@ -1,8 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { UnitDimension } from "@/modules/nutrition/lib/defaults";
 import { nextIsoDate } from "@/modules/nutrition/lib/log-entry-title";
 import { computeOverviewTotals } from "@/modules/nutrition/lib/overview-totals";
 import type { OverviewTotals } from "@/modules/nutrition/lib/overview-totals";
+import { vocabularyKey } from "@/modules/nutrition/lib/vocabulary-key";
 import type { Database } from "@/types/database";
 
 export type FoodRow = Database["public"]["Tables"]["nutrition_food"]["Row"];
@@ -19,6 +21,317 @@ export type PantryItemWithFood = PantryItemRow & { food: FoodRow };
  * either. Both tables here are fixed Family, so there is no member id to
  * filter by: a signed-in caller sees the whole kitchen.
  */
+
+// === nutrition_unit / nutrition_pantry_location ======================
+// The two managed pantry-field vocabularies (ADR-0017). `key` is the stable,
+// immutable slug the FKs reference; `active` retires a row from pickers
+// without touching rows already pointing at it; `protected` marks the seed
+// default the DB guards against delete/archive.
+
+export type UnitRow = Database["public"]["Tables"]["nutrition_unit"]["Row"];
+export type PantryLocationRow =
+  Database["public"]["Tables"]["nutrition_pantry_location"]["Row"];
+
+// SQLSTATEs the vocabulary tables raise on a blocked write, surfaced as
+// readable errors instead of a leaked driver error. `23001`
+// (restrict_violation) is the protected-default trigger; `23503`
+// (foreign_key_violation) is the `RESTRICT` FK on `nutrition_food.unit`;
+// `23505` (unique_violation) is a duplicate generated key.
+const PROTECTED_DEFAULT_VIOLATION = "23001";
+const RESTRICT_FK_VIOLATION = "23503";
+const UNIQUE_KEY_VIOLATION = "23505";
+
+/** Maps a blocked vocabulary delete onto a readable error, else rethrows raw. */
+function vocabularyDeleteError(
+  error: { code?: string | null },
+  kind: "unit" | "location",
+): unknown {
+  if (error.code === PROTECTED_DEFAULT_VIOLATION) {
+    return new Error(`The default ${kind} can't be deleted`);
+  }
+  if (error.code === RESTRICT_FK_VIOLATION) {
+    // Only `nutrition_food.unit` is RESTRICT; everything else is SET DEFAULT.
+    return new Error(
+      "This unit is in use — reassign the foods that reference it before deleting it",
+    );
+  }
+  return error;
+}
+
+/** Active units only, ordered for pickers. */
+export async function getUnits(
+  supabase: SupabaseClient<Database>,
+): Promise<UnitRow[]> {
+  const { data, error } = await supabase
+    .from("nutrition_unit")
+    .select("*")
+    .eq("active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+/** Every unit incl. archived, ordered — the settings management surface. */
+export async function getAllUnits(
+  supabase: SupabaseClient<Database>,
+): Promise<UnitRow[]> {
+  const { data, error } = await supabase
+    .from("nutrition_unit")
+    .select("*")
+    .order("sort_order", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+/** Active pantry locations only, ordered for pickers. */
+export async function getPantryLocations(
+  supabase: SupabaseClient<Database>,
+): Promise<PantryLocationRow[]> {
+  const { data, error } = await supabase
+    .from("nutrition_pantry_location")
+    .select("*")
+    .eq("active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+/** Every pantry location incl. archived, ordered — the settings surface. */
+export async function getAllPantryLocations(
+  supabase: SupabaseClient<Database>,
+): Promise<PantryLocationRow[]> {
+  const { data, error } = await supabase
+    .from("nutrition_pantry_location")
+    .select("*")
+    .order("sort_order", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Adds a unit, generating its immutable `key` from the label (never changes
+ * after creation) and parking it at the end of the sort order. A duplicate
+ * key surfaces as a readable error.
+ */
+export async function insertUnit(
+  supabase: SupabaseClient<Database>,
+  unit: { label: string; dimension: UnitDimension },
+): Promise<UnitRow> {
+  const key = vocabularyKey(unit.label);
+
+  const { data: last, error: lastError } = await supabase
+    .from("nutrition_unit")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lastError) throw lastError;
+
+  const { data, error } = await supabase
+    .from("nutrition_unit")
+    .insert({
+      key,
+      label: unit.label,
+      dimension: unit.dimension,
+      sort_order: (last?.sort_order ?? 0) + 1,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === UNIQUE_KEY_VIOLATION) {
+      throw new Error(`A unit with the key "${key}" already exists`);
+    }
+    throw error;
+  }
+  return data;
+}
+
+/** Renames a unit's label only — the `key` is immutable. */
+export async function renameUnit(
+  supabase: SupabaseClient<Database>,
+  key: string,
+  label: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_unit")
+    .update({ label })
+    .eq("key", key);
+
+  if (error) throw error;
+}
+
+/** Rewrites `sort_order` to match the given key order (1-based). */
+export async function reorderUnits(
+  supabase: SupabaseClient<Database>,
+  orderedKeys: string[],
+): Promise<void> {
+  for (const [index, key] of orderedKeys.entries()) {
+    const { error } = await supabase
+      .from("nutrition_unit")
+      .update({ sort_order: index + 1 })
+      .eq("key", key);
+
+    if (error) throw error;
+  }
+}
+
+/** Archives or restores a unit; archiving the protected default is blocked. */
+export async function setUnitActive(
+  supabase: SupabaseClient<Database>,
+  key: string,
+  active: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_unit")
+    .update({ active })
+    .eq("key", key);
+
+  if (error) {
+    if (error.code === PROTECTED_DEFAULT_VIOLATION) {
+      throw new Error("The default unit can't be archived");
+    }
+    throw error;
+  }
+}
+
+/**
+ * Deletes a unit. The DB blocks deleting the protected default (trigger) or a
+ * unit any food is stated in (`RESTRICT` FK); both come back as readable
+ * errors, not raw PG codes.
+ */
+export async function deleteUnit(
+  supabase: SupabaseClient<Database>,
+  key: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_unit")
+    .delete()
+    .eq("key", key);
+
+  if (error) throw vocabularyDeleteError(error, "unit");
+}
+
+/**
+ * Adds a pantry location, generating its immutable `key` from the label and
+ * parking it at the end of the sort order. A duplicate key surfaces readably.
+ */
+export async function insertPantryLocation(
+  supabase: SupabaseClient<Database>,
+  location: { label: string; icon: string },
+): Promise<PantryLocationRow> {
+  const key = vocabularyKey(location.label);
+
+  const { data: last, error: lastError } = await supabase
+    .from("nutrition_pantry_location")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lastError) throw lastError;
+
+  const { data, error } = await supabase
+    .from("nutrition_pantry_location")
+    .insert({
+      key,
+      label: location.label,
+      icon: location.icon,
+      sort_order: (last?.sort_order ?? 0) + 1,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === UNIQUE_KEY_VIOLATION) {
+      throw new Error(`A location with the key "${key}" already exists`);
+    }
+    throw error;
+  }
+  return data;
+}
+
+/** Renames a location's label only — the `key` is immutable. */
+export async function renamePantryLocation(
+  supabase: SupabaseClient<Database>,
+  key: string,
+  label: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_pantry_location")
+    .update({ label })
+    .eq("key", key);
+
+  if (error) throw error;
+}
+
+/** Sets a location's icon (a Lucide name resolved by location-icon.tsx). */
+export async function setPantryLocationIcon(
+  supabase: SupabaseClient<Database>,
+  key: string,
+  icon: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_pantry_location")
+    .update({ icon })
+    .eq("key", key);
+
+  if (error) throw error;
+}
+
+/** Rewrites `sort_order` to match the given key order (1-based). */
+export async function reorderPantryLocations(
+  supabase: SupabaseClient<Database>,
+  orderedKeys: string[],
+): Promise<void> {
+  for (const [index, key] of orderedKeys.entries()) {
+    const { error } = await supabase
+      .from("nutrition_pantry_location")
+      .update({ sort_order: index + 1 })
+      .eq("key", key);
+
+    if (error) throw error;
+  }
+}
+
+/** Archives or restores a location; the protected default can't be archived. */
+export async function setPantryLocationActive(
+  supabase: SupabaseClient<Database>,
+  key: string,
+  active: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_pantry_location")
+    .update({ active })
+    .eq("key", key);
+
+  if (error) {
+    if (error.code === PROTECTED_DEFAULT_VIOLATION) {
+      throw new Error("The default location can't be archived");
+    }
+    throw error;
+  }
+}
+
+/**
+ * Deletes a location. The DB blocks deleting the protected default (trigger);
+ * referencing pantry rows reset to the default (`SET DEFAULT`), so there is no
+ * in-use block here.
+ */
+export async function deletePantryLocation(
+  supabase: SupabaseClient<Database>,
+  key: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("nutrition_pantry_location")
+    .delete()
+    .eq("key", key);
+
+  if (error) throw vocabularyDeleteError(error, "location");
+}
 
 // === nutrition_food ==================================================
 

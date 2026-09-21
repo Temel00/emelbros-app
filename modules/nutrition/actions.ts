@@ -20,15 +20,21 @@ import {
   type ShoppingListShortfall,
 } from "@/modules/nutrition/lib/shopping-list-generation";
 import { computeLogMacros } from "@/modules/nutrition/lib/macro-computation";
+import {
+  UNIT_DIMENSIONS,
+  type UnitDimension,
+} from "@/modules/nutrition/lib/defaults";
 import { DEFAULT_PANTRY_LOCATION } from "@/modules/nutrition/lib/locations";
 import {
   applyPantryDecrements,
   deleteLogEntry,
   deleteMealPlanEntry,
   deletePantryItem,
+  deletePantryLocation,
   deleteRecipe,
   deleteRecipeIngredient,
   deleteShoppingListItem,
+  deleteUnit,
   getFoodsByIds,
   getLogEntry,
   getMealPlanEntriesForGeneration,
@@ -42,12 +48,21 @@ import {
   insertMealPlanEntry,
   insertManualShoppingListItem,
   insertPantryItem,
+  insertPantryLocation,
   insertRecipe,
   insertRecipeIngredient,
+  insertUnit,
   markMealPlanEntryCooked,
+  renamePantryLocation,
+  renameUnit,
+  reorderPantryLocations,
+  reorderUnits,
   replaceAutoShoppingListItems,
+  setPantryLocationActive,
+  setPantryLocationIcon,
   setRecipeArchived,
   setShoppingListItemCheckedOff,
+  setUnitActive,
   updateLogEntry,
   updateMealPlanEntry,
   updatePantryItem,
@@ -58,7 +73,9 @@ import {
   type FoodRow,
   type LogEntryRow,
   type MealPlanEntryRow,
+  type PantryLocationRow,
   type RecipeRow,
+  type UnitRow,
 } from "@/modules/nutrition/queries";
 
 /**
@@ -678,6 +695,163 @@ export async function addManualShoppingListItemAction(
   });
 
   revalidatePath("/nutrition/shopping-list");
+}
+
+// === Managed vocabularies (units & pantry locations, #156) ===========
+// Thin wrappers over the vocabulary query layer. Every write rides the same
+// fixed-Family RLS as the rest of nutrition — any signed-in member may manage
+// the shared lists. A vocabulary change ripples through every picker under
+// `/nutrition`, so each action revalidates the whole section.
+
+function isUnitDimension(value: string): value is UnitDimension {
+  return (UNIT_DIMENSIONS as readonly string[]).includes(value);
+}
+
+export type CreateUnitInput = { label: string; dimension: string };
+
+export async function createUnitAction(
+  input: CreateUnitInput,
+): Promise<UnitRow> {
+  if (isBlank(input.label)) throw new Error("Unit name is required");
+  if (!isUnitDimension(input.dimension)) {
+    throw new Error("Unit dimension must be weight, volume, or count");
+  }
+
+  await requireMember();
+  const supabase = await createClient();
+
+  const unit = await insertUnit(supabase, {
+    label: input.label.trim(),
+    dimension: input.dimension,
+  });
+
+  revalidatePath("/nutrition");
+  return unit;
+}
+
+export async function renameUnitAction(
+  key: string,
+  label: string,
+): Promise<void> {
+  if (isBlank(label)) throw new Error("Unit name is required");
+
+  await requireMember();
+  const supabase = await createClient();
+
+  await renameUnit(supabase, key, label.trim());
+  revalidatePath("/nutrition");
+}
+
+export async function reorderUnitsAction(orderedKeys: string[]): Promise<void> {
+  await requireMember();
+  const supabase = await createClient();
+
+  await reorderUnits(supabase, orderedKeys);
+  revalidatePath("/nutrition");
+}
+
+export async function archiveUnitAction(key: string): Promise<void> {
+  await requireMember();
+  const supabase = await createClient();
+
+  await setUnitActive(supabase, key, false);
+  revalidatePath("/nutrition");
+}
+
+export async function restoreUnitAction(key: string): Promise<void> {
+  await requireMember();
+  const supabase = await createClient();
+
+  await setUnitActive(supabase, key, true);
+  revalidatePath("/nutrition");
+}
+
+export async function deleteUnitAction(key: string): Promise<void> {
+  await requireMember();
+  const supabase = await createClient();
+
+  await deleteUnit(supabase, key);
+  revalidatePath("/nutrition");
+}
+
+export type CreatePantryLocationInput = { label: string; icon: string };
+
+export async function createPantryLocationAction(
+  input: CreatePantryLocationInput,
+): Promise<PantryLocationRow> {
+  if (isBlank(input.label)) throw new Error("Location name is required");
+  if (isBlank(input.icon)) throw new Error("Location icon is required");
+
+  await requireMember();
+  const supabase = await createClient();
+
+  const location = await insertPantryLocation(supabase, {
+    label: input.label.trim(),
+    icon: input.icon.trim(),
+  });
+
+  revalidatePath("/nutrition");
+  return location;
+}
+
+export async function renamePantryLocationAction(
+  key: string,
+  label: string,
+): Promise<void> {
+  if (isBlank(label)) throw new Error("Location name is required");
+
+  await requireMember();
+  const supabase = await createClient();
+
+  await renamePantryLocation(supabase, key, label.trim());
+  revalidatePath("/nutrition");
+}
+
+export async function setPantryLocationIconAction(
+  key: string,
+  icon: string,
+): Promise<void> {
+  if (isBlank(icon)) throw new Error("Location icon is required");
+
+  await requireMember();
+  const supabase = await createClient();
+
+  await setPantryLocationIcon(supabase, key, icon.trim());
+  revalidatePath("/nutrition");
+}
+
+export async function reorderPantryLocationsAction(
+  orderedKeys: string[],
+): Promise<void> {
+  await requireMember();
+  const supabase = await createClient();
+
+  await reorderPantryLocations(supabase, orderedKeys);
+  revalidatePath("/nutrition");
+}
+
+export async function archivePantryLocationAction(key: string): Promise<void> {
+  await requireMember();
+  const supabase = await createClient();
+
+  await setPantryLocationActive(supabase, key, false);
+  revalidatePath("/nutrition");
+}
+
+export async function restorePantryLocationAction(key: string): Promise<void> {
+  await requireMember();
+  const supabase = await createClient();
+
+  await setPantryLocationActive(supabase, key, true);
+  revalidatePath("/nutrition");
+}
+
+export async function deletePantryLocationAction(key: string): Promise<void> {
+  await requireMember();
+  const supabase = await createClient();
+
+  await deletePantryLocation(supabase, key);
+  revalidatePath("/nutrition");
 }
 
 export type UpdateManualShoppingListItemInput = {
