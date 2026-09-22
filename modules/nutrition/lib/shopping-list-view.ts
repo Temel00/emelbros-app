@@ -5,8 +5,10 @@
  * "node"`, no DOM — see vitest.config.ts).
  */
 
-import { groupByLocation } from "@/modules/nutrition/lib/grouping";
-import type { PantryLocation } from "@/modules/nutrition/lib/locations";
+import {
+  groupByLocation,
+  type GroupLocation,
+} from "@/modules/nutrition/lib/grouping";
 import type { ShoppingListShortfall } from "@/modules/nutrition/lib/shopping-list-generation";
 import type {
   PantryItemWithFood,
@@ -14,7 +16,7 @@ import type {
 } from "@/modules/nutrition/queries";
 
 export type ShoppingListGroup = {
-  location: PantryLocation;
+  location: GroupLocation;
   items: ShoppingListItemRow[];
 };
 
@@ -46,6 +48,7 @@ export function formatQuantity(
 export function groupShoppingListItems(
   items: readonly ShoppingListItemRow[],
   pantryItems: readonly PantryItemWithFood[],
+  locations: readonly GroupLocation[],
 ): ShoppingListGrouping {
   const locationByFood = new Map<string, string>();
   for (const pantryItem of pantryItems) {
@@ -65,7 +68,7 @@ export function groupShoppingListItems(
     else notInPantry.push(item);
   }
 
-  const grouped = groupByLocation(withLocation).map((group) => ({
+  const grouped = groupByLocation(withLocation, locations).map((group) => ({
     location: group.location,
     items: group.items.map(({ item }) => item),
   }));

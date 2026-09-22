@@ -23,7 +23,6 @@ import {
   updateManualShoppingListItemAction,
 } from "@/modules/nutrition/actions";
 import { locationIcon } from "@/modules/nutrition/components/location-icon";
-import { getPantryLocation } from "@/modules/nutrition/lib/locations";
 import type { ShoppingListShortfall } from "@/modules/nutrition/lib/shopping-list-generation";
 import {
   type AutoLineDiff,
@@ -35,6 +34,7 @@ import {
 } from "@/modules/nutrition/lib/shopping-list-view";
 import type {
   PantryItemWithFood,
+  PantryLocationRow,
   ShoppingListItemRow,
 } from "@/modules/nutrition/queries";
 
@@ -49,10 +49,12 @@ import type {
 export function ShoppingListView({
   items,
   pantryItems,
+  locations,
   range,
 }: {
   items: ShoppingListItemRow[];
   pantryItems: PantryItemWithFood[];
+  locations: PantryLocationRow[];
   range: { start: string; end: string };
 }) {
   const [isPending, startTransition] = useTransition();
@@ -64,7 +66,11 @@ export function ShoppingListView({
   const [copied, setCopied] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
-  const { grouped, notInPantry } = groupShoppingListItems(items, pantryItems);
+  const { grouped, notInPantry } = groupShoppingListItems(
+    items,
+    pantryItems,
+    locations,
+  );
 
   const diff =
     pendingLines !== null ? diffAutoLines(items, pendingLines) : null;
@@ -206,6 +212,7 @@ export function ShoppingListView({
       <EditItemDialog
         item={editItem}
         pantryItems={pantryItems}
+        locations={locations}
         onOpenChange={(open) => {
           if (!open) setEditItem(null);
         }}
@@ -393,10 +400,12 @@ function AddItemDialog({
 function EditItemDialog({
   item,
   pantryItems,
+  locations,
   onOpenChange,
 }: {
   item: ShoppingListItemRow | null;
   pantryItems: PantryItemWithFood[];
+  locations: PantryLocationRow[];
   onOpenChange: (open: boolean) => void;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -477,7 +486,10 @@ function EditItemDialog({
               <p className="mt-1">
                 {stock.food.name} — {formatQuantity(stock.quantity, stock.unit)}{" "}
                 on hand in{" "}
-                {getPantryLocation(stock.location).label.toLowerCase()}
+                {(
+                  locations.find((loc) => loc.key === stock.location)?.label ??
+                  stock.location
+                ).toLowerCase()}
               </p>
             </div>
           ) : (

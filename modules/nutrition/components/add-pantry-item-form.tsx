@@ -9,10 +9,14 @@ import { Select } from "@/components/ui/select";
 import { FoodLinkPicker } from "@/modules/nutrition/components/food-link-picker";
 import { addPantryItemAction } from "@/modules/nutrition/actions";
 import {
-  DEFAULT_PANTRY_LOCATION,
-  pantryLocations,
-} from "@/modules/nutrition/lib/locations";
-import type { FoodRow } from "@/modules/nutrition/queries";
+  DEFAULT_LOCATION_KEY,
+  DEFAULT_UNIT_KEY,
+} from "@/modules/nutrition/lib/defaults";
+import type {
+  FoodRow,
+  PantryLocationRow,
+  UnitRow,
+} from "@/modules/nutrition/queries";
 
 /**
  * Adds a pantry line (docs/modules/nutrition.md §3.2). Food-first linking
@@ -23,27 +27,37 @@ import type { FoodRow } from "@/modules/nutrition/queries";
  * "1." or "" is a valid thing to be typing, and the server action is what
  * rejects a genuinely bad value.
  */
-export function AddPantryItemForm({ foods }: { foods: FoodRow[] }) {
+export function AddPantryItemForm({
+  foods,
+  units,
+  locations,
+}: {
+  foods: FoodRow[];
+  units: UnitRow[];
+  locations: PantryLocationRow[];
+}) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const [pickedFood, setPickedFood] = useState<FoodRow | null>(null);
   const [quantity, setQuantity] = useState("1");
-  const [unit, setUnit] = useState("");
-  const [location, setLocation] = useState(DEFAULT_PANTRY_LOCATION);
+  const [unit, setUnit] = useState(DEFAULT_UNIT_KEY);
+  const [location, setLocation] = useState(DEFAULT_LOCATION_KEY);
   const [expiresOn, setExpiresOn] = useState("");
 
   function pickFood(food: FoodRow) {
     setPickedFood(food);
     // Adopt the picked food's own unit — v1 does no conversion (§8), so the
-    // line is counted in the unit its nutrition facts are expressed in.
+    // line is counted in the unit its nutrition facts are expressed in. It's
+    // a managed key (the food's FK guarantees it); a fallback option below
+    // keeps it selectable even if that unit has since been archived.
     setUnit(food.unit);
   }
 
   function reset() {
     setPickedFood(null);
     setQuantity("1");
-    setUnit("");
+    setUnit(DEFAULT_UNIT_KEY);
     setExpiresOn("");
   }
 
@@ -78,6 +92,7 @@ export function AddPantryItemForm({ foods }: { foods: FoodRow[] }) {
       {pickedFood === null ? (
         <FoodLinkPicker
           foods={foods}
+          units={units}
           onPick={pickFood}
           emptyHint="Type to search the food dictionary, or add a new one."
         />
@@ -106,15 +121,23 @@ export function AddPantryItemForm({ foods }: { foods: FoodRow[] }) {
             placeholder="Qty"
           />
 
-          <Input
-            type="text"
+          <Select
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            required
-            className="w-20"
             aria-label="Unit"
-            placeholder="Unit"
-          />
+            className="w-24"
+          >
+            {units.map((u) => (
+              <option key={u.key} value={u.key}>
+                {u.label}
+              </option>
+            ))}
+            {/* A picked food's base unit that's since been archived still
+                round-trips rather than silently switching the line's unit. */}
+            {!units.some((u) => u.key === unit) && (
+              <option value={unit}>{unit}</option>
+            )}
+          </Select>
 
           <Select
             value={location}
@@ -122,7 +145,7 @@ export function AddPantryItemForm({ foods }: { foods: FoodRow[] }) {
             aria-label="Location"
             className="w-auto"
           >
-            {pantryLocations().map((loc) => (
+            {locations.map((loc) => (
               <option key={loc.key} value={loc.key}>
                 {loc.label}
               </option>

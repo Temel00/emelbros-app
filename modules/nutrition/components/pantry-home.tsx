@@ -2,7 +2,12 @@ import { AddPantryItemForm } from "@/modules/nutrition/components/add-pantry-ite
 import { locationIcon } from "@/modules/nutrition/components/location-icon";
 import { PantryItemRow } from "@/modules/nutrition/components/pantry-item-row";
 import { groupByLocation } from "@/modules/nutrition/lib/grouping";
-import type { FoodRow, PantryItemWithFood } from "@/modules/nutrition/queries";
+import type {
+  FoodRow,
+  PantryItemWithFood,
+  PantryLocationRow,
+  UnitRow,
+} from "@/modules/nutrition/queries";
 
 /**
  * The pantry view (docs/modules/nutrition.md §3.2): household inventory
@@ -13,15 +18,19 @@ import type { FoodRow, PantryItemWithFood } from "@/modules/nutrition/queries";
 export function PantryHome({
   items,
   foods,
+  units,
+  locations,
 }: {
   items: PantryItemWithFood[];
   foods: FoodRow[];
+  units: UnitRow[];
+  locations: PantryLocationRow[];
 }) {
-  const groups = groupByLocation(items);
+  const groups = groupByLocation(items, locations);
 
   return (
     <>
-      <AddPantryItemForm foods={foods} />
+      <AddPantryItemForm foods={foods} units={units} locations={locations} />
 
       {groups.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
@@ -36,7 +45,12 @@ export function PantryHome({
             </h2>
             <ul className="flex flex-col gap-2">
               {group.items.map((item) => (
-                <PantryItemRow key={item.id} item={item} />
+                <PantryItemRow
+                  key={item.id}
+                  item={item}
+                  units={units}
+                  locations={locations}
+                />
               ))}
             </ul>
           </section>

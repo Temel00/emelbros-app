@@ -21,10 +21,10 @@ import {
 } from "@/modules/nutrition/lib/shopping-list-generation";
 import { computeLogMacros } from "@/modules/nutrition/lib/macro-computation";
 import {
+  DEFAULT_LOCATION_KEY,
   UNIT_DIMENSIONS,
   type UnitDimension,
 } from "@/modules/nutrition/lib/defaults";
-import { DEFAULT_PANTRY_LOCATION } from "@/modules/nutrition/lib/locations";
 import {
   applyPantryDecrements,
   deleteLogEntry,
@@ -923,7 +923,7 @@ export async function checkOffShoppingListItemAction(itemId: string) {
         foodId: item.food_id,
         quantity: item.quantity,
         unit: item.unit,
-        location: DEFAULT_PANTRY_LOCATION,
+        location: DEFAULT_LOCATION_KEY,
         expiresOn: null,
         addedBy: member.id,
       });

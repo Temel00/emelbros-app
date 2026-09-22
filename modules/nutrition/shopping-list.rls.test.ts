@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { Database } from "@/types/database";
-import { DEFAULT_PANTRY_LOCATION } from "@/modules/nutrition/lib/locations";
+import { DEFAULT_LOCATION_KEY } from "@/modules/nutrition/lib/defaults";
 import { computeShoppingListShortfalls } from "@/modules/nutrition/lib/shopping-list-generation";
 import {
   getMealPlanEntriesForGeneration,
@@ -262,7 +262,7 @@ describe("nutrition shopping-list generation and check-off", () => {
       foodId,
       quantity: 200,
       unit: "g",
-      location: DEFAULT_PANTRY_LOCATION,
+      location: DEFAULT_LOCATION_KEY,
       expiresOn: null,
       addedBy: "00000000-0000-0000-0000-000000000000",
     });
@@ -275,7 +275,7 @@ describe("nutrition shopping-list generation and check-off", () => {
       .eq("id", created.id)
       .single();
     expect(newRow?.quantity).toBe(200);
-    expect(newRow?.location).toBe(DEFAULT_PANTRY_LOCATION);
+    expect(newRow?.location).toBe(DEFAULT_LOCATION_KEY);
 
     const checkedOff = await getShoppingListItem(admin, item.id);
     expect(checkedOff?.checked_off).toBe(true);

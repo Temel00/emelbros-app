@@ -7,6 +7,7 @@ import {
   isEmptyDiff,
   shoppingListToCsv,
 } from "@/modules/nutrition/lib/shopping-list-view";
+import type { GroupLocation } from "@/modules/nutrition/lib/grouping";
 import type { ShoppingListShortfall } from "@/modules/nutrition/lib/shopping-list-generation";
 import type {
   PantryItemWithFood,
@@ -65,13 +66,24 @@ describe("formatQuantity", () => {
   });
 });
 
+// Stands in for `getPantryLocations()` — the managed list (ADR-0017).
+const locations: GroupLocation[] = [
+  { key: "fridge", label: "Fridge", icon: "Refrigerator" },
+  { key: "freezer", label: "Freezer", icon: "Snowflake" },
+  { key: "pantry", label: "Pantry", icon: "Archive" },
+];
+
 describe("groupShoppingListItems", () => {
   it("groups a line under the location of its food's first pantry row", () => {
     const milk = item({ id: "line-milk", food_id: "food-1" });
     const items = [milk];
     const pantryItems = [pantryItem({ food_id: "food-1", location: "fridge" })];
 
-    const { grouped, notInPantry } = groupShoppingListItems(items, pantryItems);
+    const { grouped, notInPantry } = groupShoppingListItems(
+      items,
+      pantryItems,
+      locations,
+    );
 
     expect(notInPantry).toEqual([]);
     expect(grouped).toHaveLength(1);
@@ -86,7 +98,7 @@ describe("groupShoppingListItems", () => {
       pantryItem({ id: "p2", food_id: "food-1", location: "pantry" }),
     ];
 
-    const { grouped } = groupShoppingListItems([line], pantryItems);
+    const { grouped } = groupShoppingListItems([line], pantryItems, locations);
 
     expect(grouped).toHaveLength(1);
     expect(grouped[0].location.key).toBe("freezer");
@@ -95,7 +107,11 @@ describe("groupShoppingListItems", () => {
   it("falls back to notInPantry for a line with no linked food", () => {
     const line = item({ id: "line-manual", food_id: null });
 
-    const { grouped, notInPantry } = groupShoppingListItems([line], []);
+    const { grouped, notInPantry } = groupShoppingListItems(
+      [line],
+      [],
+      locations,
+    );
 
     expect(grouped).toEqual([]);
     expect(notInPantry).toEqual([line]);
@@ -104,7 +120,11 @@ describe("groupShoppingListItems", () => {
   it("falls back to notInPantry when the linked food has no pantry row", () => {
     const line = item({ id: "line-1", food_id: "food-unstocked" });
 
-    const { grouped, notInPantry } = groupShoppingListItems([line], []);
+    const { grouped, notInPantry } = groupShoppingListItems(
+      [line],
+      [],
+      locations,
+    );
 
     expect(grouped).toEqual([]);
     expect(notInPantry).toEqual([line]);
