@@ -13,6 +13,7 @@ import type { ShoppingListShortfall } from "@/modules/nutrition/lib/shopping-lis
 import type {
   PantryItemWithFood,
   ShoppingListItemRow,
+  UnitRow,
 } from "@/modules/nutrition/queries";
 
 export type ShoppingListGroup = {
@@ -126,6 +127,25 @@ export function isEmptyDiff(diff: AutoLineDiff): boolean {
     diff.changed.length === 0 &&
     diff.removed.length === 0
   );
+}
+
+/**
+ * Sorts the active unit vocabulary (ADR-0017) so the linked food's own
+ * base-unit dimension (ADR-0016 — weight/volume/count) surfaces first in the
+ * Add-item food path's unit `<select>`, without hiding the rest: v1 does no
+ * conversion, so a member picking a different dimension entirely (e.g.
+ * "each" for a food whose base unit is "g") is still a normal, reachable
+ * choice, just not the first ones shown. `dimension === null` (nothing
+ * linked yet, or the freeform path) leaves the vocabulary's own order alone.
+ */
+export function scopeUnitsByDimension(
+  units: readonly UnitRow[],
+  dimension: string | null,
+): UnitRow[] {
+  if (dimension === null) return [...units];
+  const matching = units.filter((unit) => unit.dimension === dimension);
+  const other = units.filter((unit) => unit.dimension !== dimension);
+  return [...matching, ...other];
 }
 
 function csvField(value: string): string {

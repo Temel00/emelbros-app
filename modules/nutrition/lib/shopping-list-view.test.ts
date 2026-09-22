@@ -5,6 +5,7 @@ import {
   formatQuantity,
   groupShoppingListItems,
   isEmptyDiff,
+  scopeUnitsByDimension,
   shoppingListToCsv,
 } from "@/modules/nutrition/lib/shopping-list-view";
 import type { GroupLocation } from "@/modules/nutrition/lib/grouping";
@@ -12,6 +13,7 @@ import type { ShoppingListShortfall } from "@/modules/nutrition/lib/shopping-lis
 import type {
   PantryItemWithFood,
   ShoppingListItemRow,
+  UnitRow,
 } from "@/modules/nutrition/queries";
 
 function item(overrides: Partial<ShoppingListItemRow>): ShoppingListItemRow {
@@ -222,6 +224,57 @@ describe("isEmptyDiff", () => {
         removed: [item({ id: "x" })],
       }),
     ).toBe(false);
+  });
+});
+
+describe("scopeUnitsByDimension", () => {
+  const units: UnitRow[] = [
+    {
+      key: "g",
+      label: "Grams",
+      dimension: "weight",
+      sort_order: 1,
+      active: true,
+      protected: true,
+    },
+    {
+      key: "kg",
+      label: "Kilograms",
+      dimension: "weight",
+      sort_order: 2,
+      active: true,
+      protected: false,
+    },
+    {
+      key: "ml",
+      label: "Millilitres",
+      dimension: "volume",
+      sort_order: 3,
+      active: true,
+      protected: false,
+    },
+    {
+      key: "each",
+      label: "Each",
+      dimension: "count",
+      sort_order: 4,
+      active: true,
+      protected: false,
+    },
+  ] as UnitRow[];
+
+  it("leaves the vocabulary's own order alone when there's no dimension yet", () => {
+    expect(scopeUnitsByDimension(units, null)).toEqual(units);
+  });
+
+  it("sorts the matching dimension first without dropping the rest", () => {
+    const scoped = scopeUnitsByDimension(units, "volume");
+    expect(scoped.map((unit) => unit.key)).toEqual(["ml", "g", "kg", "each"]);
+  });
+
+  it("returns the vocabulary unchanged when nothing matches the dimension", () => {
+    const scoped = scopeUnitsByDimension(units, "unknown-dimension");
+    expect(scoped.map((unit) => unit.key)).toEqual(["g", "kg", "ml", "each"]);
   });
 });
 

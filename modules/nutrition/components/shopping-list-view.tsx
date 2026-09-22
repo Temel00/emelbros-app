@@ -1,7 +1,20 @@
 "use client";
 
-import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import {
+  AlertTriangle,
+  Copy,
+  Link2,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
+import {
+  type ComponentProps,
+  type FormEvent,
+  useState,
+  useTransition,
+} from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,6 +27,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   addManualShoppingListItemAction,
   checkOffShoppingListItemAction,
@@ -22,7 +37,9 @@ import {
   previewShoppingListGenerationAction,
   updateManualShoppingListItemAction,
 } from "@/modules/nutrition/actions";
+import { FoodLinkPicker } from "@/modules/nutrition/components/food-link-picker";
 import { locationIcon } from "@/modules/nutrition/components/location-icon";
+import { DEFAULT_UNIT_KEY } from "@/modules/nutrition/lib/defaults";
 import type { ShoppingListShortfall } from "@/modules/nutrition/lib/shopping-list-generation";
 import {
   type AutoLineDiff,
@@ -30,31 +47,44 @@ import {
   formatQuantity,
   groupShoppingListItems,
   isEmptyDiff,
+  scopeUnitsByDimension,
   shoppingListToCsv,
 } from "@/modules/nutrition/lib/shopping-list-view";
 import type {
+  FoodRow,
   PantryItemWithFood,
   PantryLocationRow,
   ShoppingListItemRow,
+  UnitRow,
 } from "@/modules/nutrition/queries";
 
 /**
  * The shopping list (nutrition.md §3.4, wayfinder #120), translating the
  * settled prototype (#119, Variant E) onto the real schema: lines grouped by
  * the location of the pantry row their food is stocked in, falling back to a
- * "Not in your pantry" bucket for freeform or unlinked lines. Units are
- * plain freeform text (no canonical list — that's #135's scope), matching
- * `pantry-item-row.tsx`'s own inline-edit inputs.
+ * "Not in your pantry" bucket for freeform or unlinked lines. Adding a line
+ * is a segmented two-path modal (#160, Variant C): the food path leads with
+ * the same searchable `FoodLinkPicker` recipe ingredients use (#159), the
+ * freeform path is a plain display-text line. Units are the managed
+ * vocabulary (ADR-0017) via a constrained `<select>` in both paths and both
+ * the Add and Edit dialogs — the `unit` column is FK'd to `nutrition_unit`,
+ * so no freeform unit string can reach it; a chosen unit that differs from a
+ * linked food's base unit is accepted and flagged, never converted
+ * (ADR-0016).
  */
 export function ShoppingListView({
   items,
   pantryItems,
   locations,
+  foods,
+  units,
   range,
 }: {
   items: ShoppingListItemRow[];
   pantryItems: PantryItemWithFood[];
   locations: PantryLocationRow[];
+  foods: FoodRow[];
+  units: UnitRow[];
   range: { start: string; end: string };
 }) {
   const [isPending, startTransition] = useTransition();
@@ -207,12 +237,18 @@ export function ShoppingListView({
         </section>
       )}
 
-      <AddItemDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddItemDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        foods={foods}
+        units={units}
+      />
 
       <EditItemDialog
         item={editItem}
         pantryItems={pantryItems}
         locations={locations}
+        units={units}
         onOpenChange={(open) => {
           if (!open) setEditItem(null);
         }}
@@ -301,34 +337,88 @@ function ShoppingListRow({
   );
 }
 
+type AddPath = "food" | "freeform";
+
+/**
+ * Variant C (#160): a segmented two-path Add modal. The food path leads with
+ * `FoodLinkPicker` — picking a food sets `food_id` and defaults the unit
+ * select to that food's own base unit, scoped so the select surfaces units
+ * of the same dimension first (ADR-0016); a mismatched unit is accepted and
+ * flagged, never converted. The freeform path is a plain display-text line
+ * with `food_id` left null, matching the list's pre-existing manual lines.
+ * Both paths' unit is the constrained managed `<select>` (ADR-0017) — never
+ * freeform text — and may be left blank.
+ */
 function AddItemDialog({
   open,
   onOpenChange,
+  foods,
+  units,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  foods: FoodRow[];
+  units: UnitRow[];
 }) {
   const [isPending, startTransition] = useTransition();
+  const [path, setPath] = useState<AddPath>("food");
+  const [pickedFood, setPickedFood] = useState<FoodRow | null>(null);
   const [displayText, setDisplayText] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState("");
+  const [unit, setUnit] = useState(DEFAULT_UNIT_KEY);
   const [error, setError] = useState<string | null>(null);
 
   function reset() {
+    setPath("food");
+    setPickedFood(null);
     setDisplayText("");
     setQuantity("");
-    setUnit("");
+    setUnit(DEFAULT_UNIT_KEY);
     setError(null);
   }
+
+  function switchPath(next: AddPath) {
+    setPath(next);
+    setPickedFood(null);
+    setDisplayText("");
+    setQuantity("");
+    setUnit(DEFAULT_UNIT_KEY);
+    setError(null);
+  }
+
+  function pickFood(food: FoodRow) {
+    setPickedFood(food);
+    setUnit(food.unit || DEFAULT_UNIT_KEY);
+  }
+
+  const foodDimension = pickedFood
+    ? (units.find((u) => u.key === pickedFood.unit)?.dimension ?? null)
+    : null;
+  const scopedUnits =
+    path === "food" ? scopeUnitsByDimension(units, foodDimension) : units;
+  const unitMismatch =
+    path === "food" &&
+    pickedFood !== null &&
+    unit !== "" &&
+    unit !== pickedFood.unit;
+
+  const canSubmit =
+    path === "food" ? pickedFood !== null : displayText.trim() !== "";
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    if (!canSubmit) return;
+
+    const foodId = path === "food" ? (pickedFood?.id ?? null) : null;
+    const text =
+      path === "food" ? (pickedFood?.name ?? "") : displayText.trim();
 
     startTransition(async () => {
       try {
         await addManualShoppingListItemAction({
-          displayText,
+          foodId,
+          displayText: text,
           quantity: quantity.trim() === "" ? null : Number(quantity),
           unit: unit.trim() === "" ? null : unit,
         });
@@ -352,32 +442,116 @@ function AddItemDialog({
         <DialogHeader>
           <DialogTitle>Add item</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-3">
-          <Input
-            autoFocus
-            value={displayText}
-            onChange={(e) => setDisplayText(e.target.value)}
-            placeholder="e.g. Paper towels"
-            required
-          />
-          <div className="flex gap-2">
-            <Input
-              type="number"
-              inputMode="decimal"
-              step="any"
-              min="0"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="Qty"
-              className="w-20"
-            />
-            <Input
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              placeholder="Unit"
-              className="flex-1"
-            />
-          </div>
+        <div className="mt-2 flex gap-1 rounded-lg bg-muted p-1">
+          <button
+            type="button"
+            onClick={() => switchPath("food")}
+            aria-pressed={path === "food"}
+            className={cn(
+              "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              path === "food"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Add a food
+          </button>
+          <button
+            type="button"
+            onClick={() => switchPath("freeform")}
+            aria-pressed={path === "freeform"}
+            className={cn(
+              "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              path === "freeform"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Freeform
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-3">
+          {path === "food" ? (
+            pickedFood === null ? (
+              <FoodLinkPicker
+                foods={foods}
+                units={units}
+                onPick={pickFood}
+                emptyHint="Type to search the food dictionary, or switch to Freeform for a plain reminder."
+              />
+            ) : (
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPickedFood(null)}
+                  className="inline-flex w-fit items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground"
+                  aria-label={`Unlink ${pickedFood.name}`}
+                >
+                  <Link2 className="size-3" /> {pickedFood.name}
+                  <X className="size-3" />
+                </button>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    min="0"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder="Qty (optional)"
+                    aria-label="Quantity"
+                    className="w-28"
+                  />
+                  <UnitSelect
+                    units={scopedUnits}
+                    value={unit}
+                    aria-label="Unit"
+                    className="flex-1"
+                    onChange={(e) => setUnit(e.target.value)}
+                  />
+                </div>
+                {unitMismatch && (
+                  <p className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
+                    <AlertTriangle className="size-3 shrink-0" aria-hidden />
+                    Differs from {pickedFood.name}&apos;s base unit (
+                    {pickedFood.unit}) — not converted, so this line won&apos;t
+                    count toward macros.
+                  </p>
+                )}
+              </div>
+            )
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Input
+                autoFocus
+                value={displayText}
+                onChange={(e) => setDisplayText(e.target.value)}
+                placeholder="e.g. Paper towels"
+                required
+              />
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min="0"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  placeholder="Qty (optional)"
+                  aria-label="Quantity"
+                  className="w-28"
+                />
+                <UnitSelect
+                  units={units}
+                  value={unit}
+                  aria-label="Unit"
+                  className="flex-1"
+                  onChange={(e) => setUnit(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
           {error && (
             <p className="text-sm text-destructive" role="alert">
               {error}
@@ -387,7 +561,7 @@ function AddItemDialog({
             <DialogClose className={buttonVariants({ variant: "ghost" })}>
               Cancel
             </DialogClose>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || !canSubmit}>
               Add
             </Button>
           </DialogFooter>
@@ -397,15 +571,48 @@ function AddItemDialog({
   );
 }
 
+/**
+ * A constrained unit picker over the active managed vocabulary (ADR-0017),
+ * mirroring recipe-ingredients-editor.tsx's `UnitSelect` (#159), plus a
+ * leading "No unit" option since the shopping list's `unit` column is
+ * nullable — a line can be added or edited with no unit at all (e.g. "3
+ * Eggs"). The current `value` is always kept selectable even when it isn't
+ * in the active list (an archived unit still referenced by an existing
+ * line), rather than silently snapping away from it.
+ */
+function UnitSelect({
+  units,
+  value,
+  ...props
+}: {
+  units: UnitRow[];
+  value: string;
+} & Omit<ComponentProps<"select">, "value">) {
+  const known = new Map(units.map((unit) => [unit.key, unit.label]));
+  if (value !== "" && !known.has(value)) known.set(value, value);
+  return (
+    <Select value={value} {...props}>
+      <option value="">No unit</option>
+      {[...known.entries()].map(([key, label]) => (
+        <option key={key} value={key}>
+          {label}
+        </option>
+      ))}
+    </Select>
+  );
+}
+
 function EditItemDialog({
   item,
   pantryItems,
   locations,
+  units,
   onOpenChange,
 }: {
   item: ShoppingListItemRow | null;
   pantryItems: PantryItemWithFood[];
   locations: PantryLocationRow[];
+  units: UnitRow[];
   onOpenChange: (open: boolean) => void;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -472,11 +679,12 @@ function EditItemDialog({
               placeholder="Qty"
               className="w-20"
             />
-            <Input
+            <UnitSelect
+              units={units}
               value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              placeholder="Unit"
+              aria-label="Unit"
               className="flex-1"
+              onChange={(e) => setUnit(e.target.value)}
             />
           </div>
 

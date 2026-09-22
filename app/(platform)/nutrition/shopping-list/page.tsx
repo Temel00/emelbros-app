@@ -6,9 +6,11 @@ import { NutritionNav } from "@/modules/nutrition/components/nutrition-nav";
 import { ShoppingListView } from "@/modules/nutrition/components/shopping-list-view";
 import { weekRange } from "@/modules/nutrition/lib/plan-calendar";
 import {
+  getFoods,
   getPantryItems,
   getPantryLocations,
   getShoppingListItems,
+  getUnits,
 } from "@/modules/nutrition/queries";
 
 /**
@@ -25,10 +27,12 @@ export default async function ShoppingListPage() {
   if (!member) return null;
 
   const supabase = await createClient();
-  const [items, pantryItems, locations] = await Promise.all([
+  const [items, pantryItems, locations, foods, units] = await Promise.all([
     getShoppingListItems(supabase),
     getPantryItems(supabase),
     getPantryLocations(supabase),
+    getFoods(supabase),
+    getUnits(supabase),
   ]);
 
   const range = weekRange(new Date());
@@ -51,6 +55,8 @@ export default async function ShoppingListPage() {
           items={items}
           pantryItems={pantryItems}
           locations={locations}
+          foods={foods}
+          units={units}
           range={range}
         />
       </main>
