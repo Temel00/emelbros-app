@@ -17,6 +17,7 @@ import {
 import type {
   FoodRow,
   RecipeWithIngredients,
+  UnitRow,
 } from "@/modules/nutrition/queries";
 
 type Mode = "cook" | "edit";
@@ -34,9 +35,11 @@ const TEXTAREA =
 export function RecipeEditor({
   recipe,
   foods,
+  units,
 }: {
   recipe: RecipeWithIngredients;
   foods: FoodRow[];
+  units: UnitRow[];
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -221,6 +224,7 @@ export function RecipeEditor({
             recipeId={recipe.id}
             ingredients={recipe.ingredients}
             foods={foods}
+            units={units}
           />
         </div>
       )}

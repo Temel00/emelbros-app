@@ -5,7 +5,7 @@ import { getCurrentMember } from "@/platform/auth";
 import { createClient } from "@/platform/supabase/server";
 
 import { RecipeEditor } from "@/modules/nutrition/components/recipe-editor";
-import { getFoods, getRecipe } from "@/modules/nutrition/queries";
+import { getFoods, getRecipe, getUnits } from "@/modules/nutrition/queries";
 
 export default async function RecipeDetailPage({
   params,
@@ -27,12 +27,15 @@ export default async function RecipeDetailPage({
   if (!recipe) notFound();
 
   const foods = await getFoods(supabase);
+  // The managed unit vocabulary (ADR-0017) backs the ingredient unit select —
+  // active, ordered, fetched here so the client editor never reaches for the DB.
+  const units = await getUnits(supabase);
 
   return (
     <>
       <AppHeader memberId={member.id} supabase={supabase} />
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 sm:p-6">
-        <RecipeEditor recipe={recipe} foods={foods} />
+        <RecipeEditor recipe={recipe} foods={foods} units={units} />
       </main>
     </>
   );
