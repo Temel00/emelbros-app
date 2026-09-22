@@ -1,7 +1,14 @@
 "use client";
 
 import { type FormEvent, useState, useTransition } from "react";
-import { ChevronDown, ChevronUp, Pencil, RotateCcw, Trash2, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Pencil,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { resolveIcon } from "@/lib/icon";
@@ -259,7 +266,10 @@ function UnitRowItem({
         />
 
         {editing ? (
-          <form onSubmit={handleRename} className="flex flex-1 items-center gap-1.5">
+          <form
+            onSubmit={handleRename}
+            className="flex flex-1 items-center gap-1.5"
+          >
             <Input
               autoFocus
               value={label}
@@ -447,7 +457,10 @@ function LocationRowItem({
         </Button>
 
         {editing ? (
-          <form onSubmit={handleRename} className="flex flex-1 items-center gap-1.5">
+          <form
+            onSubmit={handleRename}
+            className="flex flex-1 items-center gap-1.5"
+          >
             <Input
               autoFocus
               value={label}
