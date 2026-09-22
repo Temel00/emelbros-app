@@ -180,4 +180,37 @@
   html {
     @apply font-sans;
   }
+
+}
+
+/* Hide native spin buttons on number inputs that use a custom spinner UI.
+   Apply .no-spinners to any <input type="number"> that provides its own controls. */
+.no-spinners::-webkit-inner-spin-button,
+.no-spinners::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.no-spinners {
+  -moz-appearance: textfield;
+}
+
+/* Thin, app-palette scrollbars. Apply .scrollbar-app to any overflow container
+   that should use this style rather than the OS default chrome. */
+.scrollbar-app {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.scrollbar-app::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-app::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-app::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 9999px;
+}
+.scrollbar-app::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
 }

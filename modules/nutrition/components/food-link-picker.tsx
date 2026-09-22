@@ -247,7 +247,7 @@ export function FoodLinkPicker({
           </Button>
         )}
       </div>
-      <ul className="flex max-h-48 flex-col overflow-y-auto">
+      <ul className="scrollbar-app flex max-h-48 flex-col overflow-y-auto">
         {matches.map((food) => (
           <li key={food.id}>
             <button

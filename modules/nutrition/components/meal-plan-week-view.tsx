@@ -40,7 +40,7 @@ export function MealPlanWeekView({
   const today = todayIso();
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border">
+    <div className="scrollbar-app overflow-x-auto rounded-lg border border-border">
       <div className="grid grid-cols-[96px_repeat(7,minmax(150px,1fr))]">
         <div className="sticky left-0 z-10 border-r border-b border-border bg-background" />
         {days.map((day) => (

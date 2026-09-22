@@ -41,7 +41,7 @@ export function RecipeBox({ recipes }: { recipes: RecipeRow[] }) {
           No recipes yet — add the first one above.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <div className="scrollbar-app overflow-x-auto rounded-xl border border-border">
           <table className="w-full min-w-[420px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50 text-xs text-muted-foreground">
