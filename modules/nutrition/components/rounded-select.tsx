@@ -10,7 +10,13 @@ import { cn } from "@/lib/utils";
  * rollout #169, Variant D). A custom dropdown that opens a rounded, bordered
  * floating panel instead of the OS-default select popup, so the control matches
  * the Variant D field styling in both light and dark themes.
+ *
+ * Options may be plain strings (value === label) or `{ value, label }` pairs
+ * when the stored key differs from what's shown — e.g. the managed unit
+ * vocabulary stores keys (`fl_oz`, `l`) but displays labels (`fl oz`, `L`).
  */
+export type RoundedSelectOption = string | { value: string; label: string };
+
 export function RoundedSelect({
   value,
   onChange,
@@ -23,7 +29,7 @@ export function RoundedSelect({
 }: {
   value: string;
   onChange: (value: string) => void;
-  options: string[];
+  options: RoundedSelectOption[];
   id?: string;
   disabled?: boolean;
   className?: string;
@@ -32,6 +38,12 @@ export function RoundedSelect({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const items = options.map((opt) =>
+    typeof opt === "string" ? { value: opt, label: opt } : opt,
+  );
+  const selectedLabel =
+    items.find((item) => item.value === value)?.label ?? value;
 
   useEffect(() => {
     if (!open) return;
@@ -57,7 +69,7 @@ export function RoundedSelect({
         onClick={() => setOpen((o) => !o)}
       >
         <span className={cn(!value && "text-muted-foreground")}>
-          {value || placeholder}
+          {value ? selectedLabel : placeholder}
         </span>
         <ChevronDown
           className={cn(
@@ -71,22 +83,22 @@ export function RoundedSelect({
           role="listbox"
           className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
         >
-          {options.map((opt) => (
+          {items.map((item) => (
             <button
-              key={opt}
+              key={item.value}
               type="button"
               role="option"
-              aria-selected={opt === value}
+              aria-selected={item.value === value}
               className={cn(
                 "w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted",
-                opt === value && "font-medium text-primary",
+                item.value === value && "font-medium text-primary",
               )}
               onClick={() => {
-                onChange(opt);
+                onChange(item.value);
                 setOpen(false);
               }}
             >
-              {opt}
+              {item.label}
             </button>
           ))}
         </div>

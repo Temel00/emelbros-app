@@ -9,12 +9,13 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useState, useTransition, type ComponentProps } from "react";
+import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { FoodLinkPicker } from "@/modules/nutrition/components/food-link-picker";
+import { RoundedSelect } from "@/modules/nutrition/components/rounded-select";
+import { SpinnerInput } from "@/modules/nutrition/components/spinner-input";
 import { DEFAULT_UNIT_KEY } from "@/modules/nutrition/lib/defaults";
 import { moveIngredient } from "@/modules/nutrition/lib/ingredient-order";
 import { ingredientRollupText } from "@/modules/nutrition/lib/recipe-ingredient";
@@ -400,6 +401,18 @@ function IngredientRow({
   if (isLinked) {
     const baseUnit = line.food!.unit;
     const unitMismatch = unitText !== "" && unitText !== baseUnit;
+    // Managed vocabulary as {value: key, label} pairs (ADR-0017). Keeps the
+    // food's base unit and the current value selectable even if they've since
+    // been archived out of the active list, mirroring the old UnitSelect's
+    // extraKeys — a key that isn't a known label shows as itself.
+    const unitLabels = new Map(units.map((unit) => [unit.key, unit.label]));
+    for (const key of [baseUnit, unitText]) {
+      if (key !== "" && !unitLabels.has(key)) unitLabels.set(key, key);
+    }
+    const unitOptions = [...unitLabels.entries()].map(([value, label]) => ({
+      value,
+      label,
+    }));
     return (
       <li className="flex items-start gap-2 rounded-xl border border-border bg-card p-3">
         <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -413,26 +426,31 @@ function IngredientRow({
               <Link2 className="size-3" /> {line.food!.name}
               <X className="size-3" />
             </button>
-            <Input
-              type="number"
-              inputMode="decimal"
-              step="any"
-              min="0"
-              value={quantityText}
-              onChange={(e) => setQuantityText(e.target.value)}
-              onBlur={() => commitLine(quantityText, unitText)}
-              placeholder="Amount"
-              className="h-8 w-24"
-              aria-label="Amount"
-            />
-            <UnitSelect
-              units={units}
+            {/* commitLine persists on blur, as the old <Input> did; the
+                display:contents wrapper fires only when focus leaves the whole
+                spinner (a chevron click keeps relatedTarget inside). */}
+            <div
+              className="contents"
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                  commitLine(quantityText, unitText);
+                }
+              }}
+            >
+              <SpinnerInput
+                value={quantityText}
+                onChange={setQuantityText}
+                min={0}
+                className="w-28"
+                aria-label="Amount"
+              />
+            </div>
+            <RoundedSelect
               value={unitText}
-              extraKeys={[baseUnit]}
+              options={unitOptions}
               aria-label="Unit for this recipe"
-              className="h-8 w-auto"
-              onChange={(e) => {
-                const nextUnit = e.target.value;
+              className="w-auto"
+              onChange={(nextUnit) => {
                 setUnitText(nextUnit);
                 commitLine(quantityText, nextUnit);
               }}
@@ -477,36 +495,5 @@ function IngredientRow({
       </div>
       {moveDeleteButtons}
     </li>
-  );
-}
-
-/**
- * A constrained unit picker over the active managed vocabulary (ADR-0017).
- * `extraKeys` keeps a value that isn't in the active list — e.g. a food whose
- * base unit has since been archived — selectable rather than silently
- * snapping to the first option.
- */
-function UnitSelect({
-  units,
-  value,
-  extraKeys = [],
-  ...props
-}: {
-  units: UnitRow[];
-  value: string;
-  extraKeys?: string[];
-} & Omit<ComponentProps<"select">, "value">) {
-  const known = new Map(units.map((unit) => [unit.key, unit.label]));
-  for (const key of [...extraKeys, value]) {
-    if (key !== "" && !known.has(key)) known.set(key, key);
-  }
-  return (
-    <Select value={value} {...props}>
-      {[...known.entries()].map(([key, label]) => (
-        <option key={key} value={key}>
-          {label}
-        </option>
-      ))}
-    </Select>
   );
 }

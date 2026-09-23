@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CookMode } from "@/modules/nutrition/components/cook-mode";
 import { RecipeIngredientsEditor } from "@/modules/nutrition/components/recipe-ingredients-editor";
+import { SpinnerInput } from "@/modules/nutrition/components/spinner-input";
 import { isBlank, isServingsCount } from "@/modules/nutrition/lib/validation";
 import {
   setRecipeArchivedAction,
@@ -175,16 +176,28 @@ export function RecipeEditor({
             </div>
             <div className="flex items-center gap-2">
               <Label htmlFor="recipe-servings">Servings</Label>
-              <Input
-                id="recipe-servings"
-                type="number"
-                min="1"
-                step="1"
-                value={servingsText}
-                onChange={(e) => setServingsText(e.target.value)}
-                onBlur={() => saveDetails({ servings: Number(servingsText) })}
-                className="w-20"
-              />
+              {/* Persist on blur, as the old <Input> did. SpinnerInput has no
+                  onBlur (its chevrons fire onChange with no input blur), so a
+                  display:contents wrapper watches focus leaving the whole
+                  control — relatedTarget staying inside means a chevron click,
+                  which shouldn't save mid-interaction. */}
+              <div
+                className="contents"
+                onBlur={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    saveDetails({ servings: Number(servingsText) });
+                  }
+                }}
+              >
+                <SpinnerInput
+                  id="recipe-servings"
+                  value={servingsText}
+                  onChange={setServingsText}
+                  min={1}
+                  className="w-28"
+                  aria-label="Servings"
+                />
+              </div>
             </div>
           </div>
 
