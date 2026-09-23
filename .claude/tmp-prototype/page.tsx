@@ -40,9 +40,8 @@ export default async function MealPlanPrototypePage() {
         <div>
           <h1 className="text-xl font-semibold">Meal plan (prototype)</h1>
           <p className="text-sm text-muted-foreground">
-            Round 3 — the month view is settled, so these three are all
-            about the week view: flip between them with the bar at the
-            bottom.
+            Round 3 — the month view is settled, so these three are all about
+            the week view: flip between them with the bar at the bottom.
           </p>
         </div>
 

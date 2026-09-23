@@ -101,7 +101,9 @@ export function PrototypeMealPlanHarness({
   }
 
   function goPrev() {
-    setAnchor((a) => (viewMode === "week" ? addWeeks(a, -1) : addMonths(a, -1)));
+    setAnchor((a) =>
+      viewMode === "week" ? addWeeks(a, -1) : addMonths(a, -1),
+    );
   }
   function goNext() {
     setAnchor((a) => (viewMode === "week" ? addWeeks(a, 1) : addMonths(a, 1)));
@@ -123,13 +125,23 @@ export function PrototypeMealPlanHarness({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="icon-sm" onClick={goPrev} aria-label="Previous">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={goPrev}
+            aria-label="Previous"
+          >
             <ChevronLeft className="size-4" />
           </Button>
           <span className="min-w-32 text-center text-sm font-semibold">
             {viewMode === "week" ? weekLabel : monthLabel}
           </span>
-          <Button variant="ghost" size="icon-sm" onClick={goNext} aria-label="Next">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={goNext}
+            aria-label="Next"
+          >
             <ChevronRight className="size-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={goToday}>

@@ -165,8 +165,13 @@ export function buildMockEntries(
   recipes: RecipeRow[],
   days: PlanDay[],
 ): MockPlanEntry[] {
-  const fallbackTitles = ["Garlic pasta", "Sheet-pan chicken", "Veggie stir-fry"];
-  const title = (i: number) => recipes[i]?.title ?? fallbackTitles[i % fallbackTitles.length];
+  const fallbackTitles = [
+    "Garlic pasta",
+    "Sheet-pan chicken",
+    "Veggie stir-fry",
+  ];
+  const title = (i: number) =>
+    recipes[i]?.title ?? fallbackTitles[i % fallbackTitles.length];
   const id = (i: number) => recipes[i]?.id ?? null;
 
   const entries: Array<Omit<MockPlanEntry, "id">> = [
@@ -485,7 +490,10 @@ export function AssignMealDialog({
         {tab === "recipe" ? (
           <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-card p-2">
             <div className="flex items-center gap-2">
-              <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              <Search
+                className="size-4 shrink-0 text-muted-foreground"
+                aria-hidden
+              />
               <Input
                 autoFocus
                 value={query}
