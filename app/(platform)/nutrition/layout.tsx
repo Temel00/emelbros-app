@@ -35,8 +35,9 @@ export default function NutritionPrototypeLayout({
         <PrototypeSwitcher
           variants={[
             { key: "none", name: "None (control)" },
-            { key: "subtle", name: "Subtle wash" },
-            { key: "bold", name: "Bold decorative" },
+            { key: "subtle", name: "Subtle (r1 leader)" },
+            { key: "dense", name: "Dense (small + many)" },
+            { key: "wildcard", name: "Wildcard (watermark)" },
           ]}
         />
       </Suspense>

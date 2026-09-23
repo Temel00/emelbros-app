@@ -3,28 +3,32 @@
 /**
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #187 resolves.
  *
- * Answers #187: subtle or bold for the Nutrition background flair, and the
- * mechanics the winner implies (tinting / composition / attach point). Reacted
- * to in-app across shopping-list, recipes and overview, in light AND dark.
+ * Answers #187: what treatment for the Nutrition background flair, and the
+ * mechanics the winner implies. Reacted to in-app across shopping-list,
+ * recipes and overview, in light AND dark.
  *
- * Deliberate prototype shortcuts, to be swapped when the treatment is folded
- * into real code (all called out in the #187 resolution):
- * - Vectors are Lucide (already a dep) — the #186-verified fallback slugs — NOT
- *   the game-icons.net silhouettes #186 settled on. Lucide is stroke-only, so
- *   "bold" reads as heavier outlines rather than filled silhouettes; the
- *   loudness/legibility judgement still transfers. Final art swaps in the
- *   game-icons produce set + per-screen objects.
- * - Tinting is demonstrated the `currentColor` way: each icon is a single-fill
- *   vector coloured by a `text-c-*` bright token (theme-aware, from #18). That
- *   is one of the mechanics the ticket asks to settle.
- * - Composition is a fixed scattered field (one shared produce backdrop + 1–2
- *   screen accents), not a tiled pattern or a decorative frame. The other
- *   candidate compositions are named in the resolution for the owner to weigh.
+ * ROUND 2 (after the owner's round-1 reaction):
+ * - Round 1 was none / subtle / bold. Subtle won the bunch; the bold gradient
+ *   wash was disliked and is dropped.
+ * - `subtle` is kept unchanged as the reference / current leader.
+ * - `dense` iterates on subtle per the ask: smaller icons, many more of them,
+ *   a little more opaque, so the four-bright colour theme actually reads.
+ * - `wildcard` is a deliberate departure from everything discussed so far: one
+ *   oversized, corner-cropped, screen-defining object as a watermark (one big
+ *   shape instead of a scattered field), to see if a different direction lands.
+ *
+ * Deliberate prototype shortcuts, unchanged from round 1 (called out in #187):
+ * - Vectors are Lucide (the #186-verified fallback slugs), NOT the
+ *   game-icons.net silhouettes #186 settled on. Lucide is stroke-only; the
+ *   loudness/legibility/composition judgement still transfers. Final art swaps
+ *   in the game-icons produce set + per-screen objects.
+ * - Tinting is the `currentColor` way: each icon is a single-fill vector
+ *   coloured by a theme-aware `text-c-*` bright token (#18).
  *
  * The layer is `aria-hidden` + `pointer-events-none` and sits at `-z-10` inside
- * the nutrition layout's `isolate` context, so it paints above the app
- * background but behind all content (WCAG-AA body-text contrast is the hard
- * guardrail the winner must clear — judge it live, especially in "bold").
+ * the nutrition layout's `isolate` context: above the app background, behind
+ * all content. WCAG-AA body-text contrast is the hard guardrail the winner
+ * must clear — judge it live.
  */
 
 import {
@@ -36,9 +40,12 @@ import {
   Cherry,
   Citrus,
   ClipboardList,
+  CookingPot,
+  Croissant,
   Egg,
   Fish,
   Grape,
+  Milk,
   NotebookText,
   Package,
   Refrigerator,
@@ -55,27 +62,30 @@ import {
 } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-export type FlairVariant = "none" | "subtle" | "bold";
+export type FlairVariant = "none" | "subtle" | "dense" | "wildcard";
 
 // The four #18 brights, as theme-aware token classes. Icons colour via
-// `currentColor`, so tinting is just a text-colour class — the "single-fill /
-// currentColor" mechanic the ticket asks about.
+// `currentColor`, so tinting is just a text-colour class.
 const BRIGHTS = ["text-c-green", "text-c-yellow", "text-c-blue", "text-c-pink"];
+
+function tint(i: number) {
+  return BRIGHTS[i % BRIGHTS.length];
+}
 
 type Placed = {
   Icon: LucideIcon;
-  /** % from top / left of the viewport-height layer */
+  /** % from top / left of the layer */
   top: number;
   left: number;
   /** rem size */
   size: number;
   rotate: number;
-  tint: string;
 };
 
-// One shared produce backdrop, scattered across the whole layer. Same field on
-// every screen (the #186 decision: a shared produce backdrop everywhere).
-const PRODUCE: Array<Omit<Placed, "tint">> = [
+// ---------------------------------------------------------------------------
+// subtle (round-1 leader, unchanged): one sparse produce backdrop, big + faint.
+// ---------------------------------------------------------------------------
+const SUBTLE_PRODUCE: Placed[] = [
   { Icon: Carrot, top: 6, left: 8, size: 7, rotate: -18 },
   { Icon: Apple, top: 14, left: 78, size: 8, rotate: 12 },
   { Icon: Grape, top: 30, left: 22, size: 6.5, rotate: 8 },
@@ -88,49 +98,96 @@ const PRODUCE: Array<Omit<Placed, "tint">> = [
   { Icon: Soup, top: 22, left: 50, size: 7, rotate: -4 },
 ];
 
-// 1–2 screen-specific accent objects, placed prominently, keyed by pathname.
-// Slugs track #186's per-screen vocabulary (Lucide fallbacks stand in for the
-// game-icons objects).
-const ACCENTS: Record<string, Array<Omit<Placed, "tint">>> = {
-  "/nutrition": [
-    { Icon: Refrigerator, top: 18, left: 40, size: 12, rotate: -6 },
-    { Icon: Package, top: 66, left: 58, size: 10, rotate: 8 },
-  ],
-  "/nutrition/recipes": [
-    { Icon: BookOpen, top: 20, left: 44, size: 13, rotate: -5 },
-    { Icon: NotebookText, top: 68, left: 20, size: 10, rotate: 10 },
-  ],
-  "/nutrition/plan": [
-    { Icon: CalendarDays, top: 18, left: 38, size: 12, rotate: -6 },
-    { Icon: Utensils, top: 70, left: 64, size: 10, rotate: 12 },
-  ],
-  "/nutrition/shopping-list": [
-    { Icon: ShoppingBasket, top: 20, left: 42, size: 13, rotate: -7 },
-    { Icon: ShoppingCart, top: 66, left: 22, size: 11, rotate: 9 },
-  ],
-  "/nutrition/log": [
-    { Icon: ClipboardList, top: 18, left: 40, size: 12, rotate: -5 },
-    { Icon: Utensils, top: 72, left: 66, size: 10, rotate: 11 },
-  ],
-  "/nutrition/overview": [
-    { Icon: ChartColumn, top: 20, left: 44, size: 12, rotate: -4 },
-    { Icon: Target, top: 68, left: 24, size: 11, rotate: 8 },
-  ],
-  "/nutrition/settings": [
-    { Icon: Settings, top: 20, left: 42, size: 12, rotate: -6 },
-    { Icon: SlidersHorizontal, top: 70, left: 64, size: 10, rotate: 10 },
-  ],
+// ---------------------------------------------------------------------------
+// dense: smaller, many more, a little more opaque so the palette reads. Field
+// generated once at module scope with a fixed seed so server/client agree.
+// ---------------------------------------------------------------------------
+const DENSE_POOL: LucideIcon[] = [
+  Carrot,
+  Apple,
+  Grape,
+  Wheat,
+  Cherry,
+  Citrus,
+  Salad,
+  Egg,
+  Fish,
+  Soup,
+  Milk,
+  Croissant,
+  CookingPot,
+];
+
+const DENSE_PRODUCE: Placed[] = (() => {
+  // Tiny deterministic LCG — prototype-cheap, stable across renders.
+  let s = 20250923;
+  const rnd = () => {
+    s = (s * 1664525 + 1013904223) % 4294967296;
+    return s / 4294967296;
+  };
+  const items: Placed[] = [];
+  // ~7 columns x 5 rows of jittered cells → a fuller, even scatter.
+  for (let row = 0; row < 5; row++) {
+    for (let col = 0; col < 7; col++) {
+      items.push({
+        Icon: DENSE_POOL[(row * 7 + col) % DENSE_POOL.length],
+        top: 4 + row * 19 + (rnd() * 10 - 5),
+        left: 3 + col * 14 + (rnd() * 8 - 4),
+        size: 2.4 + rnd() * 1.6,
+        rotate: rnd() * 60 - 30,
+      });
+    }
+  }
+  return items;
+})();
+
+// ---------------------------------------------------------------------------
+// Per-screen accent objects (slugs track #186's vocabulary; Lucide fallbacks).
+// [0] is the screen-defining "hero" used by the wildcard watermark.
+// ---------------------------------------------------------------------------
+const ACCENTS: Record<string, LucideIcon[]> = {
+  "/nutrition": [Refrigerator, Package],
+  "/nutrition/recipes": [BookOpen, NotebookText],
+  "/nutrition/plan": [CalendarDays, Utensils],
+  "/nutrition/shopping-list": [ShoppingBasket, ShoppingCart],
+  "/nutrition/log": [ClipboardList, Utensils],
+  "/nutrition/overview": [ChartColumn, Target],
+  "/nutrition/settings": [Settings, SlidersHorizontal],
 };
 
-function accentsFor(pathname: string) {
-  // recipes/[id] and any deeper leaf falls back to the recipes accents.
+function accentsFor(pathname: string): LucideIcon[] {
   if (pathname.startsWith("/nutrition/recipes"))
     return ACCENTS["/nutrition/recipes"];
-  return ACCENTS[pathname] ?? [];
+  return ACCENTS[pathname] ?? ACCENTS["/nutrition"];
 }
 
-function tint(i: number) {
-  return BRIGHTS[i % BRIGHTS.length];
+function Field({
+  items,
+  opacity,
+  stroke,
+}: {
+  items: Array<Placed & { tint: string }>;
+  opacity: string;
+  stroke: number;
+}) {
+  return (
+    <>
+      {items.map(({ Icon, top, left, size, rotate, tint }, i) => (
+        <Icon
+          key={i}
+          className={`absolute ${tint} ${opacity}`}
+          strokeWidth={stroke}
+          style={{
+            top: `${top}%`,
+            left: `${left}%`,
+            width: `${size}rem`,
+            height: `${size}rem`,
+            transform: `rotate(${rotate}deg)`,
+          }}
+        />
+      ))}
+    </>
+  );
 }
 
 export function PrototypeFlairBackground() {
@@ -140,65 +197,104 @@ export function PrototypeFlairBackground() {
 
   if (variant === "none") return null;
 
-  const bold = variant === "bold";
+  const accents = accentsFor(pathname);
 
-  // Loudness knobs. Dark gets a touch more opacity because the brights are
-  // nudged lighter/cooler there and read fainter over the dark ground.
-  const backdropOpacity = bold
-    ? "opacity-[0.16] dark:opacity-[0.22]"
-    : "opacity-[0.05] dark:opacity-[0.08]";
-  const accentOpacity = bold
-    ? "opacity-[0.22] dark:opacity-[0.28]"
-    : "opacity-[0.07] dark:opacity-[0.10]";
-  const stroke = bold ? 1.75 : 1.5;
+  let body: React.ReactNode = null;
 
-  const produce = PRODUCE.map((p, i) => ({ ...p, tint: tint(i) }));
-  const accents = accentsFor(pathname).map((a, i) => ({
-    ...a,
-    // Bold accents lean on pink/blue for weight; subtle keeps them muted-neutral.
-    tint: bold ? tint(i + 3) : "text-muted-foreground",
-  }));
+  if (variant === "subtle") {
+    // Sparse, faint, big — the round-1 leader.
+    body = (
+      <>
+        <Field
+          items={SUBTLE_PRODUCE.map((p, i) => ({ ...p, tint: tint(i) }))}
+          opacity="opacity-[0.05] dark:opacity-[0.08]"
+          stroke={1.5}
+        />
+        {accents.slice(0, 2).map((Icon, i) => (
+          <Icon
+            key={i}
+            className="absolute text-muted-foreground opacity-[0.07] dark:opacity-[0.10]"
+            strokeWidth={1.5}
+            style={{
+              top: i === 0 ? "20%" : "68%",
+              left: i === 0 ? "42%" : "24%",
+              width: "11rem",
+              height: "11rem",
+              transform: `rotate(${i === 0 ? -6 : 9}deg)`,
+            }}
+          />
+        ))}
+      </>
+    );
+  } else if (variant === "dense") {
+    // Smaller, many more, a little more opaque — the palette reads as a set.
+    body = (
+      <>
+        <Field
+          items={DENSE_PRODUCE.map((p, i) => ({ ...p, tint: tint(i) }))}
+          opacity="opacity-[0.10] dark:opacity-[0.14]"
+          stroke={1.75}
+        />
+        {/* The two screen accents, also small, mixed into the confetti. */}
+        {accents.slice(0, 2).map((Icon, i) => (
+          <Icon
+            key={i}
+            className={`absolute ${tint(i + 2)} opacity-[0.13] dark:opacity-[0.18]`}
+            strokeWidth={1.75}
+            style={{
+              top: i === 0 ? "34%" : "58%",
+              left: i === 0 ? "46%" : "40%",
+              width: "3.4rem",
+              height: "3.4rem",
+              transform: `rotate(${i === 0 ? -8 : 10}deg)`,
+            }}
+          />
+        ))}
+      </>
+    );
+  } else if (variant === "wildcard") {
+    // Departure: one oversized, corner-cropped, screen-defining watermark +
+    // a second big shape off the opposite corner. One statement, not a field.
+    const Hero = accents[0];
+    const Echo = accents[1] ?? accents[0];
+    body = (
+      <>
+        <Hero
+          aria-hidden
+          className="absolute text-c-green opacity-[0.08] dark:opacity-[0.13]"
+          strokeWidth={1.25}
+          style={{
+            top: "-8rem",
+            right: "-9rem",
+            left: "auto",
+            width: "34rem",
+            height: "34rem",
+            transform: "rotate(-12deg)",
+          }}
+        />
+        <Echo
+          aria-hidden
+          className="absolute text-c-pink opacity-[0.06] dark:opacity-[0.10]"
+          strokeWidth={1.25}
+          style={{
+            bottom: "-7rem",
+            left: "-8rem",
+            top: "auto",
+            width: "26rem",
+            height: "26rem",
+            transform: "rotate(14deg)",
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
     >
-      {/* Bold adds a faint tinted wash band behind the field, as a sanctioned
-          module-level decorative layer (the #18 exception the ticket flags). */}
-      {bold && (
-        <div className="absolute inset-0 bg-gradient-to-br from-c-green/[0.06] via-transparent to-c-pink/[0.06] dark:from-c-green/[0.10] dark:to-c-pink/[0.10]" />
-      )}
-
-      {produce.map(({ Icon, top, left, size, rotate, tint }, i) => (
-        <Icon
-          key={`p-${i}`}
-          className={`absolute ${tint} ${backdropOpacity}`}
-          strokeWidth={stroke}
-          style={{
-            top: `${top}%`,
-            left: `${left}%`,
-            width: `${size}rem`,
-            height: `${size}rem`,
-            transform: `rotate(${rotate}deg)`,
-          }}
-        />
-      ))}
-
-      {accents.map(({ Icon, top, left, size, rotate, tint }, i) => (
-        <Icon
-          key={`a-${i}`}
-          className={`absolute ${tint} ${accentOpacity}`}
-          strokeWidth={stroke}
-          style={{
-            top: `${top}%`,
-            left: `${left}%`,
-            width: `${size}rem`,
-            height: `${size}rem`,
-            transform: `rotate(${rotate}deg)`,
-          }}
-        />
-      ))}
+      {body}
     </div>
   );
 }
