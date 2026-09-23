@@ -11,6 +11,10 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/auth/callback")).toBe(true);
   });
 
+  it("allows the sign-out route", () => {
+    expect(isPublicPath("/auth/sign-out")).toBe(true);
+  });
+
   it("allows the PWA manifest", () => {
     expect(isPublicPath("/manifest.webmanifest")).toBe(true);
   });

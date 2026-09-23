@@ -10,6 +10,7 @@ import type { Database } from "@/types/database";
 
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Wordmark } from "@/components/wordmark";
 
 /**
  * The app shell's header (#27, ADR-0014/0015): a nav landmark for the brand
@@ -43,8 +44,8 @@ export async function AppHeader({
     <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <nav aria-label="Primary">
-          <Link href="/" className="font-brand text-xl text-primary">
-            Emelbros
+          <Link href="/">
+            <Wordmark className="text-xl" />
           </Link>
         </nav>
 

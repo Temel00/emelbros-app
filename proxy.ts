@@ -6,10 +6,17 @@ import { supabaseAnonKey, supabaseUrl } from "@/platform/supabase/env";
 import type { Database } from "@/types/database";
 
 // Routes reachable while signed out (ADR-0011): the sign-in page itself, the
-// OAuth redirect target that establishes the session, and the PWA manifest
-// (ADR-0015) — browsers probe it for installability from the sign-in page
-// too, before any session cookie exists.
-const PUBLIC_PATHS = ["/sign-in", "/auth/callback", "/manifest.webmanifest"];
+// OAuth redirect target that establishes the session, sign-out (a member whose
+// session already expired must still be able to clear its cookies and land on
+// sign-in, not have their POST bounced), and the PWA manifest (ADR-0015) —
+// browsers probe it for installability from the sign-in page too, before any
+// session cookie exists.
+const PUBLIC_PATHS = [
+  "/sign-in",
+  "/auth/callback",
+  "/auth/sign-out",
+  "/manifest.webmanifest",
+];
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(
@@ -51,7 +58,9 @@ export async function proxy(request: NextRequest) {
   if (!isAuthenticated && !isPublicPath(request.nextUrl.pathname)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/sign-in";
-    return NextResponse.redirect(redirectUrl);
+    // 303 so a bounced non-GET (a form POST from a stale tab) arrives at
+    // /sign-in as a GET rather than replaying its method against the page.
+    return NextResponse.redirect(redirectUrl, 303);
   }
 
   return response;
