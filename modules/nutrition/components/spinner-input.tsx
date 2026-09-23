@@ -20,6 +20,7 @@ export function SpinnerInput({
   id,
   name,
   disabled = false,
+  autoFocus = false,
   className,
   "aria-label": ariaLabel = "Quantity",
 }: {
@@ -29,6 +30,7 @@ export function SpinnerInput({
   id?: string;
   name?: string;
   disabled?: boolean;
+  autoFocus?: boolean;
   className?: string;
   "aria-label"?: string;
 }) {
@@ -47,6 +49,7 @@ export function SpinnerInput({
         name={name}
         value={value}
         disabled={disabled}
+        autoFocus={autoFocus}
         onChange={(e) => onChange(e.target.value)}
         onFocus={(e) => e.target.select()}
         className="no-spinners h-9 min-w-0 flex-1 bg-transparent px-3 text-sm outline-none"
