@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { createMealPlanEntryAction } from "@/modules/nutrition/actions";
+import { SpinnerInput } from "@/modules/nutrition/components/spinner-input";
 import {
   mealSlots as allMealSlots,
   type MealSlot,
@@ -201,15 +202,13 @@ export function AssignMealDialog({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={servingsId}>Servings</Label>
-            <Input
+            <SpinnerInput
               id={servingsId}
-              type="number"
-              min="1"
-              step="1"
+              min={1}
               value={servings}
-              onChange={(e) => setServings(e.target.value)}
+              onChange={setServings}
               className="w-24"
-              required
+              aria-label="Servings"
             />
           </div>
 

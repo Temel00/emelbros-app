@@ -37,6 +37,7 @@ import {
   type UpdateLogEntryInput,
 } from "@/modules/nutrition/actions";
 import { FoodLinkPicker } from "@/modules/nutrition/components/food-link-picker";
+import { SpinnerInput } from "@/modules/nutrition/components/spinner-input";
 import {
   logEntryDetail,
   logEntryDisplayText,
@@ -426,15 +427,12 @@ function FoodPanel({
         className="flex flex-col gap-3"
       >
         <p className="text-sm font-medium">{pickedFood.name}</p>
-        <Input
+        <SpinnerInput
           id={`${id}-qty`}
-          type="number"
-          inputMode="decimal"
-          step="any"
-          min="0"
+          min={0}
           autoFocus
           value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
+          onChange={setQuantity}
           aria-label={`Quantity in ${pickedFood.unit}`}
         />
         <div className="flex justify-end gap-2">
@@ -658,30 +656,26 @@ function EditEntryDialog({
           {source === "recipe" && (
             <div className="flex flex-col gap-1">
               <Label htmlFor={`${id}-portion`}>Portion (× planned)</Label>
-              <Input
+              <SpinnerInput
                 id={`${id}-portion`}
-                type="number"
-                inputMode="decimal"
-                step="0.25"
-                min="0.25"
+                min={0.25}
                 value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                onChange={setQuantity}
                 autoFocus
+                aria-label="Portion (× planned)"
               />
             </div>
           )}
           {source === "food" && (
             <div className="flex flex-col gap-1">
               <Label htmlFor={`${id}-qty`}>Quantity ({entry.unit})</Label>
-              <Input
+              <SpinnerInput
                 id={`${id}-qty`}
-                type="number"
-                inputMode="decimal"
-                step="any"
-                min="0"
+                min={0}
                 value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                onChange={setQuantity}
                 autoFocus
+                aria-label={`Quantity (${entry.unit})`}
               />
             </div>
           )}

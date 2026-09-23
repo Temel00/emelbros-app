@@ -13,7 +13,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   deleteMealPlanEntryAction,
@@ -25,6 +24,7 @@ import {
   mealSlotDotClass,
   mealSlotIcon,
 } from "@/modules/nutrition/components/meal-slot-badge";
+import { SpinnerInput } from "@/modules/nutrition/components/spinner-input";
 import { getMealSlot } from "@/modules/nutrition/lib/meal-slots";
 import { entryTitle } from "@/modules/nutrition/lib/plan-calendar";
 import type { MealPlanEntryWithRecipe } from "@/modules/nutrition/queries";
@@ -160,15 +160,14 @@ function EntryDetails({
           <Label htmlFor="servings-planned" className="sr-only">
             Servings planned
           </Label>
-          <Input
+          <SpinnerInput
             id="servings-planned"
-            type="number"
-            min="1"
-            step="1"
+            min={1}
             value={servings}
-            onChange={(e) => setServings(e.target.value)}
+            onChange={setServings}
             className="w-24"
             autoFocus
+            aria-label="Servings planned"
           />
           <Button size="sm" onClick={saveServings} disabled={isPending}>
             Save
