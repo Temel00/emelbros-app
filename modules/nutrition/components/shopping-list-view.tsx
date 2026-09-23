@@ -9,12 +9,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import {
-  type ComponentProps,
-  type FormEvent,
-  useState,
-  useTransition,
-} from "react";
+import { type FormEvent, useState, useTransition } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,7 +22,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   addManualShoppingListItemAction,
@@ -39,6 +33,8 @@ import {
 } from "@/modules/nutrition/actions";
 import { FoodLinkPicker } from "@/modules/nutrition/components/food-link-picker";
 import { locationIcon } from "@/modules/nutrition/components/location-icon";
+import { RoundedSelect } from "@/modules/nutrition/components/rounded-select";
+import { SpinnerInput } from "@/modules/nutrition/components/spinner-input";
 import { DEFAULT_UNIT_KEY } from "@/modules/nutrition/lib/defaults";
 import type { ShoppingListShortfall } from "@/modules/nutrition/lib/shopping-list-generation";
 import {
@@ -491,14 +487,9 @@ function AddItemDialog({
                   <X className="size-3" />
                 </button>
                 <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    step="any"
-                    min="0"
+                  <SpinnerInput
                     value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    placeholder="Qty (optional)"
+                    onChange={setQuantity}
                     aria-label="Quantity"
                     className="w-28"
                   />
@@ -507,7 +498,7 @@ function AddItemDialog({
                     value={unit}
                     aria-label="Unit"
                     className="flex-1"
-                    onChange={(e) => setUnit(e.target.value)}
+                    onChange={setUnit}
                   />
                 </div>
                 {unitMismatch && (
@@ -530,14 +521,9 @@ function AddItemDialog({
                 required
               />
               <div className="flex gap-2">
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  step="any"
-                  min="0"
+                <SpinnerInput
                   value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  placeholder="Qty (optional)"
+                  onChange={setQuantity}
                   aria-label="Quantity"
                   className="w-28"
                 />
@@ -546,7 +532,7 @@ function AddItemDialog({
                   value={unit}
                   aria-label="Unit"
                   className="flex-1"
-                  onChange={(e) => setUnit(e.target.value)}
+                  onChange={setUnit}
                 />
               </div>
             </div>
@@ -573,32 +559,46 @@ function AddItemDialog({
 
 /**
  * A constrained unit picker over the active managed vocabulary (ADR-0017),
- * mirroring recipe-ingredients-editor.tsx's `UnitSelect` (#159), plus a
+ * mirroring recipe-ingredients-editor.tsx's unit picker (#159, #170), plus a
  * leading "No unit" option since the shopping list's `unit` column is
  * nullable — a line can be added or edited with no unit at all (e.g. "3
  * Eggs"). The current `value` is always kept selectable even when it isn't
  * in the active list (an archived unit still referenced by an existing
- * line), rather than silently snapping away from it.
+ * line), rather than silently snapping away from it. Renders the Variant D
+ * `RoundedSelect` (#173) with the managed keys as `{ value, label }` pairs,
+ * so the stored key (`fl_oz`) never leaks in place of its label (`fl oz`).
  */
 function UnitSelect({
   units,
   value,
-  ...props
+  onChange,
+  className,
+  disabled,
+  "aria-label": ariaLabel,
 }: {
   units: UnitRow[];
   value: string;
-} & Omit<ComponentProps<"select">, "value">) {
+  onChange: (value: string) => void;
+  className?: string;
+  disabled?: boolean;
+  "aria-label"?: string;
+}) {
   const known = new Map(units.map((unit) => [unit.key, unit.label]));
   if (value !== "" && !known.has(value)) known.set(value, value);
+  const options = [
+    { value: "", label: "No unit" },
+    ...[...known.entries()].map(([key, label]) => ({ value: key, label })),
+  ];
   return (
-    <Select value={value} {...props}>
-      <option value="">No unit</option>
-      {[...known.entries()].map(([key, label]) => (
-        <option key={key} value={key}>
-          {label}
-        </option>
-      ))}
-    </Select>
+    <RoundedSelect
+      value={value}
+      onChange={onChange}
+      options={options}
+      placeholder="No unit"
+      className={className}
+      disabled={disabled}
+      aria-label={ariaLabel}
+    />
   );
 }
 
@@ -669,14 +669,10 @@ function EditItemDialog({
             required
           />
           <div className="flex gap-2">
-            <Input
-              type="number"
-              inputMode="decimal"
-              step="any"
-              min="0"
+            <SpinnerInput
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="Qty"
+              onChange={setQuantity}
+              aria-label="Quantity"
               className="w-20"
             />
             <UnitSelect
@@ -684,7 +680,7 @@ function EditItemDialog({
               value={unit}
               aria-label="Unit"
               className="flex-1"
-              onChange={(e) => setUnit(e.target.value)}
+              onChange={setUnit}
             />
           </div>
 
