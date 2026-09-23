@@ -180,7 +180,6 @@
   html {
     @apply font-sans;
   }
-
 }
 
 /* Hide native spin buttons on number inputs that use a custom spinner UI.
