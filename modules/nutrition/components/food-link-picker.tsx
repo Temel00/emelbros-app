@@ -149,9 +149,10 @@ export function FoodLinkPicker({
             required
             value={calories}
             onChange={(e) => setCalories(e.target.value)}
+            onFocus={(e) => e.target.select()}
             placeholder="Calories"
             aria-label="Calories per unit"
-            className="w-24"
+            className="no-spinners w-24"
           />
           <Input
             type="number"
@@ -161,9 +162,10 @@ export function FoodLinkPicker({
             required
             value={protein}
             onChange={(e) => setProtein(e.target.value)}
+            onFocus={(e) => e.target.select()}
             placeholder="Protein (g)"
             aria-label="Protein per unit"
-            className="w-24"
+            className="no-spinners w-24"
           />
           <Input
             type="number"
@@ -173,9 +175,10 @@ export function FoodLinkPicker({
             required
             value={carbs}
             onChange={(e) => setCarbs(e.target.value)}
+            onFocus={(e) => e.target.select()}
             placeholder="Carbs (g)"
             aria-label="Carbs per unit"
-            className="w-24"
+            className="no-spinners w-24"
           />
           <Input
             type="number"
@@ -185,9 +188,10 @@ export function FoodLinkPicker({
             required
             value={fat}
             onChange={(e) => setFat(e.target.value)}
+            onFocus={(e) => e.target.select()}
             placeholder="Fat (g)"
             aria-label="Fat per unit"
-            className="w-24"
+            className="no-spinners w-24"
           />
           <Input
             type="number"
@@ -196,9 +200,10 @@ export function FoodLinkPicker({
             min="0"
             value={fiber}
             onChange={(e) => setFiber(e.target.value)}
+            onFocus={(e) => e.target.select()}
             placeholder="Fibre (g, optional)"
             aria-label="Fibre per unit"
-            className="w-28"
+            className="no-spinners w-28"
           />
         </div>
         {error && (
@@ -247,7 +252,7 @@ export function FoodLinkPicker({
           </Button>
         )}
       </div>
-      <ul className="flex max-h-48 flex-col overflow-y-auto">
+      <ul className="scrollbar-app flex max-h-48 flex-col overflow-y-auto">
         {matches.map((food) => (
           <li key={food.id}>
             <button

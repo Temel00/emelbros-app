@@ -5,8 +5,9 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { FoodLinkPicker } from "@/modules/nutrition/components/food-link-picker";
+import { RoundedSelect } from "@/modules/nutrition/components/rounded-select";
+import { SpinnerInput } from "@/modules/nutrition/components/spinner-input";
 import { addPantryItemAction } from "@/modules/nutrition/actions";
 import {
   DEFAULT_LOCATION_KEY,
@@ -44,6 +45,21 @@ export function AddPantryItemForm({
   const [unit, setUnit] = useState(DEFAULT_UNIT_KEY);
   const [location, setLocation] = useState(DEFAULT_LOCATION_KEY);
   const [expiresOn, setExpiresOn] = useState("");
+
+  // Managed vocabularies as {value: key, label} pairs (ADR-0017): the store
+  // holds keys (`fl_oz`), the picker shows labels (`fl oz`). A picked food's
+  // base unit that's since been archived still round-trips rather than
+  // silently switching the line's unit.
+  const unitOptions = [
+    ...units.map((u) => ({ value: u.key, label: u.label })),
+    ...(units.some((u) => u.key === unit)
+      ? []
+      : [{ value: unit, label: unit }]),
+  ];
+  const locationOptions = locations.map((loc) => ({
+    value: loc.key,
+    label: loc.label,
+  }));
 
   function pickFood(food: FoodRow) {
     setPickedFood(food);
@@ -108,49 +124,29 @@ export function AddPantryItemForm({
             <X className="size-3" />
           </button>
 
-          <Input
-            type="number"
-            inputMode="decimal"
-            step="any"
-            min="0"
+          <SpinnerInput
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            required
-            className="w-24"
+            onChange={setQuantity}
+            min={0}
+            className="w-28"
             aria-label="Quantity"
-            placeholder="Qty"
           />
 
-          <Select
+          <RoundedSelect
             value={unit}
-            onChange={(e) => setUnit(e.target.value)}
+            onChange={setUnit}
+            options={unitOptions}
             aria-label="Unit"
             className="w-24"
-          >
-            {units.map((u) => (
-              <option key={u.key} value={u.key}>
-                {u.label}
-              </option>
-            ))}
-            {/* A picked food's base unit that's since been archived still
-                round-trips rather than silently switching the line's unit. */}
-            {!units.some((u) => u.key === unit) && (
-              <option value={unit}>{unit}</option>
-            )}
-          </Select>
+          />
 
-          <Select
+          <RoundedSelect
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
+            onChange={setLocation}
+            options={locationOptions}
             aria-label="Location"
             className="w-auto"
-          >
-            {locations.map((loc) => (
-              <option key={loc.key} value={loc.key}>
-                {loc.label}
-              </option>
-            ))}
-          </Select>
+          />
 
           <Input
             type="date"

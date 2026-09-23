@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SpinnerInput } from "@/modules/nutrition/components/spinner-input";
 import { createRecipeAction } from "@/modules/nutrition/actions";
 import type { RecipeRow } from "@/modules/nutrition/queries";
 
@@ -41,7 +42,7 @@ export function RecipeBox({ recipes }: { recipes: RecipeRow[] }) {
           No recipes yet — add the first one above.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <div className="scrollbar-app overflow-x-auto rounded-xl border border-border">
           <table className="w-full min-w-[420px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50 text-xs text-muted-foreground">
@@ -143,15 +144,13 @@ function NewRecipeDialog() {
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={servingsId}>Servings</Label>
-            <Input
+            <SpinnerInput
               id={servingsId}
-              type="number"
-              min="1"
-              step="1"
               value={servings}
-              onChange={(event) => setServings(event.target.value)}
-              className="w-24"
-              required
+              onChange={setServings}
+              min={1}
+              className="w-28"
+              aria-label="Servings"
             />
           </div>
 

@@ -5,7 +5,8 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { RoundedSelect } from "@/modules/nutrition/components/rounded-select";
+import { SpinnerInput } from "@/modules/nutrition/components/spinner-input";
 import {
   deletePantryItemAction,
   updatePantryItemAction,
@@ -47,6 +48,22 @@ export function PantryItemRow({
   // Render the managed label for the stored unit key, falling back to the key
   // itself if that unit has since been archived (a stored value never blanks).
   const unitLabel = units.find((u) => u.key === item.unit)?.label ?? item.unit;
+
+  // Managed vocabularies as {value: key, label} pairs (ADR-0017). A stored key
+  // no longer active still round-trips rather than silently snapping to the
+  // first option (§10).
+  const unitOptions = [
+    ...units.map((u) => ({ value: u.key, label: u.label })),
+    ...(units.some((u) => u.key === unit)
+      ? []
+      : [{ value: unit, label: unit }]),
+  ];
+  const locationOptions = [
+    ...locations.map((loc) => ({ value: loc.key, label: loc.label })),
+    ...(locations.some((loc) => loc.key === location)
+      ? []
+      : [{ value: location, label: location }]),
+  ];
 
   function save() {
     setError(null);
@@ -125,49 +142,27 @@ export function PantryItemRow({
             save();
           }}
         >
-          <Input
-            type="number"
-            inputMode="decimal"
-            step="any"
-            min="0"
+          <SpinnerInput
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            required
-            className="w-24"
+            onChange={setQuantity}
+            min={0}
+            className="w-28"
             aria-label={`Quantity of ${item.food.name}`}
           />
-          <Select
+          <RoundedSelect
             value={unit}
-            onChange={(e) => setUnit(e.target.value)}
+            onChange={setUnit}
+            options={unitOptions}
             className="w-24"
             aria-label={`Unit for ${item.food.name}`}
-          >
-            {units.map((u) => (
-              <option key={u.key} value={u.key}>
-                {u.label}
-              </option>
-            ))}
-            {/* A stored unit no longer active still round-trips (§10). */}
-            {!units.some((u) => u.key === unit) && (
-              <option value={unit}>{unit}</option>
-            )}
-          </Select>
-          <Select
+          />
+          <RoundedSelect
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
+            onChange={setLocation}
+            options={locationOptions}
             className="w-auto"
             aria-label={`Location of ${item.food.name}`}
-          >
-            {locations.map((loc) => (
-              <option key={loc.key} value={loc.key}>
-                {loc.label}
-              </option>
-            ))}
-            {/* A stored key no longer active still round-trips (§10). */}
-            {!locations.some((loc) => loc.key === location) && (
-              <option value={location}>{location}</option>
-            )}
-          </Select>
+          />
           <Input
             type="date"
             value={expiresOn}
