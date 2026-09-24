@@ -3,6 +3,7 @@ import { getCurrentMember } from "@/platform/auth";
 import { createClient } from "@/platform/supabase/server";
 
 import { NutritionNav } from "@/modules/nutrition/components/nutrition-nav";
+import { PrototypeFolderCard } from "@/modules/nutrition/components/prototype-folder-card";
 import { ShoppingListView } from "@/modules/nutrition/components/shopping-list-view";
 import { weekRange } from "@/modules/nutrition/lib/plan-calendar";
 import {
@@ -43,22 +44,19 @@ export default async function ShoppingListPage() {
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 sm:p-6">
         <NutritionNav active="shopping" />
 
-        <div>
-          <h1 className="text-xl font-semibold">Shopping list</h1>
-          <p className="text-sm text-muted-foreground">
-            What the household needs to buy. Anyone can add, check off, or
-            regenerate from the plan.
-          </p>
-        </div>
-
-        <ShoppingListView
-          items={items}
-          pantryItems={pantryItems}
-          locations={locations}
-          foods={foods}
-          units={units}
-          range={range}
-        />
+        <PrototypeFolderCard
+          title="Shopping list"
+          description="What the household needs to buy. Anyone can add, check off, or regenerate from the plan."
+        >
+          <ShoppingListView
+            items={items}
+            pantryItems={pantryItems}
+            locations={locations}
+            foods={foods}
+            units={units}
+            range={range}
+          />
+        </PrototypeFolderCard>
       </main>
     </>
   );

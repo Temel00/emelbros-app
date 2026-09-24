@@ -4,6 +4,7 @@ import { createClient } from "@/platform/supabase/server";
 
 import { NutritionNav } from "@/modules/nutrition/components/nutrition-nav";
 import { PantryHome } from "@/modules/nutrition/components/pantry-home";
+import { PrototypeFolderCard } from "@/modules/nutrition/components/prototype-folder-card";
 import {
   getFoods,
   getPantryItems,
@@ -31,20 +32,17 @@ export default async function NutritionPage() {
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 sm:p-6">
         <NutritionNav active="pantry" />
 
-        <div>
-          <h1 className="text-xl font-semibold">Pantry</h1>
-          <p className="text-sm text-muted-foreground">
-            What the household has in, and where it&apos;s kept. Anyone can add
-            or adjust a line.
-          </p>
-        </div>
-
-        <PantryHome
-          items={items}
-          foods={foods}
-          units={units}
-          locations={locations}
-        />
+        <PrototypeFolderCard
+          title="Pantry"
+          description="What the household has in, and where it's kept. Anyone can add or adjust a line."
+        >
+          <PantryHome
+            items={items}
+            foods={foods}
+            units={units}
+            locations={locations}
+          />
+        </PrototypeFolderCard>
       </main>
     </>
   );
