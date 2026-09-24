@@ -112,6 +112,7 @@ export default async function OverviewPage({
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 sm:p-6">
         <NutritionNav active="overview" />
         <PrototypeFolderCard
+          active="overview"
           title="Overview"
           description="Trends in what's been logged, against the daily guideline."
         >

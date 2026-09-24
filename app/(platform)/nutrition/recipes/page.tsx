@@ -23,6 +23,7 @@ export default async function RecipesPage() {
         <NutritionNav active="recipes" />
 
         <PrototypeFolderCard
+          active="recipes"
           title="Recipes"
           description="The household's recipe box. Anyone can add, edit, or archive a recipe."
         >

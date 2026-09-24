@@ -40,9 +40,9 @@ export default function NutritionPrototypeLayout({
           showTheme={false}
           positionClass="bottom-16 left-1/2 -translate-x-1/2"
           variants={[
-            { key: "tab", name: "Soft folder tab" },
-            { key: "chip", name: "Inset pill chip" },
-            { key: "plain", name: "Heading + accent" },
+            { key: "tab", name: "Manila folder tab" },
+            { key: "smooth", name: "Smooth (one shape)" },
+            { key: "nav-tabs", name: "Nav as folder tabs" },
           ]}
         />
       </Suspense>

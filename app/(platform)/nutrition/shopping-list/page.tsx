@@ -45,6 +45,7 @@ export default async function ShoppingListPage() {
         <NutritionNav active="shopping" />
 
         <PrototypeFolderCard
+          active="shopping"
           title="Shopping list"
           description="What the household needs to buy. Anyone can add, check off, or regenerate from the plan."
         >

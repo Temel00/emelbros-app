@@ -33,6 +33,7 @@ export default async function NutritionPage() {
         <NutritionNav active="pantry" />
 
         <PrototypeFolderCard
+          active="pantry"
           title="Pantry"
           description="What the household has in, and where it's kept. Anyone can add or adjust a line."
         >

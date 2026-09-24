@@ -4,49 +4,72 @@
  * PROTOTYPE ONLY — throwaway. Delete when wayfinder #187 resolves.
  *
  * Part of the `dense` flair prototype (#187). The dense tinted-produce field
- * (with page-specific accents woven in) is the LOCKED background. The open
- * composition question is how title + content stay legible and undistracted
- * over it. The first answer — a bold manila folder — read as "too bold"; the
- * owner asked for a subtler, lighter tone and a rounder, softer shape, and to
- * SEE a few title/tab treatments side by side to judge legibility + looks.
+ * (with page-specific accents woven in) is the LOCKED background. The manila
+ * folder is the owner's favourite content container, but "not quite right"
+ * yet. This round explores it on `?card=` (floating bar, second row):
  *
- * So this card is now switchable on `?card=` (floating bar, second row):
+ * - `tab`      — the classic outlined manila folder tab carrying the title.
+ *                The owner's current leader.
+ * - `smooth`   — one continuous shape: a borderless, same-colour raised title
+ *                nub instead of a distinct outlined tab. A subtler hint at a
+ *                folder rather than a literal one.
+ * - `nav-tabs` — the nutrition nav folded INTO the folder: the section tabs
+ *                run across the top, and the active tab is the title. The
+ *                standalone pill nav hides itself when this is active.
  *
- * - `tab`   — soft rounded folder tab carrying the title (the folder idea,
- *             softened: lighter cream, fully rounded, gentle shadow).
- * - `chip`  — title in a rounded pill chip inset at the top of the card, no
- *             protruding tab. Reads as a label sitting inside the content.
- * - `plain` — title as a heading inside the card with a short tinted underline
- *             accent, no tab or chip. The quietest option.
+ * Colours (owner's call this round): manila in light mode, a lighter BLUE in
+ * dark mode instead of the old orange/brown. Prototype-local arbitrary values,
+ * not #18 tokens — a win here decides whether they graduate into real tokens.
  *
- * All three share ONE refined surface: a light, barely-warm opaque card with a
- * big soft radius, so the flair only shows in the gutter around it. Tones are
- * prototype-local arbitrary values (not #18 tokens); a win here decides whether
- * they graduate into real surface tokens.
- *
- * Client + useSearchParams (wrapped in Suspense so the content still SSRs in
- * the default treatment), hook-free otherwise, drops into the server pages.
+ * Client + useSearchParams (wrapped in Suspense so content still SSRs in the
+ * default treatment), otherwise hook-free, drops into the server pages.
  */
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
-type CardVariant = "tab" | "chip" | "plain";
+import {
+  NUTRITION_NAV_ITEMS,
+  type NutritionNavKey,
+} from "@/modules/nutrition/components/nutrition-nav";
+
+type CardVariant = "tab" | "smooth" | "nav-tabs";
 
 const DEFAULT_VARIANT: CardVariant = "tab";
 
-// One refined, opaque surface shared by every treatment: light + barely warm,
-// big soft radius, gentle shadow. Lighter and rounder than the first manila.
+// The shared opaque surface: manila in light, a lighter blue in dark.
 const SURFACE =
-  "rounded-3xl border border-[#efe7d3] bg-[#faf6ec] shadow-sm dark:border-[#322e26] dark:bg-[#221f18]";
+  "border-[#e2d4ad] bg-[#f4ead0] dark:border-[#33495c] dark:bg-[#21323f]";
+// Same fill with no border, for the `smooth` nub that merges into the body.
+const SURFACE_BG = "bg-[#f4ead0] dark:bg-[#21323f]";
+// A recessed tab (inactive nav tab): slightly deeper than the surface.
+const TAB_INACTIVE =
+  "border-[#e2d4ad] bg-[#e9dcb6] text-muted-foreground hover:text-foreground dark:border-[#33495c] dark:bg-[#1a2833]";
+
+function Body({
+  rounded,
+  children,
+}: {
+  rounded: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`${SURFACE} border ${rounded} p-5 shadow-sm sm:p-7`}>
+      {children}
+    </div>
+  );
+}
 
 function FolderShell({
   variant,
+  active,
   title,
   description,
   children,
 }: {
   variant: CardVariant;
+  active?: NutritionNavKey;
   title: string;
   description?: string;
   children: React.ReactNode;
@@ -57,62 +80,87 @@ function FolderShell({
     </p>
   ) : null;
 
-  if (variant === "tab") {
+  if (variant === "smooth") {
     return (
       <section className="mx-auto w-full max-w-3xl">
-        {/* Soft rounded folder tab — same surface as the body, sits just above. */}
-        <div className="ml-4 inline-flex w-fit items-center rounded-2xl rounded-b-none border border-b-0 border-[#efe7d3] bg-[#faf6ec] px-5 pb-2 pt-2 shadow-sm dark:border-[#322e26] dark:bg-[#221f18]">
+        {/* Borderless, same-colour nub — reads as one continuous shape, a
+            subtle hint at a folder rather than a distinct outlined tab. */}
+        <div
+          className={`ml-5 inline-flex w-fit rounded-t-2xl ${SURFACE_BG} px-5 pb-1 pt-2`}
+        >
           <h1 className="text-base font-semibold text-foreground">{title}</h1>
         </div>
-        <div className={`${SURFACE} rounded-tl-xl p-5 sm:p-7`}>
+        <Body rounded="rounded-2xl rounded-tl-none">
           {desc}
           {children}
-        </div>
+        </Body>
       </section>
     );
   }
 
-  if (variant === "chip") {
+  if (variant === "nav-tabs") {
     return (
       <section className="mx-auto w-full max-w-3xl">
-        <div className={`${SURFACE} p-5 sm:p-7`}>
-          {/* Title as a soft pill chip sitting inside the top of the card. */}
-          <span className="mb-4 inline-flex items-center rounded-full bg-[#f0e6cf] px-4 py-1 text-sm font-semibold text-foreground dark:bg-[#2d2920]">
-            {title}
-          </span>
+        {/* The nutrition nav AS folder tabs; the active tab is the title. */}
+        <div className="flex flex-wrap items-end gap-1 pl-3">
+          {NUTRITION_NAV_ITEMS.map((item) =>
+            item.key === active ? (
+              <span
+                key={item.key}
+                aria-current="page"
+                className={`relative -mb-px rounded-t-xl border border-b-0 ${SURFACE} px-4 pb-2 pt-2 text-sm font-semibold text-foreground shadow-sm`}
+              >
+                {item.label}
+              </span>
+            ) : (
+              <Link
+                key={item.key}
+                href={item.href}
+                className={`rounded-t-lg border border-b-0 ${TAB_INACTIVE} px-3.5 pb-2 pt-1.5 text-sm font-medium`}
+              >
+                {item.label}
+              </Link>
+            ),
+          )}
+        </div>
+        <Body rounded="rounded-xl rounded-tl-none">
           {desc}
           {children}
-        </div>
+        </Body>
       </section>
     );
   }
 
-  // plain
+  // tab (default): the classic outlined manila folder tab.
   return (
     <section className="mx-auto w-full max-w-3xl">
-      <div className={`${SURFACE} p-5 sm:p-7`}>
-        <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-        {/* Short tinted underline — a quiet nod to the flair palette. */}
-        <div className="mb-4 mt-1.5 h-1 w-10 rounded-full bg-c-green/60" />
+      <div
+        className={`ml-3 inline-flex w-fit items-center rounded-t-xl border border-b-0 ${SURFACE} px-5 pb-1.5 pt-2 shadow-sm`}
+      >
+        <h1 className="text-base font-semibold text-foreground">{title}</h1>
+      </div>
+      <Body rounded="rounded-xl rounded-tl-none">
         {desc}
         {children}
-      </div>
+      </Body>
     </section>
   );
 }
 
 function FolderInner(props: {
+  active?: NutritionNavKey;
   title: string;
   description?: string;
   children: React.ReactNode;
 }) {
   const param = useSearchParams().get("card");
   const variant: CardVariant =
-    param === "chip" || param === "plain" ? param : DEFAULT_VARIANT;
+    param === "smooth" || param === "nav-tabs" ? param : DEFAULT_VARIANT;
   return <FolderShell variant={variant} {...props} />;
 }
 
 export function PrototypeFolderCard(props: {
+  active?: NutritionNavKey;
   title: string;
   description?: string;
   children: React.ReactNode;
