@@ -5,22 +5,18 @@
  *
  * Part of the `dense` flair prototype (#187). The dense tinted-produce field
  * (with page-specific accents woven in) is the LOCKED background. The manila
- * folder is the owner's favourite content container. The owner likes the `tab`
- * treatment's SIZING (a larger tab, sizable title text) and likes how the
- * earlier nav-into-folder idea folds the section nav into the tabs. This round
- * merges those two likes and drops the treatments no longer in play (`smooth`
- * and the flat equal-size `nav-tabs`). Three variants on `?card=`:
+ * folder is the owner's favourite content container. The owner has converged
+ * on the nav-into-folder idea: the nutrition nav folds INTO the folder tabs, in
+ * natural order, and the ACTIVE tab is scaled up to serve as the title. This
+ * round rounds the card's top-left corner (was squared for the nav variants)
+ * and turns the `?card=` axis into a comparison of how MUCH to scale the
+ * active/title tab:
  *
- * - `tab`        — the classic single outlined manila folder tab carrying the
- *                  title. The owner's sizing benchmark; kept as-is.
- * - `nav-scaled` — the nutrition nav folded INTO the folder tabs, in natural
- *                  order, with the ACTIVE tab scaled up (larger, bolder, the
- *                  same size as the `tab` title) so it reads as the title while
- *                  the rest stay compact section tabs.
- * - `carousel`   — same scaled-up active tab, but the row is rotated so the
- *                  active tab is always LEFT-MOST; the remaining tabs keep their
- *                  order and wrap around to the end, like a carousel spun to
- *                  bring the current section to the front.
+ * - `nav-sm` — active tab slightly larger than its neighbours (text-base).
+ * - `nav-md` — active tab clearly the title (text-lg, more padding).
+ * - `nav-lg` — active tab dominant (text-xl, generous padding).
+ * - `tab`    — the original single folder tab, kept as the sizing benchmark
+ *              the owner first liked. Standalone pill nav still shows here.
  *
  * Colours (owner's call): manila in light mode, a lighter BLUE in dark mode.
  * Prototype-local arbitrary values, not #18 tokens — a win here decides whether
@@ -39,9 +35,10 @@ import {
   type NutritionNavKey,
 } from "@/modules/nutrition/components/nutrition-nav";
 
-type CardVariant = "tab" | "nav-scaled" | "carousel";
+type NavScale = "nav-sm" | "nav-md" | "nav-lg";
+type CardVariant = NavScale | "tab";
 
-const DEFAULT_VARIANT: CardVariant = "tab";
+const DEFAULT_VARIANT: CardVariant = "nav-sm";
 
 // The shared opaque surface: manila in light, a lighter blue in dark.
 const SURFACE =
@@ -49,6 +46,14 @@ const SURFACE =
 // A recessed tab (inactive nav tab): slightly deeper than the surface.
 const TAB_INACTIVE =
   "border-[#e2d4ad] bg-[#e9dcb6] text-muted-foreground hover:text-foreground dark:border-[#33495c] dark:bg-[#1a2833]";
+
+// How far the active/title tab is scaled above the compact inactive tabs.
+// Literal class strings so Tailwind's static scan sees every value.
+const ACTIVE_SCALE: Record<NavScale, string> = {
+  "nav-sm": "px-5 pb-1.5 pt-2 text-base",
+  "nav-md": "px-6 pb-2 pt-2.5 text-lg",
+  "nav-lg": "px-7 pb-2.5 pt-3 text-xl",
+};
 
 function Body({
   rounded,
@@ -64,13 +69,13 @@ function Body({
   );
 }
 
-// The scaled-up active tab (doubles as the title) — same size/weight as the
-// `tab` variant's folder tab so the sizing the owner likes carries over.
-function ActiveTab({ label }: { label: string }) {
+// The scaled-up active tab (doubles as the title). `scale` sets how much larger
+// it reads than its neighbours.
+function ActiveTab({ label, scale }: { label: string; scale: string }) {
   return (
     <span
       aria-current="page"
-      className={`relative -mb-px rounded-t-2xl border border-b-0 ${SURFACE} px-5 pb-1.5 pt-2 text-base font-semibold text-foreground shadow-sm`}
+      className={`relative -mb-px rounded-t-2xl border border-b-0 ${SURFACE} ${scale} font-semibold text-foreground shadow-sm`}
     >
       {label}
     </span>
@@ -87,18 +92,6 @@ function InactiveTab({ label, href }: { label: string; href: string }) {
       {label}
     </Link>
   );
-}
-
-// Rotate the nav so the active item is first (left-most); the rest keep their
-// order and wrap around to the end. Returns the list unchanged if active is
-// already first or not found.
-function rotateToActive(active?: NutritionNavKey) {
-  const idx = NUTRITION_NAV_ITEMS.findIndex((i) => i.key === active);
-  if (idx <= 0) return NUTRITION_NAV_ITEMS;
-  return [
-    ...NUTRITION_NAV_ITEMS.slice(idx),
-    ...NUTRITION_NAV_ITEMS.slice(0, idx),
-  ];
 }
 
 function FolderShell({
@@ -120,23 +113,23 @@ function FolderShell({
     </p>
   ) : null;
 
-  if (variant === "nav-scaled" || variant === "carousel") {
-    const items =
-      variant === "carousel" ? rotateToActive(active) : NUTRITION_NAV_ITEMS;
+  if (variant !== "tab") {
+    const scale = ACTIVE_SCALE[variant];
     return (
       <section className="mx-auto w-full max-w-3xl">
-        {/* The nutrition nav AS folder tabs; the active tab is scaled up to
-            serve as the title. `carousel` rotates the active tab to the front. */}
+        {/* The nutrition nav AS folder tabs, in natural order; the active tab
+            is scaled up to serve as the title. */}
         <div className="flex flex-wrap items-end gap-1 pl-3">
-          {items.map((item) =>
+          {NUTRITION_NAV_ITEMS.map((item) =>
             item.key === active ? (
-              <ActiveTab key={item.key} label={item.label} />
+              <ActiveTab key={item.key} label={item.label} scale={scale} />
             ) : (
               <InactiveTab key={item.key} label={item.label} href={item.href} />
             ),
           )}
         </div>
-        <Body rounded="rounded-2xl rounded-tl-none">
+        {/* Rounded top-left corner (owner's call this round). */}
+        <Body rounded="rounded-2xl">
           {desc}
           {children}
         </Body>
@@ -144,8 +137,8 @@ function FolderShell({
     );
   }
 
-  // tab (default): the classic outlined manila folder tab — the owner's sizing
-  // benchmark. Rounder tab corners and a rounded card top-left corner.
+  // tab: the original single outlined manila folder tab — the sizing benchmark
+  // the owner first liked. Rounder tab corners + rounded card top-left corner.
   return (
     <section className="mx-auto w-full max-w-3xl">
       <div
@@ -169,7 +162,12 @@ function FolderInner(props: {
 }) {
   const param = useSearchParams().get("card");
   const variant: CardVariant =
-    param === "nav-scaled" || param === "carousel" ? param : DEFAULT_VARIANT;
+    param === "nav-sm" ||
+    param === "nav-md" ||
+    param === "nav-lg" ||
+    param === "tab"
+      ? param
+      : DEFAULT_VARIANT;
   return <FolderShell variant={variant} {...props} />;
 }
 

@@ -62,17 +62,20 @@ function NavBar({ active }: { active: NutritionNavKey }) {
 }
 
 function NavGated({ active }: { active: NutritionNavKey }) {
-  // In the nav-based folder treatments (`nav-scaled`, `carousel`) the folder
-  // renders these items as its tabs, so this standalone bar steps aside to
-  // avoid a duplicate nav.
+  // The nav-scaled folder treatments render these items AS the folder tabs, so
+  // this standalone bar only appears for the single-tab benchmark (`?card=tab`).
+  // Every other value — including the default (no param) — is nav-based, so the
+  // folder owns the nav and this bar steps aside to avoid a duplicate.
   const card = useSearchParams().get("card");
-  if (card === "nav-scaled" || card === "carousel") return null;
-  return <NavBar active={active} />;
+  if (card === "tab") return <NavBar active={active} />;
+  return null;
 }
 
 export function NutritionNav({ active }: { active: NutritionNavKey }) {
+  // Default fallback is null: the default folder treatment is nav-based and
+  // renders its own tabs, so no standalone pill nav during SSR/suspense.
   return (
-    <Suspense fallback={<NavBar active={active} />}>
+    <Suspense fallback={null}>
       <NavGated active={active} />
     </Suspense>
   );

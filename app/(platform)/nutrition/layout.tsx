@@ -40,9 +40,10 @@ export default function NutritionPrototypeLayout({
           showTheme={false}
           positionClass="bottom-16 left-1/2 -translate-x-1/2"
           variants={[
-            { key: "tab", name: "Manila folder tab" },
-            { key: "nav-scaled", name: "Nav tabs (active as title)" },
-            { key: "carousel", name: "Carousel (active left-most)" },
+            { key: "nav-sm", name: "Nav scaled — small" },
+            { key: "nav-md", name: "Nav scaled — medium" },
+            { key: "nav-lg", name: "Nav scaled — large" },
+            { key: "tab", name: "Single folder tab" },
           ]}
         />
       </Suspense>
