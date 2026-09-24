@@ -4,6 +4,7 @@ import { createClient } from "@/platform/supabase/server";
 
 import { NutritionNav } from "@/modules/nutrition/components/nutrition-nav";
 import { PantryFieldSettings } from "@/modules/nutrition/components/pantry-field-settings";
+import { PrototypeFolderCard } from "@/modules/nutrition/components/prototype-folder-card";
 import {
   getAllPantryLocations,
   getAllUnits,
@@ -33,15 +34,13 @@ export default async function NutritionSettingsPage() {
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 sm:p-6">
         <NutritionNav active="settings" />
 
-        <div>
-          <h1 className="text-xl font-semibold">Settings</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage the units and pantry locations everyone in the household
-            shares. Changes apply everywhere under Nutrition.
-          </p>
-        </div>
-
-        <PantryFieldSettings units={units} locations={locations} />
+        <PrototypeFolderCard
+          active="settings"
+          title="Settings"
+          description="Manage the units and pantry locations everyone in the household shares. Changes apply everywhere under Nutrition."
+        >
+          <PantryFieldSettings units={units} locations={locations} />
+        </PrototypeFolderCard>
       </main>
     </>
   );

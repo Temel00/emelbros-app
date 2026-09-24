@@ -4,6 +4,7 @@ import { createClient } from "@/platform/supabase/server";
 
 import { LogView } from "@/modules/nutrition/components/log-view";
 import { NutritionNav } from "@/modules/nutrition/components/nutrition-nav";
+import { PrototypeFolderCard } from "@/modules/nutrition/components/prototype-folder-card";
 import { todayIso } from "@/modules/nutrition/lib/plan-calendar";
 import {
   getFoods,
@@ -40,19 +41,18 @@ export default async function NutritionLogPage() {
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 sm:p-6">
         <NutritionNav active="log" />
 
-        <div>
-          <h1 className="text-xl font-semibold">Log</h1>
-          <p className="text-sm text-muted-foreground">
-            What you&apos;ve eaten today. Only your own entries show here.
-          </p>
-        </div>
-
-        <LogView
-          entries={entries}
-          foods={foods}
-          recipes={recipes}
-          todaysPlan={todaysPlan}
-        />
+        <PrototypeFolderCard
+          active="log"
+          title="Log"
+          description="What you've eaten today. Only your own entries show here."
+        >
+          <LogView
+            entries={entries}
+            foods={foods}
+            recipes={recipes}
+            todaysPlan={todaysPlan}
+          />
+        </PrototypeFolderCard>
       </main>
     </>
   );
