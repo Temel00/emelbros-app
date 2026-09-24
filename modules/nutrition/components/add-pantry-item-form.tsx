@@ -99,7 +99,7 @@ export function AddPantryItemForm({
 
   return (
     <form
-      className="flex flex-col gap-3 rounded-lg border border-border p-3"
+      className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3"
       onSubmit={(e) => {
         e.preventDefault();
         submit();

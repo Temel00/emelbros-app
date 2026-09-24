@@ -75,7 +75,7 @@ export function OverviewMonthView({
       </div>
 
       {selected && (
-        <div className="rounded-lg border border-border p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <h2 className="mb-3 text-sm font-medium">
             {new Date(`${selected}T00:00:00`).toLocaleDateString(undefined, {
               weekday: "long",

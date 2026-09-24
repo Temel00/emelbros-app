@@ -188,7 +188,7 @@ export function ShoppingListView({
       )}
 
       {items.length === 0 && (
-        <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        <p className="rounded-lg border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
           Nothing on the list yet — Generate to pull shortfalls from this
           week&apos;s plan, or add an item.
         </p>
@@ -275,7 +275,7 @@ function ShoppingListRow({
   return (
     <li
       className={`flex items-start gap-3 rounded-lg border border-border px-3 py-2.5 ${
-        item.checked_off ? "bg-muted/30" : ""
+        item.checked_off ? "bg-muted" : "bg-card"
       }`}
     >
       <Checkbox

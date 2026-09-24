@@ -84,7 +84,7 @@ export function OverviewDayView({
         {entries.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nothing logged yet.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
+          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-card">
             {entries.map((entry) => (
               <li
                 key={entry.id}

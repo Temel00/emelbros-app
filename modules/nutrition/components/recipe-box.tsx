@@ -38,11 +38,11 @@ export function RecipeBox({ recipes }: { recipes: RecipeRow[] }) {
       </div>
 
       {recipes.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        <p className="rounded-lg border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
           No recipes yet — add the first one above.
         </p>
       ) : (
-        <div className="scrollbar-app overflow-x-auto rounded-xl border border-border">
+        <div className="scrollbar-app overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full min-w-[420px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50 text-xs text-muted-foreground">

@@ -39,7 +39,10 @@ export function NutritionNav({
     );
 
   return (
-    <nav aria-label="Nutrition" className="flex gap-1">
+    <nav
+      aria-label="Nutrition"
+      className="flex w-fit flex-wrap gap-1 rounded-xl border border-border bg-card p-1 shadow-sm"
+    >
       <Link href="/nutrition" className={linkClass("pantry")}>
         Pantry
       </Link>

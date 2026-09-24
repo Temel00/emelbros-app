@@ -118,19 +118,22 @@ const DENSE_POOL: LucideIcon[] = [
   CookingPot,
 ];
 
-const DENSE_PRODUCE: Placed[] = (() => {
-  // Tiny deterministic LCG — prototype-cheap, stable across renders.
+type Cell = { top: number; left: number; size: number; rotate: number };
+
+// Geometry only — one jittered 7x5 grid, generated once with a fixed seed so
+// every cell (produce OR page accent) lives on the SAME grid. Which icon lands
+// in each cell is decided at render, so accents mix in rather than floating on
+// a second layer.
+const DENSE_CELLS: Cell[] = (() => {
   let s = 20250923;
   const rnd = () => {
     s = (s * 1664525 + 1013904223) % 4294967296;
     return s / 4294967296;
   };
-  const items: Placed[] = [];
-  // ~7 columns x 5 rows of jittered cells → a fuller, even scatter.
+  const cells: Cell[] = [];
   for (let row = 0; row < 5; row++) {
     for (let col = 0; col < 7; col++) {
-      items.push({
-        Icon: DENSE_POOL[(row * 7 + col) % DENSE_POOL.length],
+      cells.push({
         top: 4 + row * 19 + (rnd() * 10 - 5),
         left: 3 + col * 14 + (rnd() * 8 - 4),
         size: 2.4 + rnd() * 1.6,
@@ -138,8 +141,26 @@ const DENSE_PRODUCE: Placed[] = (() => {
       });
     }
   }
-  return items;
+  return cells;
 })();
+
+// Cells (scattered, non-adjacent) whose icon is a page accent instead of
+// produce — spread across the grid so the screen objects read as mixed in.
+const DENSE_ACCENT_SLOTS = [4, 11, 17, 24, 30];
+
+// Fill the shared grid: page accents at the accent slots (cycled), produce
+// everywhere else. Deterministic given `accents`, so keys stay stable.
+function buildDenseField(accents: LucideIcon[]): Placed[] {
+  const accentSet = new Set(DENSE_ACCENT_SLOTS);
+  let produceI = 0;
+  let accentI = 0;
+  return DENSE_CELLS.map((cell, i) => {
+    const Icon = accentSet.has(i)
+      ? accents[accentI++ % accents.length]
+      : DENSE_POOL[produceI++ % DENSE_POOL.length];
+    return { Icon, ...cell };
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Per-screen accent objects (slugs track #186's vocabulary; Lucide fallbacks).
@@ -228,29 +249,17 @@ export function PrototypeFlairBackground() {
     );
   } else if (variant === "dense") {
     // Smaller, many more, a little more opaque — the palette reads as a set.
+    // Produce and the page-specific accents share ONE grid: accents are woven
+    // into scattered cells, not floated on a second layer.
     body = (
-      <>
-        <Field
-          items={DENSE_PRODUCE.map((p, i) => ({ ...p, tint: tint(i) }))}
-          opacity="opacity-[0.10] dark:opacity-[0.14]"
-          stroke={1.75}
-        />
-        {/* The two screen accents, also small, mixed into the confetti. */}
-        {accents.slice(0, 2).map((Icon, i) => (
-          <Icon
-            key={i}
-            className={`absolute ${tint(i + 2)} opacity-[0.13] dark:opacity-[0.18]`}
-            strokeWidth={1.75}
-            style={{
-              top: i === 0 ? "34%" : "58%",
-              left: i === 0 ? "46%" : "40%",
-              width: "3.4rem",
-              height: "3.4rem",
-              transform: `rotate(${i === 0 ? -8 : 10}deg)`,
-            }}
-          />
-        ))}
-      </>
+      <Field
+        items={buildDenseField(accents).map((p, i) => ({
+          ...p,
+          tint: tint(i),
+        }))}
+        opacity="opacity-[0.10] dark:opacity-[0.14]"
+        stroke={1.75}
+      />
     );
   } else if (variant === "wildcard") {
     // Departure: one oversized, corner-cropped, screen-defining watermark +

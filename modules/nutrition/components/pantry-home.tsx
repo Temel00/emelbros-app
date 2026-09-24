@@ -33,7 +33,7 @@ export function PantryHome({
       <AddPantryItemForm foods={foods} units={units} locations={locations} />
 
       {groups.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        <p className="rounded-lg border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
           The pantry is empty — add what&apos;s in the fridge above.
         </p>
       ) : (
