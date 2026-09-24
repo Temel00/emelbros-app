@@ -62,10 +62,11 @@ function NavBar({ active }: { active: NutritionNavKey }) {
 }
 
 function NavGated({ active }: { active: NutritionNavKey }) {
-  // In the `nav-tabs` folder treatment the folder renders these items as its
-  // tabs, so this standalone bar steps aside to avoid a duplicate nav.
+  // In the nav-based folder treatments (`nav-scaled`, `carousel`) the folder
+  // renders these items as its tabs, so this standalone bar steps aside to
+  // avoid a duplicate nav.
   const card = useSearchParams().get("card");
-  if (card === "nav-tabs") return null;
+  if (card === "nav-scaled" || card === "carousel") return null;
   return <NavBar active={active} />;
 }
 

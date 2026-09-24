@@ -5,21 +5,26 @@
  *
  * Part of the `dense` flair prototype (#187). The dense tinted-produce field
  * (with page-specific accents woven in) is the LOCKED background. The manila
- * folder is the owner's favourite content container, but "not quite right"
- * yet. This round explores it on `?card=` (floating bar, second row):
+ * folder is the owner's favourite content container. The owner likes the `tab`
+ * treatment's SIZING (a larger tab, sizable title text) and likes how the
+ * earlier nav-into-folder idea folds the section nav into the tabs. This round
+ * merges those two likes and drops the treatments no longer in play (`smooth`
+ * and the flat equal-size `nav-tabs`). Three variants on `?card=`:
  *
- * - `tab`      — the classic outlined manila folder tab carrying the title.
- *                The owner's current leader.
- * - `smooth`   — one continuous shape: a borderless, same-colour raised title
- *                nub instead of a distinct outlined tab. A subtler hint at a
- *                folder rather than a literal one.
- * - `nav-tabs` — the nutrition nav folded INTO the folder: the section tabs
- *                run across the top, and the active tab is the title. The
- *                standalone pill nav hides itself when this is active.
+ * - `tab`        — the classic single outlined manila folder tab carrying the
+ *                  title. The owner's sizing benchmark; kept as-is.
+ * - `nav-scaled` — the nutrition nav folded INTO the folder tabs, in natural
+ *                  order, with the ACTIVE tab scaled up (larger, bolder, the
+ *                  same size as the `tab` title) so it reads as the title while
+ *                  the rest stay compact section tabs.
+ * - `carousel`   — same scaled-up active tab, but the row is rotated so the
+ *                  active tab is always LEFT-MOST; the remaining tabs keep their
+ *                  order and wrap around to the end, like a carousel spun to
+ *                  bring the current section to the front.
  *
- * Colours (owner's call this round): manila in light mode, a lighter BLUE in
- * dark mode instead of the old orange/brown. Prototype-local arbitrary values,
- * not #18 tokens — a win here decides whether they graduate into real tokens.
+ * Colours (owner's call): manila in light mode, a lighter BLUE in dark mode.
+ * Prototype-local arbitrary values, not #18 tokens — a win here decides whether
+ * they graduate into real tokens.
  *
  * Client + useSearchParams (wrapped in Suspense so content still SSRs in the
  * default treatment), otherwise hook-free, drops into the server pages.
@@ -34,15 +39,13 @@ import {
   type NutritionNavKey,
 } from "@/modules/nutrition/components/nutrition-nav";
 
-type CardVariant = "tab" | "smooth" | "nav-tabs";
+type CardVariant = "tab" | "nav-scaled" | "carousel";
 
 const DEFAULT_VARIANT: CardVariant = "tab";
 
 // The shared opaque surface: manila in light, a lighter blue in dark.
 const SURFACE =
   "border-[#e2d4ad] bg-[#f4ead0] dark:border-[#33495c] dark:bg-[#21323f]";
-// Same fill with no border, for the `smooth` nub that merges into the body.
-const SURFACE_BG = "bg-[#f4ead0] dark:bg-[#21323f]";
 // A recessed tab (inactive nav tab): slightly deeper than the surface.
 const TAB_INACTIVE =
   "border-[#e2d4ad] bg-[#e9dcb6] text-muted-foreground hover:text-foreground dark:border-[#33495c] dark:bg-[#1a2833]";
@@ -59,6 +62,43 @@ function Body({
       {children}
     </div>
   );
+}
+
+// The scaled-up active tab (doubles as the title) — same size/weight as the
+// `tab` variant's folder tab so the sizing the owner likes carries over.
+function ActiveTab({ label }: { label: string }) {
+  return (
+    <span
+      aria-current="page"
+      className={`relative -mb-px rounded-t-2xl border border-b-0 ${SURFACE} px-5 pb-1.5 pt-2 text-base font-semibold text-foreground shadow-sm`}
+    >
+      {label}
+    </span>
+  );
+}
+
+// A compact inactive section tab.
+function InactiveTab({ label, href }: { label: string; href: string }) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-t-lg border border-b-0 ${TAB_INACTIVE} px-3.5 pb-2 pt-1.5 text-sm font-medium`}
+    >
+      {label}
+    </Link>
+  );
+}
+
+// Rotate the nav so the active item is first (left-most); the rest keep their
+// order and wrap around to the end. Returns the list unchanged if active is
+// already first or not found.
+function rotateToActive(active?: NutritionNavKey) {
+  const idx = NUTRITION_NAV_ITEMS.findIndex((i) => i.key === active);
+  if (idx <= 0) return NUTRITION_NAV_ITEMS;
+  return [
+    ...NUTRITION_NAV_ITEMS.slice(idx),
+    ...NUTRITION_NAV_ITEMS.slice(0, idx),
+  ];
 }
 
 function FolderShell({
@@ -80,15 +120,21 @@ function FolderShell({
     </p>
   ) : null;
 
-  if (variant === "smooth") {
+  if (variant === "nav-scaled" || variant === "carousel") {
+    const items =
+      variant === "carousel" ? rotateToActive(active) : NUTRITION_NAV_ITEMS;
     return (
       <section className="mx-auto w-full max-w-3xl">
-        {/* Borderless, same-colour nub — reads as one continuous shape, a
-            subtle hint at a folder rather than a distinct outlined tab. */}
-        <div
-          className={`ml-5 inline-flex w-fit rounded-t-2xl ${SURFACE_BG} px-5 pb-1 pt-2`}
-        >
-          <h1 className="text-base font-semibold text-foreground">{title}</h1>
+        {/* The nutrition nav AS folder tabs; the active tab is scaled up to
+            serve as the title. `carousel` rotates the active tab to the front. */}
+        <div className="flex flex-wrap items-end gap-1 pl-3">
+          {items.map((item) =>
+            item.key === active ? (
+              <ActiveTab key={item.key} label={item.label} />
+            ) : (
+              <InactiveTab key={item.key} label={item.label} href={item.href} />
+            ),
+          )}
         </div>
         <Body rounded="rounded-2xl rounded-tl-none">
           {desc}
@@ -98,41 +144,8 @@ function FolderShell({
     );
   }
 
-  if (variant === "nav-tabs") {
-    return (
-      <section className="mx-auto w-full max-w-3xl">
-        {/* The nutrition nav AS folder tabs; the active tab is the title. */}
-        <div className="flex flex-wrap items-end gap-1 pl-3">
-          {NUTRITION_NAV_ITEMS.map((item) =>
-            item.key === active ? (
-              <span
-                key={item.key}
-                aria-current="page"
-                className={`relative -mb-px rounded-t-xl border border-b-0 ${SURFACE} px-4 pb-2 pt-2 text-sm font-semibold text-foreground shadow-sm`}
-              >
-                {item.label}
-              </span>
-            ) : (
-              <Link
-                key={item.key}
-                href={item.href}
-                className={`rounded-t-lg border border-b-0 ${TAB_INACTIVE} px-3.5 pb-2 pt-1.5 text-sm font-medium`}
-              >
-                {item.label}
-              </Link>
-            ),
-          )}
-        </div>
-        <Body rounded="rounded-xl rounded-tl-none">
-          {desc}
-          {children}
-        </Body>
-      </section>
-    );
-  }
-
-  // tab (default): the classic outlined manila folder tab, now with rounder
-  // tab corners and a rounded top-left corner on the card body too.
+  // tab (default): the classic outlined manila folder tab — the owner's sizing
+  // benchmark. Rounder tab corners and a rounded card top-left corner.
   return (
     <section className="mx-auto w-full max-w-3xl">
       <div
@@ -156,7 +169,7 @@ function FolderInner(props: {
 }) {
   const param = useSearchParams().get("card");
   const variant: CardVariant =
-    param === "smooth" || param === "nav-tabs" ? param : DEFAULT_VARIANT;
+    param === "nav-scaled" || param === "carousel" ? param : DEFAULT_VARIANT;
   return <FolderShell variant={variant} {...props} />;
 }
 
