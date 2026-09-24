@@ -31,13 +31,31 @@ export default function NutritionPrototypeLayout({
         <PrototypeFlairBackground />
       </Suspense>
       {children}
+      {/* Content-card treatment (title/tab) — the live question. Stacked above
+          the flair bar. Dense flair is locked, so this is the bar in play. */}
       <Suspense fallback={null}>
         <PrototypeSwitcher
+          param="card"
+          label="card:"
+          showTheme={false}
+          positionClass="bottom-16 left-1/2 -translate-x-1/2"
           variants={[
-            { key: "none", name: "None (control)" },
+            { key: "tab", name: "Soft folder tab" },
+            { key: "chip", name: "Inset pill chip" },
+            { key: "plain", name: "Heading + accent" },
+          ]}
+        />
+      </Suspense>
+      {/* Flair is locked to dense (owner's favourite); kept switchable to
+          re-confirm against the others while the card treatment is chosen. */}
+      <Suspense fallback={null}>
+        <PrototypeSwitcher
+          label="flair:"
+          variants={[
+            { key: "dense", name: "Dense (LOCKED)" },
             { key: "subtle", name: "Subtle (r1 leader)" },
-            { key: "dense", name: "Dense (small + many)" },
             { key: "wildcard", name: "Wildcard (watermark)" },
+            { key: "none", name: "None (control)" },
           ]}
         />
       </Suspense>

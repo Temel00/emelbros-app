@@ -26,20 +26,32 @@ function useIsDark() {
 export function PrototypeSwitcher({
   variants,
   current,
+  param = "variant",
+  label,
+  positionClass = "bottom-4 left-1/2 -translate-x-1/2",
+  showTheme = true,
 }: {
   variants: PrototypeVariant[];
   /**
    * Current variant key. Optional: when omitted (e.g. mounted in a server
-   * layout that can't read searchParams), it's derived from `?variant=`,
+   * layout that can't read searchParams), it's derived from the URL param,
    * falling back to the first variant.
    */
   current?: string;
+  /** URL search param this bar drives. Lets several bars co-exist. */
+  param?: string;
+  /** Optional short label shown before the variant name. */
+  label?: string;
+  /** Tailwind position classes so multiple bars can stack. */
+  positionClass?: string;
+  /** Show the theme toggle. Off for secondary bars to avoid duplicates. */
+  showTheme?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isDark = useIsDark();
 
-  const active = current ?? searchParams.get("variant") ?? variants[0]?.key;
+  const active = current ?? searchParams.get(param) ?? variants[0]?.key;
   const index = Math.max(
     0,
     variants.findIndex((v) => v.key === active),
@@ -50,7 +62,7 @@ export function PrototypeSwitcher({
       const next =
         variants[(index + delta + variants.length) % variants.length];
       const params = new URLSearchParams(searchParams.toString());
-      params.set("variant", next.key);
+      params.set(param, next.key);
       router.replace(`?${params.toString()}`);
     }
 
@@ -68,16 +80,19 @@ export function PrototypeSwitcher({
       if (event.key === "ArrowRight") go(1);
     }
 
+    // Only the primary bar binds arrow keys, so a second stacked bar
+    // (e.g. `?card=`) doesn't get driven by the same keypress.
+    if (param !== "variant") return;
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [index, router, searchParams, variants]);
+  }, [index, router, searchParams, variants, param]);
 
   if (process.env.NODE_ENV === "production") return null;
 
   function navigate(delta: number) {
     const next = variants[(index + delta + variants.length) % variants.length];
     const params = new URLSearchParams(searchParams.toString());
-    params.set("variant", next.key);
+    params.set(param, next.key);
     router.replace(`?${params.toString()}`);
   }
 
@@ -89,7 +104,9 @@ export function PrototypeSwitcher({
   }
 
   return (
-    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full bg-neutral-900 px-2 py-1.5 font-mono text-xs text-white shadow-lg ring-1 ring-white/20">
+    <div
+      className={`fixed ${positionClass} z-50 flex items-center gap-1 rounded-full bg-neutral-900 px-2 py-1.5 font-mono text-xs text-white shadow-lg ring-1 ring-white/20`}
+    >
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -99,6 +116,7 @@ export function PrototypeSwitcher({
         ←
       </button>
       <span className="min-w-40 px-2 text-center tabular-nums">
+        {label ? <span className="text-white/50">{label} </span> : null}
         {variants[index].key} — {variants[index].name}
       </span>
       <button
@@ -109,14 +127,16 @@ export function PrototypeSwitcher({
       >
         →
       </button>
-      <button
-        type="button"
-        onClick={toggleTheme}
-        aria-label="Toggle theme"
-        className="ml-1 rounded-full border-l border-white/20 px-2 py-1 hover:bg-white/15"
-      >
-        {isDark ? "☀" : "☾"}
-      </button>
+      {showTheme ? (
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+          className="ml-1 rounded-full border-l border-white/20 px-2 py-1 hover:bg-white/15"
+        >
+          {isDark ? "☀" : "☾"}
+        </button>
+      ) : null}
     </div>
   );
 }

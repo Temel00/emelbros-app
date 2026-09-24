@@ -214,7 +214,9 @@ function Field({
 export function PrototypeFlairBackground() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const variant = (searchParams.get("variant") as FlairVariant) ?? "none";
+  // Dense is the owner's locked choice, so it's the default when no `?variant=`
+  // is set; the switcher still reaches the others to re-confirm against them.
+  const variant = (searchParams.get("variant") as FlairVariant) ?? "dense";
 
   if (variant === "none") return null;
 
