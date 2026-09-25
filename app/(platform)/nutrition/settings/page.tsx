@@ -42,6 +42,29 @@ export default async function NutritionSettingsPage() {
         </div>
 
         <PantryFieldSettings units={units} locations={locations} />
+
+        {/* CC BY 3.0 credit for the flair-layer art (#185, ADR-0018). */}
+        <p className="text-xs text-muted-foreground">
+          Background illustrations by Lorc, Delapouite &amp; contributors at{" "}
+          <a
+            href="https://game-icons.net"
+            className="underline underline-offset-2"
+            target="_blank"
+            rel="noreferrer"
+          >
+            game-icons.net
+          </a>
+          , licensed{" "}
+          <a
+            href="https://creativecommons.org/licenses/by/3.0/"
+            className="underline underline-offset-2"
+            target="_blank"
+            rel="noreferrer"
+          >
+            CC BY 3.0
+          </a>
+          .
+        </p>
       </main>
     </>
   );
