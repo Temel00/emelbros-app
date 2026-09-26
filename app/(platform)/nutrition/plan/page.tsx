@@ -8,7 +8,7 @@ import { createClient } from "@/platform/supabase/server";
 
 import { MealPlanMonthView } from "@/modules/nutrition/components/meal-plan-month-view";
 import { MealPlanWeekView } from "@/modules/nutrition/components/meal-plan-week-view";
-import { NutritionNav } from "@/modules/nutrition/components/nutrition-nav";
+import { FolderCard } from "@/modules/nutrition/components/folder-card";
 import {
   addMonths,
   addWeeks,
@@ -86,85 +86,87 @@ export default async function MealPlanPage({
     <>
       <AppHeader memberId={member.id} supabase={supabase} />
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 sm:p-6">
-        <NutritionNav active="plan" />
+        <FolderCard
+          active="plan"
+          description="What the household is eating. Anyone can plan, edit, or mark a meal cooked."
+        >
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1">
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  render={
+                    <Link
+                      href={hrefFor({ anchor: prevAnchor })}
+                      aria-label="Previous"
+                    >
+                      <ChevronLeft />
+                    </Link>
+                  }
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  render={
+                    <Link href={hrefFor({ anchor: todayIso() })}>Today</Link>
+                  }
+                />
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  render={
+                    <Link
+                      href={hrefFor({ anchor: nextAnchor })}
+                      aria-label="Next"
+                    >
+                      <ChevronRight />
+                    </Link>
+                  }
+                />
+              </div>
 
-        <div>
-          <h1 className="text-xl font-semibold">Meal plan</h1>
-          <p className="text-sm text-muted-foreground">
-            What the household is eating. Anyone can plan, edit, or mark a meal
-            cooked.
-          </p>
-        </div>
+              <p className="text-sm font-medium">{heading}</p>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
-            <Button
-              size="icon-sm"
-              variant="outline"
-              render={
+              <div className="flex gap-1 rounded-lg bg-muted p-0.5">
                 <Link
-                  href={hrefFor({ anchor: prevAnchor })}
-                  aria-label="Previous"
+                  href={hrefFor({ view: "week" })}
+                  className={`rounded-md px-2.5 py-1 text-sm font-medium ${
+                    view === "week"
+                      ? "bg-background shadow-sm"
+                      : "text-muted-foreground"
+                  }`}
                 >
-                  <ChevronLeft />
+                  Week
                 </Link>
-              }
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              render={<Link href={hrefFor({ anchor: todayIso() })}>Today</Link>}
-            />
-            <Button
-              size="icon-sm"
-              variant="outline"
-              render={
-                <Link href={hrefFor({ anchor: nextAnchor })} aria-label="Next">
-                  <ChevronRight />
+                <Link
+                  href={hrefFor({ view: "month" })}
+                  className={`rounded-md px-2.5 py-1 text-sm font-medium ${
+                    view === "month"
+                      ? "bg-background shadow-sm"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  Month
                 </Link>
-              }
-            />
+              </div>
+            </div>
+
+            {view === "week" ? (
+              <MealPlanWeekView
+                days={getWeekDays(anchorDate)}
+                entries={entries}
+                recipes={recipes}
+              />
+            ) : (
+              <MealPlanMonthView
+                monthGrid={getMonthGrid(anchorDate)}
+                entries={entries}
+                recipes={recipes}
+              />
+            )}
           </div>
-
-          <p className="text-sm font-medium">{heading}</p>
-
-          <div className="flex gap-1 rounded-lg bg-muted p-0.5">
-            <Link
-              href={hrefFor({ view: "week" })}
-              className={`rounded-md px-2.5 py-1 text-sm font-medium ${
-                view === "week"
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground"
-              }`}
-            >
-              Week
-            </Link>
-            <Link
-              href={hrefFor({ view: "month" })}
-              className={`rounded-md px-2.5 py-1 text-sm font-medium ${
-                view === "month"
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground"
-              }`}
-            >
-              Month
-            </Link>
-          </div>
-        </div>
-
-        {view === "week" ? (
-          <MealPlanWeekView
-            days={getWeekDays(anchorDate)}
-            entries={entries}
-            recipes={recipes}
-          />
-        ) : (
-          <MealPlanMonthView
-            monthGrid={getMonthGrid(anchorDate)}
-            entries={entries}
-            recipes={recipes}
-          />
-        )}
+        </FolderCard>
       </main>
     </>
   );

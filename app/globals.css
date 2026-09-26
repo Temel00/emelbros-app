@@ -54,6 +54,12 @@
   --color-c-yellow: var(--c-yellow);
   --color-c-green: var(--c-green);
   --color-c-blue: var(--c-blue);
+
+  /* Nutrition folder-card surfaces (ADR-0018). Theme-aware like the brights;
+     the opaque fill behind which the decorative flair is guard-railed. */
+  --color-c-surface-folder: var(--c-surface-folder);
+  --color-c-surface-folder-border: var(--c-surface-folder-border);
+  --color-c-surface-tab-inactive: var(--c-surface-tab-inactive);
 }
 
 :root {
@@ -63,6 +69,12 @@
   --c-yellow: #ffd166;
   --c-green: #05d69e;
   --c-blue: #1089b1;
+
+  /* Nutrition folder-card surfaces (ADR-0018): manila fill, in light mode.
+     Opaque, so body text is measured against these, never the flair behind. */
+  --c-surface-folder: #f4ead0;
+  --c-surface-folder-border: #e2d4ad;
+  --c-surface-tab-inactive: #e9dcb6;
 
   /* Neutrals carry ~90% of every surface. Ink is a dark cut of the blue
      bright, not pure black; ground is a near-white, not pure white. */
@@ -125,6 +137,11 @@
   --c-yellow: #ffdb85;
   --c-green: #2fe9b8;
   --c-blue: #3bb6d6;
+
+  /* Nutrition folder-card surfaces (ADR-0018): a lighter blue, in dark mode. */
+  --c-surface-folder: #21323f;
+  --c-surface-folder-border: #33495c;
+  --c-surface-tab-inactive: #1a2833;
 
   /* Deep ground is a dark cut of the blue bright. */
   --background: #0a1f24;

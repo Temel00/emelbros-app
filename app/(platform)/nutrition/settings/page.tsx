@@ -2,7 +2,7 @@ import { AppHeader } from "@/components/app-header";
 import { getCurrentMember } from "@/platform/auth";
 import { createClient } from "@/platform/supabase/server";
 
-import { NutritionNav } from "@/modules/nutrition/components/nutrition-nav";
+import { FolderCard } from "@/modules/nutrition/components/folder-card";
 import { PantryFieldSettings } from "@/modules/nutrition/components/pantry-field-settings";
 import {
   getAllPantryLocations,
@@ -31,40 +31,37 @@ export default async function NutritionSettingsPage() {
     <>
       <AppHeader memberId={member.id} supabase={supabase} />
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 sm:p-6">
-        <NutritionNav active="settings" />
+        <FolderCard
+          active="settings"
+          description="Manage the units and pantry locations everyone in the household shares. Changes apply everywhere under Nutrition."
+        >
+          <div className="flex flex-col gap-6">
+            <PantryFieldSettings units={units} locations={locations} />
 
-        <div>
-          <h1 className="text-xl font-semibold">Settings</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage the units and pantry locations everyone in the household
-            shares. Changes apply everywhere under Nutrition.
-          </p>
-        </div>
-
-        <PantryFieldSettings units={units} locations={locations} />
-
-        {/* CC BY 3.0 credit for the flair-layer art (#185, ADR-0018). */}
-        <p className="text-xs text-muted-foreground">
-          Background illustrations by Lorc, Delapouite &amp; contributors at{" "}
-          <a
-            href="https://game-icons.net"
-            className="underline underline-offset-2"
-            target="_blank"
-            rel="noreferrer"
-          >
-            game-icons.net
-          </a>
-          , licensed{" "}
-          <a
-            href="https://creativecommons.org/licenses/by/3.0/"
-            className="underline underline-offset-2"
-            target="_blank"
-            rel="noreferrer"
-          >
-            CC BY 3.0
-          </a>
-          .
-        </p>
+            {/* CC BY 3.0 credit for the flair-layer art (#185, ADR-0018). */}
+            <p className="text-xs text-muted-foreground">
+              Background illustrations by Lorc, Delapouite &amp; contributors at{" "}
+              <a
+                href="https://game-icons.net"
+                className="underline underline-offset-2"
+                target="_blank"
+                rel="noreferrer"
+              >
+                game-icons.net
+              </a>
+              , licensed{" "}
+              <a
+                href="https://creativecommons.org/licenses/by/3.0/"
+                className="underline underline-offset-2"
+                target="_blank"
+                rel="noreferrer"
+              >
+                CC BY 3.0
+              </a>
+              .
+            </p>
+          </div>
+        </FolderCard>
       </main>
     </>
   );

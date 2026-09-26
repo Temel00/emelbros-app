@@ -1,66 +1,26 @@
-import Link from "next/link";
-
-import { cn } from "@/lib/utils";
-
 /**
- * A minimal two-way link between the nutrition module's views. Full
- * navigation for all six eventual views (pantry, recipes, plan, shopping,
- * log, overview) is deliberately not decided yet (wayfinder map #111,
- * "Not yet specified") — this is just enough for the views that exist
- * today to reach each other, not a sub-nav framework to build later views on.
+ * The nutrition module's navigation model: the ordered list of its screens.
+ *
+ * There is no standalone nav bar any more. The settled content treatment
+ * (#187, ADR-0018) folds the nav INTO the folder card's tabs — the folder
+ * owns the nav — so the old pill bar would only duplicate it. What survives is
+ * this shared, ordered item list, consumed by `folder-card.tsx` to render the
+ * tabs in natural order with the active tab scaled up as the page title.
  */
-export function NutritionNav({
-  active,
-}: {
-  active:
-    | "pantry"
-    | "recipes"
-    | "plan"
-    | "shopping"
-    | "log"
-    | "overview"
-    | "settings";
-}) {
-  const linkClass = (
-    key:
-      | "pantry"
-      | "recipes"
-      | "plan"
-      | "shopping"
-      | "log"
-      | "overview"
-      | "settings",
-  ) =>
-    cn(
-      "rounded-lg px-2.5 py-1 text-sm font-medium",
-      active === key
-        ? "bg-secondary text-secondary-foreground"
-        : "text-muted-foreground hover:text-foreground",
-    );
 
-  return (
-    <nav aria-label="Nutrition" className="flex gap-1">
-      <Link href="/nutrition" className={linkClass("pantry")}>
-        Pantry
-      </Link>
-      <Link href="/nutrition/recipes" className={linkClass("recipes")}>
-        Recipes
-      </Link>
-      <Link href="/nutrition/plan" className={linkClass("plan")}>
-        Plan
-      </Link>
-      <Link href="/nutrition/shopping-list" className={linkClass("shopping")}>
-        Shopping
-      </Link>
-      <Link href="/nutrition/log" className={linkClass("log")}>
-        Log
-      </Link>
-      <Link href="/nutrition/overview" className={linkClass("overview")}>
-        Overview
-      </Link>
-      <Link href="/nutrition/settings" className={linkClass("settings")}>
-        Settings
-      </Link>
-    </nav>
-  );
-}
+export type NutritionNavKey =
+  "pantry" | "recipes" | "plan" | "shopping" | "log" | "overview" | "settings";
+
+export const NUTRITION_NAV_ITEMS: {
+  key: NutritionNavKey;
+  label: string;
+  href: string;
+}[] = [
+  { key: "pantry", label: "Pantry", href: "/nutrition" },
+  { key: "recipes", label: "Recipes", href: "/nutrition/recipes" },
+  { key: "plan", label: "Plan", href: "/nutrition/plan" },
+  { key: "shopping", label: "Shopping", href: "/nutrition/shopping-list" },
+  { key: "log", label: "Log", href: "/nutrition/log" },
+  { key: "overview", label: "Overview", href: "/nutrition/overview" },
+  { key: "settings", label: "Settings", href: "/nutrition/settings" },
+];

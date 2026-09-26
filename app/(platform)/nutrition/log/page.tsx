@@ -2,8 +2,8 @@ import { AppHeader } from "@/components/app-header";
 import { getCurrentMember } from "@/platform/auth";
 import { createClient } from "@/platform/supabase/server";
 
+import { FolderCard } from "@/modules/nutrition/components/folder-card";
 import { LogView } from "@/modules/nutrition/components/log-view";
-import { NutritionNav } from "@/modules/nutrition/components/nutrition-nav";
 import { todayIso } from "@/modules/nutrition/lib/plan-calendar";
 import {
   getFoods,
@@ -38,21 +38,17 @@ export default async function NutritionLogPage() {
     <>
       <AppHeader memberId={member.id} supabase={supabase} />
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 sm:p-6">
-        <NutritionNav active="log" />
-
-        <div>
-          <h1 className="text-xl font-semibold">Log</h1>
-          <p className="text-sm text-muted-foreground">
-            What you&apos;ve eaten today. Only your own entries show here.
-          </p>
-        </div>
-
-        <LogView
-          entries={entries}
-          foods={foods}
-          recipes={recipes}
-          todaysPlan={todaysPlan}
-        />
+        <FolderCard
+          active="log"
+          description="What you've eaten today. Only your own entries show here."
+        >
+          <LogView
+            entries={entries}
+            foods={foods}
+            recipes={recipes}
+            todaysPlan={todaysPlan}
+          />
+        </FolderCard>
       </main>
     </>
   );
