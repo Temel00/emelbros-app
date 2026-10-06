@@ -13,13 +13,16 @@ Decided while resolving [#197](https://github.com/Temel00/emelbros-app/issues/19
 - **Bright assignment:** stable per Tool, derived from a hash of `slug`. It never depends on array position, so inserting a Tool does not recolour others. No manifest field is added (ADR-0019's manifest stays `{ slug, name, description, icon }`).
 - **Motion:** the tilt is static and stays. The hover lift and its transition are `motion-safe:` only.
 - **Surfaces:** reuse `--c-surface-folder`, `--c-surface-folder-border`, `--c-surface-tab-inactive` from ADR-0018. No new colour values or tokens.
+- **Title:** the gallery heading leans into the pegboard flavour as a workshop sign (letters cut out of wood), not the plain `h1` other modules use. Each module owns its own flavour. It remains a real `h1` with the text "Dev Tools". Wood tones come from the existing `--c-surface-*` tokens; if the look needs new wood colours, that is a token decision for the build ticket, not a licence in this ADR.
+- **Empty state:** none. The registry always holds at least the SVG Sandbox.
+- **Unknown tool (404):** `notFound()` per ADR-0019, rendered as a not-found page with a workbench illustration and an error message. The illustration is decorative (`aria-hidden`), the message is real text on an opaque surface, and the page uses only surface tokens and `foreground`, no brights. Scope: Dev Tools only, no other module's 404 changes.
 - **Mobile:** the 2-column grid and whole-card tap target apply; no separate mobile layout.
 
 ### Exception to #18 colour-usage rule 1
 
 The four-bright set may be used on the **Dev Tools gallery home only**, as the per-card icon tint (`text-c-*`) and handle stripe (`bg-c-*`), subject to every guardrail:
 
-1. **Gallery home only.** Tool pages (`/dev-tools/[tool]`) and `ToolShell` stay on platform tokens.
+1. **Gallery home only.** Tool pages (`/dev-tools/[tool]`) and `ToolShell` stay on platform tokens. The sign title and the 404 page use no brights.
 2. **Narrow use.** Brights appear only as the icon tint and the handle stripe. Never as text colour, and never as a fill behind text.
 3. **Opaque text surface.** Name and description render on the opaque `--c-surface-folder` in `foreground` / `muted-foreground`. WCAG AA body-text contrast is verified in **both** themes against that surface (and icon/stripe non-text contrast against it).
 4. **Pink stays the action colour.** The focus ring stays `--ring`; no bright is used to signal a button or state.
