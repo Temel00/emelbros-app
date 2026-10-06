@@ -77,6 +77,12 @@ _Avoid_: visibility setting
 A member's choice to show a module on their own launcher/dashboard. Pinning is visibility-only: every module's routes and data are open to all signed-in members regardless, and any member can be a participant in any module's shared data.
 _Avoid_: enabled, installed, activated (all imply an access gate that doesn't exist)
 
+### Dev Tools
+
+**Tool**:
+A single-purpose, mostly client-side utility living inside the one **Dev Tools** module (e.g. the SVG Sandbox), described by its Tool manifest and registered in the module's internal tool registry. A Tool is not a Module: it gets no launcher tile, scopes, or widgets. See ADR [0019](docs/adr/0019-dev-tools-single-module-lazy-tool-registry.md).
+_Avoid_: module, app, plugin
+
 ### Nutrition
 
 **Pantry location**:
