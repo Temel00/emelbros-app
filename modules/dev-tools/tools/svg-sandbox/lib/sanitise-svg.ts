@@ -21,6 +21,9 @@ function stripExternalRefs(node: Element) {
  * Needs a DOM: call from the browser (or jsdom in tests).
  */
 export function sanitiseSvg(text: string): string {
+  // Without a DOM (server render) DOMPurify cannot sanitise; render nothing
+  // rather than risk returning the input unsanitised.
+  if (!DOMPurify.isSupported) return "";
   DOMPurify.addHook("afterSanitizeAttributes", stripExternalRefs);
   try {
     return DOMPurify.sanitize(text, {
