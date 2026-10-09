@@ -10,7 +10,7 @@ A private family web platform for five allowlisted members, built as one Next.js
 
 - **Framework** — Next.js (App Router), one application, deployed on **Vercel** free tier ([ADR-0012](docs/adr/0012-hosting-vercel-squarespace-dns.md)). The owner's Squarespace-registered domain points at Vercel via DNS records; Squarespace stays registrar.
 - **Data & auth** — **Supabase**: Postgres with row-level security as the visibility engine, plus Supabase Auth with **Google sign-in** ([ADR-0011](docs/adr/0011-auth-supabase-google-signin.md)) gated by an `allowed_emails` allowlist ([ADR-0010](docs/adr/0010-allowed-emails-table-managed-via-dashboard.md)).
-- **UI** — **Tailwind CSS + shadcn/ui** ([ADR-0014](docs/adr/0014-ui-stack-tailwind-shadcn.md)), mobile-first responsive with a **PWA manifest** for "Add to Home Screen" ([ADR-0015](docs/adr/0015-pwa-responsive-manifest.md)). Visual identity — palette, type, light/dark, per-member accent — is set by [#18](https://github.com/Temel00/emelbros-app/issues/18); the Nutrition module carries a guard-railed decorative-flair exception to #18's colour-usage discipline ([ADR-0018](docs/adr/0018-nutrition-decorative-flair-exception-and-folder-surface-tokens.md)).
+- **UI** — **Tailwind CSS + shadcn/ui** ([ADR-0014](docs/adr/0014-ui-stack-tailwind-shadcn.md)), mobile-first responsive with a **PWA manifest** for "Add to Home Screen" ([ADR-0015](docs/adr/0015-pwa-responsive-manifest.md)). Visual identity — palette, type, light/dark, per-member accent — is set by [#18](https://github.com/Temel00/emelbros-app/issues/18); the Nutrition module carries a guard-railed decorative-flair exception to #18's colour-usage discipline ([ADR-0018](docs/adr/0018-nutrition-decorative-flair-exception-and-folder-surface-tokens.md)); the Dev Tools gallery home carries a second, narrower one allowing brights as icon/stripe chrome ([ADR-0020](docs/adr/0020-dev-tools-gallery-workshop-pegboard-chrome-exception.md)).
 
 **Architecture.** The platform is a **modular monolith** ([ADR-0013](docs/adr/0013-single-nextjs-app-modular-monolith.md)): each module is a folder under `modules/<slug>/` with its own routes, typed manifest, tables, and migrations, registered in `modules/index.ts`. A module exposes optional dashboard **widgets** and **profile sections**; a member's **dashboard** is an Apps grid plus an At-a-glance widget stack, each independently ordered ([#8](https://github.com/Temel00/emelbros-app/issues/8)). The database holds no module catalog — only per-member pin rows.
 
@@ -76,6 +76,12 @@ _Avoid_: visibility setting
 **Pinned**:
 A member's choice to show a module on their own launcher/dashboard. Pinning is visibility-only: every module's routes and data are open to all signed-in members regardless, and any member can be a participant in any module's shared data.
 _Avoid_: enabled, installed, activated (all imply an access gate that doesn't exist)
+
+### Dev Tools
+
+**Tool**:
+A single-purpose, mostly client-side utility living inside the one **Dev Tools** module (e.g. the SVG Sandbox), described by its Tool manifest and registered in the module's internal tool registry. A Tool is not a Module: it gets no launcher tile, scopes, or widgets. See ADR [0019](docs/adr/0019-dev-tools-single-module-lazy-tool-registry.md).
+_Avoid_: module, app, plugin
 
 ### Nutrition
 
