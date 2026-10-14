@@ -16,6 +16,8 @@ export type ParseSvgResult =
       rootCloseOffset: number;
       /** True when the root is `<svg ... />` and has no separate closing tag. */
       rootSelfClosing: boolean;
+      /** Offset of the `<` of the last direct child element of the root, or null if none. */
+      lastChildOffset: number | null;
       viewBox: ViewBox | null;
     }
   | { ok: false; line: number; col: number; message: string };
@@ -46,6 +48,7 @@ export function parseSvg(text: string): ParseSvgResult {
   let rootClosed = false;
   let rootCloseOffset = -1;
   let rootSelfClosing = false;
+  let lastChildOffset: number | null = null;
   let viewBox: ViewBox | null = null;
 
   const fail = (message: string) => {
@@ -75,6 +78,10 @@ export function parseSvg(text: string): ParseSvgResult {
         rootCloseOffset = parser.position - 2;
       }
     }
+    if (depth === 1) {
+      // position is just past `>`; `<` cannot occur inside a start tag.
+      lastChildOffset = text.lastIndexOf("<", parser.position - 1);
+    }
     if (!tag.isSelfClosing) depth++;
   });
 
@@ -103,5 +110,11 @@ export function parseSvg(text: string): ParseSvgResult {
       message: "Document must contain exactly one root <svg> element",
     };
   }
-  return { ok: true, rootCloseOffset, rootSelfClosing, viewBox };
+  return {
+    ok: true,
+    rootCloseOffset,
+    rootSelfClosing,
+    lastChildOffset,
+    viewBox,
+  };
 }

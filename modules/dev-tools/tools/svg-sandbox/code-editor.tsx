@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Transaction } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import {
   defaultKeymap,
   history,
   historyKeymap,
+  isolateHistory,
   redo,
   redoDepth,
   undo,
@@ -14,7 +15,13 @@ import {
 } from "@codemirror/commands";
 import { xml } from "@codemirror/lang-xml";
 
-export type EditorApi = { undo: () => void; redo: () => void };
+export type EditorApi = {
+  undo: () => void;
+  redo: () => void;
+  getText: () => string;
+  /** Apply one canvas-draw edit (ADR-0021); leaves caret and focus alone. */
+  applyDraw: (change: { from: number; to: number; insert: string }) => void;
+};
 export type HistoryState = { canUndo: boolean; canRedo: boolean };
 
 /**
@@ -75,6 +82,16 @@ export default function CodeEditor({
         redo(view);
         view.focus();
       },
+      getText: () => view.state.doc.toString(),
+      applyDraw: (change) =>
+        view.dispatch({
+          changes: change,
+          // Own undo step, never merged with typing; no selection/scroll/focus.
+          annotations: [
+            Transaction.userEvent.of("input.draw"),
+            isolateHistory.of("full"),
+          ],
+        }),
     };
     callbacks.current.onChange(initial);
     return () => {
