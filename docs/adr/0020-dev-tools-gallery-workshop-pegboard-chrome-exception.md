@@ -45,3 +45,9 @@ This is not blanket permission. A different surface citing this ADR must meet ev
 - The gallery build ticket inherits the six guardrails as acceptance conditions, including the two-theme contrast pass and `motion-safe:` on the hover lift.
 - `CONTEXT.md` gains a pointer to this ADR beside ADR-0018.
 - The prototype's `_prototype/` folder is throwaway; the real gallery reads the registry from ADR-0019.
+
+## Amendments (as shipped)
+
+Reconciled against the merged implementation under [#211](https://github.com/Temel00/emelbros-app/issues/211). The decision and all six guardrails stand as shipped; one detail differs.
+
+- **Tilt alternates per card, not per row.** The grid is responsive (2/3/4 columns), so "per row" has no stable meaning; `ToolGallery` alternates ±0.6° by card index. Bright assignment still hashes the slug (`lib/bright.ts`), never the index. Tilt remains static; the hover lift is `motion-safe:` only.

@@ -80,7 +80,7 @@ _Avoid_: enabled, installed, activated (all imply an access gate that doesn't ex
 ### Dev Tools
 
 **Tool**:
-A single-purpose, mostly client-side utility living inside the one **Dev Tools** module (e.g. the SVG Sandbox), described by its Tool manifest and registered in the module's internal tool registry. A Tool is not a Module: it gets no launcher tile, scopes, or widgets. See ADR [0019](docs/adr/0019-dev-tools-single-module-lazy-tool-registry.md).
+A single-purpose, mostly client-side utility living inside the one **Dev Tools** module (e.g. the SVG Sandbox, [ADR 0021](docs/adr/0021-svg-sandbox-text-is-truth-patch-never-reserialise.md)), described by its Tool manifest and registered in the module's internal tool registry. A Tool is not a Module: it gets no launcher tile, scopes, or widgets. See ADR [0019](docs/adr/0019-dev-tools-single-module-lazy-tool-registry.md).
 _Avoid_: module, app, plugin
 
 ### Nutrition
