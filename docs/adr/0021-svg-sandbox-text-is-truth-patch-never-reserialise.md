@@ -23,3 +23,13 @@ Decided while resolving [#202](https://github.com/Temel00/emelbros-app/issues/20
 ## Consequences
 
 Later phases (selection, move/resize, reordering, style inspector) must also be expressed as text patches against source ranges, not model mutations. That is why the range map is built then, from the same `saxes` offsets. Canvas operations cannot repair invalid code; they pause until it parses.
+
+## Amendments (as shipped)
+
+Reconciled against the merged implementation under [#211](https://github.com/Temel00/emelbros-app/issues/211). The decision stands; these are the deviations and details.
+
+- **Parser surface is slightly wider than "minimal":** besides valid/invalid, line/col and the root close-tag offset, `parseSvg` returns the `viewBox`, whether the root is self-closing, and the offset of the last child (for matching indentation). The element-to-source range map is still deferred.
+- **Draw and text tools are also disabled when there is no `viewBox`** (hint "Add a viewBox to draw"), since coordinates cannot be mapped to viewBox units. The validity check is re-run against the live editor text at insert time, because the preview's error state lags by the debounce.
+- **Canvas insertions use `isolateHistory: "full"`** alongside the `input.draw` user event, so each draw is its own undo step and never merges with typing. They remain on CodeMirror's single history stack (`minDepth: 25`).
+- **Text sizing:** `font-size` is a tenth of the viewBox height (minimum 1). Sanitising is DOMPurify's svg + svgFilters profiles minus `foreignObject`/`script`/`style`, with non-`#fragment` `href`/`url()` references stripped.
+- **Draft:** `localStorage` key `dev-tools:svg-sandbox:draft`, saved on a 500ms debounce.
