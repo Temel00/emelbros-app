@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { parseSvg, type ViewBox } from "./parse-svg";
 import {
   describeShape,
+  describeText,
   insertionChange,
   randomColor,
   type ShapeDescriptor,
@@ -151,5 +152,32 @@ describe("insertionChange", () => {
     const reparsed = parseSvg(out);
     expect(reparsed.ok).toBe(true);
     expect(out.lastIndexOf("<rect")).toBeGreaterThan(out.lastIndexOf("<g/>"));
+  });
+});
+
+describe("describeText", () => {
+  const at = { x: 10.4, y: 20.6 };
+
+  it("writes a black-filled text element at the point", () => {
+    expect(describeText(at, "hi", big)).toBe(
+      '<text x="10" y="21" font-size="10" fill="#000000">hi</text>',
+    );
+  });
+
+  it("escapes & < >", () => {
+    expect(describeText(at, "a & b <c> d", big)).toContain(
+      ">a &amp; b &lt;c&gt; d</text>",
+    );
+  });
+
+  it("returns null for empty or whitespace-only input", () => {
+    expect(describeText(at, "", big)).toBeNull();
+    expect(describeText(at, "   ", big)).toBeNull();
+  });
+
+  it("inserts like any other element", () => {
+    const el = describeText(at, "hi", big)!;
+    const { out } = apply('<svg viewBox="0 0 200 100">\n</svg>', el);
+    expect(out).toContain(`  ${el}\n</svg>`);
   });
 });

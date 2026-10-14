@@ -17,12 +17,14 @@ import { cn } from "@/lib/utils";
 
 import type { EditorApi, HistoryState } from "./code-editor";
 import { DrawOverlay } from "./draw-overlay";
+import { TextOverlay } from "./text-overlay";
 import { loadDraft, saveDraft } from "./lib/draft";
 import { EMPTY_PREVIEW, nextPreview } from "./lib/hot-reload";
-import { parseSvg } from "./lib/parse-svg";
+import { parseSvg, type ViewBox } from "./lib/parse-svg";
 import { sanitiseSvg } from "./lib/sanitise-svg";
 import {
   describeShape,
+  describeText,
   insertionChange,
   type ShapeDescriptor,
 } from "./lib/shapes";
@@ -39,6 +41,8 @@ const DRAFT_DEBOUNCE_MS = 500;
 
 type DrawTool = ShapeDescriptor["tool"];
 
+type ActiveTool = DrawTool | "text";
+
 const DRAW_TOOLS: { label: string; tool: DrawTool; Icon: typeof Square }[] = [
   { label: "Rectangle", tool: "rect", Icon: Square },
   { label: "Ellipse", tool: "ellipse", Icon: Circle },
@@ -52,7 +56,7 @@ export default function SvgSandbox() {
     canUndo: false,
     canRedo: false,
   });
-  const [tool, setTool] = useState<DrawTool | null>(null);
+  const [tool, setTool] = useState<ActiveTool | null>(null);
   const [tab, setTab] = useState<"code" | "preview">("code");
   const apiRef = useRef<EditorApi | null>(null);
   const reloadTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -75,23 +79,30 @@ export default function SvgSandbox() {
   }, []);
 
   // Draw actions patch the text, then render at once, skipping the debounce.
-  const draw = useCallback((descriptor: ShapeDescriptor) => {
+  const insert = useCallback((build: (viewBox: ViewBox) => string | null) => {
     const api = apiRef.current;
     if (!api) return;
     const text = api.getText();
     const parsed = parseSvg(text);
     // Re-check against the live text: the preview's error state lags by the debounce.
     if (!parsed.ok || !parsed.viewBox) return;
-    const change = insertionChange(
-      text,
-      parsed,
-      describeShape(descriptor, parsed.viewBox),
-    );
-    api.applyDraw(change);
+    const element = build(parsed.viewBox);
+    if (element === null) return;
+    api.applyDraw(insertionChange(text, parsed, element));
     clearTimeout(reloadTimer.current);
     const next = api.getText();
     setPreview((prev) => nextPreview(prev, next, sanitiseSvg));
   }, []);
+
+  const draw = useCallback(
+    (d: ShapeDescriptor) => insert((vb) => describeShape(d, vb)),
+    [insert],
+  );
+  const addText = useCallback(
+    (at: { x: number; y: number }, content: string) =>
+      insert((vb) => describeText(at, content, vb)),
+    [insert],
+  );
 
   useEffect(
     () => () => {
@@ -171,10 +182,12 @@ export default function SvgSandbox() {
           ))}
           <Button
             size="icon-sm"
-            variant="ghost"
+            variant={tool === "text" ? "default" : "ghost"}
             aria-label="Text"
-            title="Text drawing arrives in a later update"
-            disabled
+            aria-pressed={tool === "text"}
+            title={drawHint ?? "Text"}
+            disabled={drawHint !== null}
+            onClick={() => setTool(tool === "text" ? null : "text")}
           >
             <Type />
           </Button>
@@ -244,7 +257,10 @@ export default function SvgSandbox() {
                 className="size-full [&>svg]:size-full"
                 dangerouslySetInnerHTML={{ __html: html }}
               />
-              {tool && viewBox && !error && (
+              {tool === "text" && viewBox && !error && (
+                <TextOverlay viewBox={viewBox} onCommit={addText} />
+              )}
+              {tool && tool !== "text" && viewBox && !error && (
                 <DrawOverlay tool={tool} viewBox={viewBox} onDraw={draw} />
               )}
             </div>

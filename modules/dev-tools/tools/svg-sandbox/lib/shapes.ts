@@ -144,3 +144,24 @@ export function insertionChange(
   }
   return { from: close, to: close, insert: `\n${indent}${element}\n` };
 }
+
+/** Escapes the characters that would otherwise break out of text content. */
+export function escapeXml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * One `<text>` element for `content` placed at `at` (viewBox units), black
+ * fill, XML-escaped, sized at a tenth of the viewBox height. Returns null for
+ * empty input so nothing is inserted.
+ */
+export function describeText(
+  at: Point,
+  content: string,
+  viewBox: ViewBox,
+): string | null {
+  if (content.trim() === "") return null;
+  const f = formatter(viewBox);
+  const size = Math.max(viewBox.height / 10, 1);
+  return `<text x="${f(at.x)}" y="${f(at.y)}" font-size="${f(size)}" fill="#000000">${escapeXml(content)}</text>`;
+}
