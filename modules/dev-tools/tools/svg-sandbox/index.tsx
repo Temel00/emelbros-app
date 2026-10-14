@@ -16,9 +16,16 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import type { EditorApi, HistoryState } from "./code-editor";
+import { DrawOverlay } from "./draw-overlay";
 import { loadDraft, saveDraft } from "./lib/draft";
 import { EMPTY_PREVIEW, nextPreview } from "./lib/hot-reload";
+import { parseSvg } from "./lib/parse-svg";
 import { sanitiseSvg } from "./lib/sanitise-svg";
+import {
+  describeShape,
+  insertionChange,
+  type ShapeDescriptor,
+} from "./lib/shapes";
 
 const CodeEditor = dynamic(() => import("./code-editor"), {
   ssr: false,
@@ -30,12 +37,12 @@ const CodeEditor = dynamic(() => import("./code-editor"), {
 const RELOAD_DEBOUNCE_MS = 150;
 const DRAFT_DEBOUNCE_MS = 500;
 
-// Draw tools arrive in a later slice; shown disabled so the strip is final.
-const DRAW_TOOLS = [
-  { label: "Rectangle", Icon: Square },
-  { label: "Ellipse", Icon: Circle },
-  { label: "Line", Icon: Minus },
-  { label: "Text", Icon: Type },
+type DrawTool = ShapeDescriptor["tool"];
+
+const DRAW_TOOLS: { label: string; tool: DrawTool; Icon: typeof Square }[] = [
+  { label: "Rectangle", tool: "rect", Icon: Square },
+  { label: "Ellipse", tool: "ellipse", Icon: Circle },
+  { label: "Line", tool: "line", Icon: Minus },
 ];
 
 export default function SvgSandbox() {
@@ -45,6 +52,7 @@ export default function SvgSandbox() {
     canUndo: false,
     canRedo: false,
   });
+  const [tool, setTool] = useState<DrawTool | null>(null);
   const [tab, setTab] = useState<"code" | "preview">("code");
   const apiRef = useRef<EditorApi | null>(null);
   const reloadTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -66,6 +74,25 @@ export default function SvgSandbox() {
     }
   }, []);
 
+  // Draw actions patch the text, then render at once, skipping the debounce.
+  const draw = useCallback((descriptor: ShapeDescriptor) => {
+    const api = apiRef.current;
+    if (!api) return;
+    const text = api.getText();
+    const parsed = parseSvg(text);
+    // Re-check against the live text: the preview's error state lags by the debounce.
+    if (!parsed.ok || !parsed.viewBox) return;
+    const change = insertionChange(
+      text,
+      parsed,
+      describeShape(descriptor, parsed.viewBox),
+    );
+    api.applyDraw(change);
+    clearTimeout(reloadTimer.current);
+    const next = api.getText();
+    setPreview((prev) => nextPreview(prev, next, sanitiseSvg));
+  }, []);
+
   useEffect(
     () => () => {
       clearTimeout(reloadTimer.current);
@@ -75,6 +102,11 @@ export default function SvgSandbox() {
   );
 
   const { error, html, viewBox } = preview;
+  const drawHint = error
+    ? "Fix the SVG to draw"
+    : !viewBox
+      ? "Add a viewBox to draw"
+      : null;
 
   return (
     <div className="flex h-[calc(100dvh-7.5rem)] min-h-96 flex-col">
@@ -117,19 +149,35 @@ export default function SvgSandbox() {
             <Redo2 />
           </Button>
         </div>
-        <div className="ml-auto flex gap-1">
-          {DRAW_TOOLS.map(({ label, Icon }) => (
+        <div className="ml-auto flex items-center gap-1">
+          {drawHint && (
+            <span className="mr-1 text-xs text-muted-foreground">
+              {drawHint}
+            </span>
+          )}
+          {DRAW_TOOLS.map(({ label, tool: t, Icon }) => (
             <Button
               key={label}
               size="icon-sm"
-              variant="ghost"
+              variant={tool === t ? "default" : "ghost"}
               aria-label={label}
-              title="Drawing arrives in a later update"
-              disabled
+              aria-pressed={tool === t}
+              title={drawHint ?? label}
+              disabled={drawHint !== null}
+              onClick={() => setTool(tool === t ? null : t)}
             >
               <Icon />
             </Button>
           ))}
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label="Text"
+            title="Text drawing arrives in a later update"
+            disabled
+          >
+            <Type />
+          </Button>
         </div>
       </div>
 
@@ -196,6 +244,9 @@ export default function SvgSandbox() {
                 className="size-full [&>svg]:size-full"
                 dangerouslySetInnerHTML={{ __html: html }}
               />
+              {tool && viewBox && !error && (
+                <DrawOverlay tool={tool} viewBox={viewBox} onDraw={draw} />
+              )}
             </div>
           </div>
           {error && (
