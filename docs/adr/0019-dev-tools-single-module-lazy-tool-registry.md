@@ -24,3 +24,11 @@ Decided while resolving [#195](https://github.com/Temel00/emelbros-app/issues/19
 ## Consequences
 
 The `[tool]` page is the only place a Tool's component is mounted; Tool authors never touch `app/`. Because a Tool's chunk loads on navigation, a tool's first paint shows a shell-level loading state. The module is deletable the usual way (folder, `modules/index.ts` entry, route folder).
+
+## Amendments (as shipped)
+
+Reconciled against the merged implementation under [#211](https://github.com/Temel00/emelbros-app/issues/211). The decision stands; these are the deviations.
+
+- **`ssr: false` is not on the registry-level `dynamic()`.** `[tool]/page.tsx` is a server component, where `ssr: false` is not allowed, so it calls plain `dynamic(load)` once at module scope (stable component identity). The Tool's entry module is a client component that server-renders its shell; browser-only weight is split one level down with `next/dynamic` + `ssr: false` (the SVG Sandbox does this for CodeMirror). The chunk-isolation guarantee is unchanged.
+- **`ToolShell` props and chrome.** It also takes `memberId` and `supabase` (for `AppHeader`) and renders a bar holding the back link and the Tool's name/icon as the page `h1`, above the full-bleed `<main>`.
+- **Unknown-slug 404** is `app/(platform)/dev-tools/not-found.tsx`, a themed page per [ADR-0020](0020-dev-tools-gallery-workshop-pegboard-chrome-exception.md).
