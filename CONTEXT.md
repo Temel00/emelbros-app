@@ -103,3 +103,21 @@ _Avoid_: unit type, category, class
 **Base unit**:
 The Unit a Food's nutrition facts are stated per (its `calories_per_unit` etc.). A quantity's macros are computed only when its Unit equals the Food's base unit; a mismatch is flagged, never silently converted.
 _Avoid_: canonical unit, reference unit
+
+### Coffee
+
+**Bean**:
+A coffee the family keeps on hand, shown as a card (name, roaster, origin, roast level, notes, bag photo). Shared Family data any member can add, edit, or delete; owns its Grind Profiles.
+_Avoid_: coffee, bag, product
+
+**Grind Profile**:
+A named grind setting belonging to one Bean ("Drip", "Espresso 30/15"), with a label, a description of the cup, and a Grind Size. A Bean may have several profiles with the same label. Within a Bean they list from finest to coarsest.
+_Avoid_: recipe, preset, setting
+
+**Grind Size**:
+The number a Grind Profile sends to the grinder, from 0.00 to 99.99; higher is coarser. Only the machine's `GRIND` and `HOMEVALUE` commands carry one.
+_Avoid_: grind level, setting, step
+
+**Home**:
+The grinder's zero reference position, found by driving to its limit switch. Home is a machine command and a position, never a stored Grind Size.
+_Avoid_: reset, zero

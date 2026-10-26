@@ -23,6 +23,20 @@ describe("module registry", () => {
     expect(darts?.profileSections).toEqual([]);
   });
 
+  it("registers the coffee module", () => {
+    const coffee = modules.find((mod) => mod.slug === "coffee");
+    expect(coffee?.scopes).toEqual([
+      { table: "coffee_bean", policy: "fixed", scope: "family" },
+      {
+        table: "coffee_grind_profile",
+        policy: "inherited",
+        from: "coffee_bean",
+      },
+    ]);
+    expect(coffee?.widgets).toEqual([]);
+    expect(coffee?.profileSections).toEqual([]);
+  });
+
   it("registers the nutrition module", () => {
     const nutrition = modules.find((mod) => mod.slug === "nutrition");
     expect(nutrition).toBeDefined();
