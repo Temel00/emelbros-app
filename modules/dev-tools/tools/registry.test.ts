@@ -21,4 +21,8 @@ describe("dev-tools tool registry", () => {
   it("registers the svg-sandbox tool", () => {
     expect(tools.map((t) => t.manifest.slug)).toContain("svg-sandbox");
   });
+
+  it("registers the bluetooth-serial tool", () => {
+    expect(tools.map((t) => t.manifest.slug)).toContain("bluetooth-serial");
+  });
 });
