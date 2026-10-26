@@ -42,7 +42,9 @@ export function Hc06SmokeTest() {
     if (supportEl.current)
       supportEl.current.textContent = `'serial' in navigator: ${"serial" in navigator} · isSecureContext: ${window.isSecureContext} · ${location.href}`;
   }, []);
-  useEffect(() => logEnd.current?.scrollIntoView(), [lines]);
+  useEffect(() => {
+    logEnd.current?.scrollIntoView();
+  }, [lines]);
 
   async function readLoop() {
     while (port.current?.readable && keepReading.current) {
