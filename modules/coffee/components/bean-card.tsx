@@ -10,7 +10,10 @@ export function BeanCard({ bean }: { bean: CoffeeBeanRow }) {
       href={`/coffee/${bean.id}`}
       className="flex flex-col gap-2 rounded-lg border bg-card p-2 text-card-foreground transition-colors hover:bg-accent"
     >
-      <BeanImage />
+      <BeanImage
+        bean={bean}
+        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+      />
       <div className="flex flex-col gap-0.5 px-1 pb-1">
         <span className="font-medium leading-tight">{bean.name}</span>
         {bean.roaster && (

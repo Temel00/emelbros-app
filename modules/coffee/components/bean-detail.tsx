@@ -26,7 +26,11 @@ export function BeanDetail({ bean }: { bean: CoffeeBeanWithProfiles }) {
       </Link>
 
       <div className="flex gap-4">
-        <BeanImage className="w-28 shrink-0 sm:w-36" />
+        <BeanImage
+          bean={bean}
+          sizes="144px"
+          className="w-28 shrink-0 sm:w-36"
+        />
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold">{bean.name}</h1>
           {facts.length > 0 && (
