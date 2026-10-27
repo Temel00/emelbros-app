@@ -27,13 +27,20 @@ const SPP_CLASS_ID = "00001101-0000-1000-8000-00805f9b34fb";
 
 // Android Chrome lists Bluetooth serial ports only when asked for them by
 // service class; desktop surfaces paired devices as ports without a filter.
-const requestOptions = () =>
-  /Android/i.test(navigator.userAgent)
-    ? {
-        filters: [{ bluetoothServiceClassId: SPP_CLASS_ID }],
-        allowedBluetoothServiceClassIds: [SPP_CLASS_ID],
-      }
-    : undefined;
+// TEMPORARY: `?serial=` picks a request variant so one preview can compare them
+// (filter | allowed | none); remove once Android behaviour is settled.
+const requestOptions = () => {
+  if (!/Android/i.test(navigator.userAgent)) return undefined;
+  const variant = new URLSearchParams(location.search).get("serial");
+  if (variant === "none") return undefined;
+  if (variant === "allowed") {
+    return { allowedBluetoothServiceClassIds: [SPP_CLASS_ID] };
+  }
+  return {
+    filters: [{ bluetoothServiceClassId: SPP_CLASS_ID }],
+    allowedBluetoothServiceClassIds: [SPP_CLASS_ID],
+  };
+};
 
 const serialApi = () => (navigator as unknown as { serial: SerialLike }).serial;
 

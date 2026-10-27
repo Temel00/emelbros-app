@@ -43,6 +43,7 @@ describe("WebSerialLink", () => {
     serial = { requestPort: vi.fn(), getPorts: vi.fn(async () => []) };
     vi.stubGlobal("navigator", { serial });
     vi.stubGlobal("isSecureContext", true);
+    vi.stubGlobal("location", { search: "" });
   });
 
   afterEach(() => {
@@ -144,6 +145,25 @@ describe("WebSerialLink", () => {
       filters: [{ bluetoothServiceClassId: spp }],
       allowedBluetoothServiceClassIds: [spp],
     });
+  });
+
+  it("honours ?serial=allowed and ?serial=none on Android", async () => {
+    vi.stubGlobal("navigator", {
+      serial,
+      userAgent: "Mozilla/5.0 (Linux; Android 14)",
+    });
+    serial.requestPort.mockImplementation(async () => createPort().port);
+    const spp = "00001101-0000-1000-8000-00805f9b34fb";
+
+    vi.stubGlobal("location", { search: "?serial=allowed" });
+    await new WebSerialLink().connect(9600);
+    expect(serial.requestPort).toHaveBeenLastCalledWith({
+      allowedBluetoothServiceClassIds: [spp],
+    });
+
+    vi.stubGlobal("location", { search: "?serial=none" });
+    await new WebSerialLink().connect(9600);
+    expect(serial.requestPort).toHaveBeenLastCalledWith(undefined);
   });
 
   it("shows the unfiltered picker off Android", async () => {
