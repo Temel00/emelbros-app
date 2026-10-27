@@ -56,6 +56,39 @@ export async function getBean(
   return { ...bean, profiles };
 }
 
+/** A bean's stored photo path, or `null` (no photo, or no such bean). */
+export async function getBeanPhotoPath(
+  supabase: SupabaseClient<Database>,
+  beanId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("coffee_bean")
+    .select("photo_path")
+    .eq("id", beanId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.photo_path ?? null;
+}
+
+/** Points a bean at its (new) bag photo and blur placeholder. */
+export async function setBeanPhoto(
+  supabase: SupabaseClient<Database>,
+  beanId: string,
+  photo: { path: string; blur: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from("coffee_bean")
+    .update({
+      photo_path: photo.path,
+      photo_blur: photo.blur,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", beanId);
+
+  if (error) throw error;
+}
+
 /** Inserts a bean and returns its id. */
 export async function createBean(
   supabase: SupabaseClient<Database>,
@@ -71,7 +104,7 @@ export async function createBean(
   return data.id;
 }
 
-/** Updates a bean's editable fields; `photo_path` is never touched here. */
+/** Updates a bean's editable fields; the photo columns are never touched here. */
 export async function updateBean(
   supabase: SupabaseClient<Database>,
   beanId: string,
