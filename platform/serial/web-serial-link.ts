@@ -15,9 +15,25 @@ type SerialPortLike = {
   close(): Promise<void>;
 };
 type SerialLike = {
-  requestPort(): Promise<SerialPortLike>;
+  requestPort(options?: {
+    filters?: { bluetoothServiceClassId: string }[];
+    allowedBluetoothServiceClassIds?: string[];
+  }): Promise<SerialPortLike>;
   getPorts(): Promise<SerialPortLike[]>;
 };
+
+// Serial Port Profile: the RFCOMM service an HC-06 exposes.
+const SPP_CLASS_ID = "00001101-0000-1000-8000-00805f9b34fb";
+
+// Android Chrome lists Bluetooth serial ports only when asked for them by
+// service class; desktop surfaces paired devices as ports without a filter.
+const requestOptions = () =>
+  /Android/i.test(navigator.userAgent)
+    ? {
+        filters: [{ bluetoothServiceClassId: SPP_CLASS_ID }],
+        allowedBluetoothServiceClassIds: [SPP_CLASS_ID],
+      }
+    : undefined;
 
 const serialApi = () => (navigator as unknown as { serial: SerialLike }).serial;
 
@@ -57,7 +73,7 @@ export class WebSerialLink implements SerialLink {
     try {
       const port = options.silent
         ? (await serialApi().getPorts())[0]
-        : await serialApi().requestPort();
+        : await serialApi().requestPort(requestOptions());
       if (!port) {
         this.setStatus("disconnected");
         return;

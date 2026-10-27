@@ -130,6 +130,34 @@ describe("WebSerialLink", () => {
     expect(link.getStatus()).toBe("disconnected");
   });
 
+  it("asks Android for Bluetooth serial ports by service class", async () => {
+    vi.stubGlobal("navigator", {
+      serial,
+      userAgent: "Mozilla/5.0 (Linux; Android 14)",
+    });
+    serial.requestPort.mockResolvedValue(createPort().port);
+
+    await new WebSerialLink().connect(9600);
+
+    const spp = "00001101-0000-1000-8000-00805f9b34fb";
+    expect(serial.requestPort).toHaveBeenCalledWith({
+      filters: [{ bluetoothServiceClassId: spp }],
+      allowedBluetoothServiceClassIds: [spp],
+    });
+  });
+
+  it("shows the unfiltered picker off Android", async () => {
+    vi.stubGlobal("navigator", {
+      serial,
+      userAgent: "Mozilla/5.0 (Windows NT 10.0)",
+    });
+    serial.requestPort.mockResolvedValue(createPort().port);
+
+    await new WebSerialLink().connect(9600);
+
+    expect(serial.requestPort).toHaveBeenCalledWith(undefined);
+  });
+
   it("surfaces a cancelled picker as a rejection and stays disconnected", async () => {
     serial.requestPort.mockRejectedValue(new Error("NotFoundError"));
     const link = new WebSerialLink();
