@@ -294,6 +294,83 @@ export type Database = {
           },
         ];
       };
+      coffee_bean: {
+        Row: {
+          id: string;
+          name: string;
+          roaster: string | null;
+          origin: string | null;
+          notes: string | null;
+          roast_level: string | null;
+          photo_path: string | null;
+          photo_blur: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          roaster?: string | null;
+          origin?: string | null;
+          notes?: string | null;
+          roast_level?: string | null;
+          photo_path?: string | null;
+          photo_blur?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          roaster?: string | null;
+          origin?: string | null;
+          notes?: string | null;
+          roast_level?: string | null;
+          photo_path?: string | null;
+          photo_blur?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      coffee_grind_profile: {
+        Row: {
+          id: string;
+          bean_id: string;
+          label: string;
+          description: string | null;
+          grind_size: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          bean_id: string;
+          label: string;
+          description?: string | null;
+          grind_size: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          bean_id?: string;
+          label?: string;
+          description?: string | null;
+          grind_size?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "coffee_grind_profile_bean_id_fkey";
+            columns: ["bean_id"];
+            isOneToOne: false;
+            referencedRelation: "coffee_bean";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       darts_dart: {
         Row: {
           id: string;

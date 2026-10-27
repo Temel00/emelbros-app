@@ -1,3 +1,4 @@
+import { coffeeManifest } from "@/modules/coffee/manifest";
 import { dartsManifest } from "@/modules/darts/manifest";
 import { devToolsManifest } from "@/modules/dev-tools/manifest";
 import { habitsManifest } from "@/modules/habits/manifest";
@@ -16,5 +17,6 @@ export const modules: ModuleManifest[] = [
   dartsManifest,
   habitsManifest,
   nutritionManifest,
+  coffeeManifest,
   devToolsManifest,
 ];
