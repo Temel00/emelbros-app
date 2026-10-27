@@ -303,6 +303,7 @@ export type Database = {
           notes: string | null;
           roast_level: string | null;
           photo_path: string | null;
+          photo_blur: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -314,6 +315,7 @@ export type Database = {
           notes?: string | null;
           roast_level?: string | null;
           photo_path?: string | null;
+          photo_blur?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -325,6 +327,7 @@ export type Database = {
           notes?: string | null;
           roast_level?: string | null;
           photo_path?: string | null;
+          photo_blur?: string | null;
           created_at?: string;
           updated_at?: string;
         };

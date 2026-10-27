@@ -226,4 +226,50 @@ describe("coffee RLS", () => {
       .insert({ bean_id: beanId, label: "Drip", grind_size: 12 });
     expect(error).toBeNull();
   });
+
+  describe("bag photo storage", () => {
+    const BUCKET = "coffee-bag-photos";
+    const JPEG = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], {
+      type: "image/jpeg",
+    });
+    let uploaded: string[] = [];
+
+    afterEach(async () => {
+      if (uploaded.length) await admin.storage.from(BUCKET).remove(uploaded);
+      uploaded = [];
+    });
+
+    it("lets a signed-in member upload and delete a photo", async () => {
+      const path = `rls-test/${crypto.randomUUID()}.jpg`;
+      const { error } = await alice.client.storage
+        .from(BUCKET)
+        .upload(path, JPEG, { contentType: "image/jpeg" });
+      expect(error).toBeNull();
+      uploaded.push(path);
+
+      const { data, error: removeError } = await bob.client.storage
+        .from(BUCKET)
+        .remove([path]);
+      expect(removeError).toBeNull();
+      expect(data).toHaveLength(1);
+    });
+
+    it("blocks an anonymous client from uploading", async () => {
+      const path = `rls-test/${crypto.randomUUID()}.jpg`;
+      const { error } = await anon.storage
+        .from(BUCKET)
+        .upload(path, JPEG, { contentType: "image/jpeg" });
+      expect(error).not.toBeNull();
+    });
+
+    it("rejects non-JPEG uploads", async () => {
+      const path = `rls-test/${crypto.randomUUID()}.png`;
+      const { error } = await alice.client.storage
+        .from(BUCKET)
+        .upload(path, new Blob(["x"], { type: "image/png" }), {
+          contentType: "image/png",
+        });
+      expect(error).not.toBeNull();
+    });
+  });
 });
