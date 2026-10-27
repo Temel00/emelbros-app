@@ -134,11 +134,10 @@ describe("GrinderPanel", () => {
     expect(container.textContent).toContain("Machine error: 9 stalled");
   });
 
-  it("offers Home when the state is UNKNOWN and sends HOME", async () => {
+  it("offers Home once connected and sends HOME", async () => {
     const link = new FakeSerialLink({ hasGrantedPort: true });
     await mount(link);
-    expect(button("Home")).toBeUndefined();
-    await act(async () => link.emitLine("OK MOVE 0 UNKNOWN"));
+    expect(button("Home")).toBeDefined();
     await click("Home");
     expect(link.written).toEqual(["HOME"]);
   });

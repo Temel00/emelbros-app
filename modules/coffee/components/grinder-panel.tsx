@@ -1,5 +1,7 @@
 "use client";
 
+import { LocateFixed } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { DeleteProfileButton } from "@/modules/coffee/components/delete-buttons";
 import { ProfileFormDialog } from "@/modules/coffee/components/profile-form-dialog";
@@ -85,22 +87,23 @@ export function GrinderPanel({
               Connect
             </Button>
           )}
-          {grinder.machine && (
-            <span className="text-muted-foreground">
-              {grinder.machine.position !== null &&
-                `Position ${grinder.machine.position} · `}
-              {grinder.machine.state}
-            </span>
-          )}
-          {connected && grinder.machine?.state === "UNKNOWN" && (
+          {connected && (
             <Button
               variant="outline"
               size="sm"
               disabled={busy}
               onClick={() => void grinder.sendHome()}
             >
+              <LocateFixed aria-hidden />
               Home
             </Button>
+          )}
+          {grinder.machine && (
+            <span className="text-muted-foreground">
+              {grinder.machine.position !== null &&
+                `Position ${grinder.machine.position} · `}
+              {grinder.machine.state}
+            </span>
           )}
           {grinder.send?.key === "home" && <StatusLine send={grinder.send} />}
         </div>
