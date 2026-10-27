@@ -1,6 +1,8 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
+import { BeanFormDialog } from "@/modules/coffee/components/bean-form-dialog";
+import { DeleteBeanButton } from "@/modules/coffee/components/delete-buttons";
 import { GrinderPanel } from "@/modules/coffee/components/grinder-panel";
 import { BeanImage } from "@/modules/coffee/components/bean-image";
 import type { CoffeeBeanWithProfiles } from "@/modules/coffee/queries";
@@ -33,10 +35,14 @@ export function BeanDetail({ bean }: { bean: CoffeeBeanWithProfiles }) {
             </p>
           )}
           {bean.notes && <p className="mt-2 text-sm">{bean.notes}</p>}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <BeanFormDialog bean={bean} />
+            <DeleteBeanButton beanId={bean.id} name={bean.name} />
+          </div>
         </div>
       </div>
 
-      <GrinderPanel profiles={bean.profiles} />
+      <GrinderPanel beanId={bean.id} profiles={bean.profiles} />
     </>
   );
 }

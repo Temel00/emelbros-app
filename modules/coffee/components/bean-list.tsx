@@ -5,7 +5,7 @@ export function BeanList({ beans }: { beans: CoffeeBeanRow[] }) {
   if (beans.length === 0) {
     return (
       <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-        No beans yet.
+        No beans yet. Add the first one.
       </p>
     );
   }

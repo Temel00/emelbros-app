@@ -9,6 +9,8 @@ import { CONFIRMATION_TIMEOUT_MS } from "@/modules/coffee/lib/use-grinder";
 
 import { GrinderPanel } from "./grinder-panel";
 
+vi.mock("@/modules/coffee/actions", () => ({}));
+
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
@@ -29,7 +31,7 @@ let root: Root;
 async function mount(link: FakeSerialLink) {
   setSerialLink(link);
   await act(async () => {
-    root.render(<GrinderPanel profiles={profiles} />);
+    root.render(<GrinderPanel beanId="b1" profiles={profiles} />);
   });
 }
 

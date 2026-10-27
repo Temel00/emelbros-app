@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { DeleteProfileButton } from "@/modules/coffee/components/delete-buttons";
+import { ProfileFormDialog } from "@/modules/coffee/components/profile-form-dialog";
 import type { CoffeeGrindProfileRow } from "@/modules/coffee/queries";
 import { useGrinder, type SendStatus } from "@/modules/coffee/lib/use-grinder";
 
@@ -30,8 +32,10 @@ function StatusLine({ send }: { send: SendStatus }) {
 
 /** Connection controls and the grind profiles, each with Send to machine. */
 export function GrinderPanel({
+  beanId,
   profiles,
 }: {
+  beanId: string;
   profiles: CoffeeGrindProfileRow[];
 }) {
   const grinder = useGrinder();
@@ -42,9 +46,12 @@ export function GrinderPanel({
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-muted-foreground">
-        Grind profiles
-      </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-muted-foreground">
+          Grind profiles
+        </h2>
+        <ProfileFormDialog beanId={beanId} />
+      </div>
 
       {!grinder.supported ? (
         <p className="text-sm text-muted-foreground">
@@ -117,7 +124,9 @@ export function GrinderPanel({
       )}
 
       {profiles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No profiles yet.</p>
+        <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+          No profiles yet. Add one to start sending grinds.
+        </p>
       ) : (
         <ul className="flex flex-col gap-2">
           {profiles.map((profile) => (
@@ -136,7 +145,7 @@ export function GrinderPanel({
                   <StatusLine send={grinder.send} />
                 )}
               </div>
-              <div className="flex shrink-0 items-center gap-3">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
                 <span className="text-lg font-semibold tabular-nums">
                   {profile.grind_size}
                 </span>
@@ -152,6 +161,12 @@ export function GrinderPanel({
                 >
                   Send to machine
                 </Button>
+                <ProfileFormDialog beanId={beanId} profile={profile} />
+                <DeleteProfileButton
+                  beanId={beanId}
+                  profileId={profile.id}
+                  label={profile.label}
+                />
               </div>
             </li>
           ))}

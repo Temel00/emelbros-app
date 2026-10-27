@@ -55,3 +55,79 @@ export async function getBean(
   if (profilesError) throw profilesError;
   return { ...bean, profiles };
 }
+
+/** Inserts a bean and returns its id. */
+export async function createBean(
+  supabase: SupabaseClient<Database>,
+  input: Database["public"]["Tables"]["coffee_bean"]["Insert"],
+): Promise<string> {
+  const { data, error } = await supabase
+    .from("coffee_bean")
+    .insert(input)
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data.id;
+}
+
+/** Updates a bean's editable fields; `photo_path` is never touched here. */
+export async function updateBean(
+  supabase: SupabaseClient<Database>,
+  beanId: string,
+  patch: Database["public"]["Tables"]["coffee_bean"]["Update"],
+): Promise<void> {
+  const { error } = await supabase
+    .from("coffee_bean")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", beanId);
+
+  if (error) throw error;
+}
+
+/** Deletes a bean; its grind profiles go with it (cascade). */
+export async function deleteBean(
+  supabase: SupabaseClient<Database>,
+  beanId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("coffee_bean")
+    .delete()
+    .eq("id", beanId);
+
+  if (error) throw error;
+}
+
+export async function createGrindProfile(
+  supabase: SupabaseClient<Database>,
+  input: Database["public"]["Tables"]["coffee_grind_profile"]["Insert"],
+): Promise<void> {
+  const { error } = await supabase.from("coffee_grind_profile").insert(input);
+
+  if (error) throw error;
+}
+
+export async function updateGrindProfile(
+  supabase: SupabaseClient<Database>,
+  profileId: string,
+  patch: Database["public"]["Tables"]["coffee_grind_profile"]["Update"],
+): Promise<void> {
+  const { error } = await supabase
+    .from("coffee_grind_profile")
+    .update(patch)
+    .eq("id", profileId);
+
+  if (error) throw error;
+}
+
+export async function deleteGrindProfile(
+  supabase: SupabaseClient<Database>,
+  profileId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("coffee_grind_profile")
+    .delete()
+    .eq("id", profileId);
+
+  if (error) throw error;
+}
