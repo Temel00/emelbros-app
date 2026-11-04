@@ -3,7 +3,8 @@ import { AppHeader } from "@/components/app-header";
 import { getCurrentMember } from "@/platform/auth";
 import { createClient } from "@/platform/supabase/server";
 
-import { Prototype, VARIANTS, type VariantId } from "./prototype";
+import { VARIANTS, type VariantId } from "./diff-model";
+import { Prototype } from "./prototype";
 
 export default async function DiffCheckerPrototypePage({
   searchParams,

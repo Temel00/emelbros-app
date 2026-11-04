@@ -4,11 +4,9 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { VARIANTS, type VariantId } from "./diff-model";
 import { useDiffCtl } from "./shared";
 import { VariantA, VariantB, VariantC, VariantD } from "./variants";
-
-export const VARIANTS = ["A", "B", "C", "D"] as const;
-export type VariantId = (typeof VARIANTS)[number];
 
 const LABELS: Record<VariantId, string> = {
   A: "Aligned surface, edit in place",
