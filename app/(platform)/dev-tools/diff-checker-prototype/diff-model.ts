@@ -2,7 +2,7 @@
 import { diffChars, diffLines } from "diff";
 
 // Lives here (not in prototype.tsx) so the server page can read it.
-export const VARIANTS = ["A", "B", "C", "D"] as const;
+export const VARIANTS = ["A", "B", "C", "D", "E", "F", "G"] as const;
 export type VariantId = (typeof VARIANTS)[number];
 
 export type Seg = { text: string; changed: boolean };

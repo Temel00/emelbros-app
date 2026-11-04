@@ -6,6 +6,7 @@ import { useEffect } from "react";
 
 import { VARIANTS, type VariantId } from "./diff-model";
 import { useDiffCtl } from "./shared";
+import { VariantE, VariantF, VariantG } from "./variants2";
 import { VariantA, VariantB, VariantC, VariantD } from "./variants";
 
 const LABELS: Record<VariantId, string> = {
@@ -13,6 +14,9 @@ const LABELS: Record<VariantId, string> = {
   B: "Edit / Compare tabs",
   C: "Inputs + collapsed result + minimap",
   D: "Change list cards",
+  E: "In-place edit, options panel (hide)",
+  F: "In-place edit, options panel (icon rail)",
+  G: "In-place edit, options drawer",
 };
 
 export function Prototype({ variant }: { variant: VariantId }) {
@@ -41,6 +45,9 @@ export function Prototype({ variant }: { variant: VariantId }) {
       {variant === "B" && <VariantB c={c} />}
       {variant === "C" && <VariantC c={c} />}
       {variant === "D" && <VariantD c={c} />}
+      {variant === "E" && <VariantE c={c} />}
+      {variant === "F" && <VariantF c={c} />}
+      {variant === "G" && <VariantG c={c} />}
       {process.env.NODE_ENV !== "production" && (
         <div className="fixed inset-x-0 bottom-3 z-50 flex justify-center px-3">
           <div className="flex items-center gap-1 rounded-full border-2 border-input bg-background p-1 shadow-lg">
