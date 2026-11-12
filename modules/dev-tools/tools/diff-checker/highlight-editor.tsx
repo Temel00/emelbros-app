@@ -58,6 +58,9 @@ export function HighlightEditor({
   label,
   value,
   onChange,
+  onUndo,
+  onRedo,
+  focusRef,
   marks,
   lineHighlight,
   charHighlight,
@@ -67,7 +70,12 @@ export function HighlightEditor({
   side: Side;
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  /** `isolate` marks paste/clear: never merged into a typing run. */
+  onChange: (value: string, isolate: boolean) => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  /** This box registers its own focus function here. */
+  focusRef: MutableRefObject<(() => void) | null>;
   /** Undefined while the debounced diff is stale: no highlights are drawn. */
   marks: (LineMark | undefined)[] | undefined;
   lineHighlight: boolean;
@@ -91,6 +99,12 @@ export function HighlightEditor({
       followRef.current = null;
     };
   }, [followRef]);
+  useEffect(() => {
+    focusRef.current = () => area.current?.focus();
+    return () => {
+      focusRef.current = null;
+    };
+  }, [focusRef]);
   useEffect(
     () => () => {
       if (timer.current) clearTimeout(timer.current);
@@ -155,7 +169,35 @@ export function HighlightEditor({
         spellCheck={false}
         placeholder="Paste or type text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          const type = (e.nativeEvent as InputEvent).inputType ?? "";
+          onChange(
+            e.target.value,
+            type === "insertFromPaste" || type === "deleteByCut",
+          );
+        }}
+        onBeforeInput={(e) => {
+          const type = (e.nativeEvent as InputEvent).inputType;
+          if (type === "historyUndo") {
+            e.preventDefault();
+            onUndo();
+          } else if (type === "historyRedo") {
+            e.preventDefault();
+            onRedo();
+          }
+        }}
+        onKeyDown={(e) => {
+          if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+          const k = e.key.toLowerCase();
+          if (k === "z") {
+            e.preventDefault();
+            if (e.shiftKey) onRedo();
+            else onUndo();
+          } else if (k === "y" && e.ctrlKey) {
+            e.preventDefault();
+            onRedo();
+          }
+        }}
         onScroll={(e) => {
           const el = e.currentTarget;
           if (backdrop.current) {
@@ -184,7 +226,7 @@ export function HighlightEditor({
         <IconButton
           label="Clear"
           disabled={!value}
-          onClick={() => onChange("")}
+          onClick={() => onChange("", true)}
         >
           <Eraser className="size-4" aria-hidden />
         </IconButton>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight, SlidersHorizontal } from "lucide-react";
+import { ArrowLeftRight, Redo2, SlidersHorizontal, Undo2 } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -9,9 +9,12 @@ import { HighlightEditor } from "./highlight-editor";
 import { IconButton } from "./icon-button";
 import {
   compare,
+  createHistory,
   lineMarks,
   statusOf,
   type CompareResult,
+  type Restored,
+  type Side,
   type Snapshot,
 } from "./lib";
 import { ignoreCount, OptionsDrawer, type DiffOptions } from "./options-drawer";
@@ -30,6 +33,11 @@ export default function DiffChecker() {
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [debounced, setDebounced] = useState(text);
+  const [history] = useState(() =>
+    createHistory({ original: "", changed: "" }, { now: () => Date.now() }),
+  );
+  const focusOriginal = useRef<(() => void) | null>(null);
+  const focusChanged = useRef<(() => void) | null>(null);
   const followOriginal = useRef<((top: number) => void) | null>(null);
   const followChanged = useRef<((top: number) => void) | null>(null);
 
@@ -37,6 +45,20 @@ export default function DiffChecker() {
     const t = setTimeout(() => setDebounced(text), DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [text]);
+
+  const edit = (next: Snapshot, side: Side, isolate = false) => {
+    history.push(next, side, { isolate });
+    setText(next);
+  };
+  const restore = (r: Restored | null) => {
+    if (!r) return;
+    setText(r.snapshot);
+    // Focus after the restored value has rendered.
+    const focus = r.side === "changed" ? focusChanged : focusOriginal;
+    setTimeout(() => focus.current?.(), 0);
+  };
+  const undo = () => restore(history.undo());
+  const redo = () => restore(history.redo());
 
   // Highlights only when the debounced diff matches what is on screen.
   const current =
@@ -110,7 +132,12 @@ export default function DiffChecker() {
             side="original"
             label="Original text"
             value={text.original}
-            onChange={(original) => setText((t) => ({ ...t, original }))}
+            onChange={(original, iso) =>
+              edit({ ...text, original }, "original", iso)
+            }
+            onUndo={undo}
+            onRedo={redo}
+            focusRef={focusOriginal}
             marks={originalMarks}
             lineHighlight={options.lineHighlight}
             charHighlight={options.charHighlight}
@@ -121,7 +148,11 @@ export default function DiffChecker() {
             <IconButton
               label="Swap"
               onClick={() =>
-                setText((t) => ({ original: t.changed, changed: t.original }))
+                edit(
+                  { original: text.changed, changed: text.original },
+                  history.lastChanged() ?? "original",
+                  true,
+                )
               }
             >
               <ArrowLeftRight className="size-4" aria-hidden />
@@ -136,13 +167,34 @@ export default function DiffChecker() {
             side="changed"
             label="Changed text"
             value={text.changed}
-            onChange={(changed) => setText((t) => ({ ...t, changed }))}
+            onChange={(changed, iso) =>
+              edit({ ...text, changed }, "changed", iso)
+            }
+            onUndo={undo}
+            onRedo={redo}
+            focusRef={focusChanged}
             marks={changedMarks}
             lineHighlight={options.lineHighlight}
             charHighlight={options.charHighlight}
             onScrollTop={(top) => followOriginal.current?.(top)}
             followRef={followChanged}
           />
+          <div className="flex justify-center gap-2 py-1 sm:col-span-2">
+            <IconButton
+              label="Undo"
+              disabled={!history.canUndo()}
+              onClick={undo}
+            >
+              <Undo2 className="size-4" aria-hidden />
+            </IconButton>
+            <IconButton
+              label="Redo"
+              disabled={!history.canRedo()}
+              onClick={redo}
+            >
+              <Redo2 className="size-4" aria-hidden />
+            </IconButton>
+          </div>
         </div>
       </div>
     </div>
