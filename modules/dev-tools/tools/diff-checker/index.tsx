@@ -88,7 +88,7 @@ export default function DiffChecker() {
   const ignores = ignoreCount(options);
   const summary =
     !comparing && result && !result.tooLarge
-      ? `+${result.added} −${result.removed} ~${result.changed}`
+      ? `+${result.added} âˆ’${result.removed} ~${result.changed}`
       : null;
 
   return (
@@ -107,13 +107,13 @@ export default function DiffChecker() {
             {ignores} ignore option{ignores === 1 ? "" : "s"} on
           </span>
         )}
-        {/* Only the settled message is announced; "Comparing�" is visual. */}
+        {/* Only the settled message is announced; "Comparing…" is visual. */}
         <span role="status" aria-live="polite" className="text-sm">
           {comparing ? "" : status.message}
         </span>
         {comparing && (
           <span aria-hidden className="text-sm text-muted-foreground">
-            Comparing�
+            Comparing…
           </span>
         )}
         {summary && (
