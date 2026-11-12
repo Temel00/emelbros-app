@@ -88,7 +88,7 @@ export default function DiffChecker() {
   const ignores = ignoreCount(options);
   const summary =
     !comparing && result && !result.tooLarge
-      ? `+${result.added} âˆ’${result.removed} ~${result.changed}`
+      ? `+${result.added} −${result.removed} ~${result.changed}`
       : null;
 
   return (
