@@ -25,4 +25,8 @@ describe("dev-tools tool registry", () => {
   it("registers the bluetooth-serial tool", () => {
     expect(tools.map((t) => t.manifest.slug)).toContain("bluetooth-serial");
   });
+
+  it("registers the diff-checker tool", () => {
+    expect(tools.map((t) => t.manifest.slug)).toContain("diff-checker");
+  });
 });
