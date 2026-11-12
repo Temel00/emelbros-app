@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 
 import type { ToolManifest } from "@/modules/dev-tools/lib/tool-manifest";
 import { bluetoothSerialManifest } from "@/modules/dev-tools/tools/bluetooth-serial/manifest";
+import { diffCheckerManifest } from "@/modules/dev-tools/tools/diff-checker/manifest";
 import { svgSandboxManifest } from "@/modules/dev-tools/tools/svg-sandbox/manifest";
 
 export type ToolEntry = {
@@ -22,6 +23,10 @@ export const tools: ToolEntry[] = [
   {
     manifest: bluetoothSerialManifest,
     load: () => import("./bluetooth-serial"),
+  },
+  {
+    manifest: diffCheckerManifest,
+    load: () => import("./diff-checker"),
   },
 ];
 
