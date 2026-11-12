@@ -85,7 +85,6 @@ export default function DiffChecker() {
 
   const status = statusOf(debounced.original, debounced.changed, result);
   const comparing = !current && !!text.original && !!text.changed;
-  const message = comparing ? "Comparingâ€¦" : status.message;
   const ignores = ignoreCount(options);
   const summary =
     !comparing && result && !result.tooLarge
@@ -97,7 +96,8 @@ export default function DiffChecker() {
       <div className="flex flex-wrap items-center gap-3">
         <IconButton
           label={drawerOpen ? "Hide options" : "Show options"}
-          pressed={drawerOpen}
+          expanded={drawerOpen}
+          controls={drawerId}
           onClick={() => setDrawerOpen((o) => !o)}
         >
           <SlidersHorizontal className="size-4" aria-hidden />
@@ -107,9 +107,15 @@ export default function DiffChecker() {
             {ignores} ignore option{ignores === 1 ? "" : "s"} on
           </span>
         )}
+        {/* Only the settled message is announced; "Comparing…" is visual. */}
         <span role="status" aria-live="polite" className="text-sm">
-          {message}
+          {comparing ? "" : status.message}
         </span>
+        {comparing && (
+          <span aria-hidden className="text-sm text-muted-foreground">
+            Comparing…
+          </span>
+        )}
         {summary && (
           <span className="font-mono text-sm text-muted-foreground">
             {summary}
